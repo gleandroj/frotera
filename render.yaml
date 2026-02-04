@@ -1,0 +1,281 @@
+version: "1"
+projects:
+- name: RS-FROTAS
+  environments:
+  - name: Development
+    services:
+    # MinIO - Object Storage (S3 Compatible)
+    - type: web
+      name: minio-dev
+      runtime: image
+      image:
+        url: docker.io/minio/minio:latest
+      plan: starter
+      envVars:
+      - key: PORT
+        sync: false
+      - key: MINIO_ROOT_PASSWORD
+        sync: false
+      - key: MINIO_ROOT_USER
+        sync: false
+      - key: MINIO_BROWSER_REDIRECT_URL
+        sync: false
+      - key: MINIO_SERVER_URL
+        sync: false
+      region: oregon
+      dockerCommand: /usr/bin/docker-entrypoint.sh server /data --address 0.0.0.0:$PORT --console-address 0.0.0.0:9000
+      disk:
+        name: disk
+        mountPath: /data
+        sizeGB: 5
+      domains:
+      - minio-dev.radisa.com.br
+      autoDeployTrigger: commit
+    
+    # Frontend - Next.js Application
+    - type: web
+      name: frontend-dev
+      runtime: node
+      repo: https://github.com/gleandroj/rs-frotas
+      plan: starter
+      envVars:
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_FACEBOOK_APP_ID
+        sync: false
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        sync: false
+      - key: HOSTNAME
+        sync: false
+      - key: PORT
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ORG
+        sync: false
+      - key: SENTRY_PROJECT
+        sync: false
+      region: oregon
+      buildCommand: pnpm install --frozen-lockfile && bash ./scripts/build-standalone.sh
+      startCommand: cd standalone-build && node apps/web/server.js
+      domains:
+      - rs-frotas-dev.radisa.com.br
+      autoDeployTrigger: commit
+      branch: dev
+    
+    # Backend - NestJS API
+    - type: web
+      name: backend-dev
+      runtime: node
+      repo: https://github.com/gleandroj/rs-frotas
+      plan: pro
+      envVars:
+      # Database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: database-dev
+          property: connectionString
+      
+      # Redis
+      - key: REDIS_URL
+        fromService:
+          name: redis-dev
+          type: keyvalue
+          property: connectionString
+      
+      # Application
+      - key: NODE_ENV
+        value: development
+      - key: PORT
+        sync: false
+      - key: APP_NAME
+        sync: false
+      - key: APP_DOMAIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      
+      # Security
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_VERIFICATION_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      
+      # Email (SMTP)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false
+      
+      # AWS S3 / MinIO
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_S3_ENDPOINT
+        sync: false
+      - key: AWS_S3_FORCE_PATH_STYLE
+        sync: false
+      
+      # AI / Integrations
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RETELL_SECRET_KEY
+        sync: false
+      
+      # WhatsApp Service
+      - key: WHATSAPP_SERVICE_URL
+        sync: false
+      - key: WHATSAPP_SERVICE_API_KEY
+        sync: false
+      - key: WHATSAPP_SIGNATURE_KEY
+        sync: false
+      
+      # Social Auth
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      
+      # Instagram
+      - key: INSTAGRAM_CLIENT_ID
+        sync: false
+      - key: INSTAGRAM_CLIENT_SECRET
+        sync: false
+      - key: INSTAGRAM_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      
+      # Monitoring
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ORG
+        sync: false
+      - key: SENTRY_PROJECT
+        sync: false
+      
+      # BullMQ Configuration
+      - key: BULLMQ_REMOVE_ON_COMPLETE_AGE
+        value: "3600"
+      - key: BULLMQ_REMOVE_ON_COMPLETE_COUNT
+        value: "1000"
+      - key: BULLMQ_REMOVE_ON_FAIL_AGE
+        value: "86400"
+      
+      region: oregon
+      buildCommand: NODE_OPTIONS=--max-old-space-size=8192 pnpm install --frozen-lockfile && NODE_OPTIONS=--max-old-space-size=8192 pnpm run build --filter api --filter "@gleandroj/shared"
+      startCommand: cd apps/api && npx prisma db push --accept-data-loss && node dist/main.js
+      domains:
+      - rs-frotas-api-dev.radisa.com.br
+      autoDeployTrigger: commit
+      branch: dev
+    
+    # WhatsApp Service
+    - type: web
+      name: whatsapp-dev
+      runtime: docker
+      dockerfilePath: apps/whatsapp/Dockerfile
+      dockerContext: apps/whatsapp
+      plan: standard
+      envVars:
+      - key: PORT
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: database-dev
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: database-dev
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: database-dev
+          property: user
+      - key: DB_PASS
+        fromDatabase:
+          name: database-dev
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: database-dev
+          property: database
+      - key: DB_TYPE
+        value: postgres
+      - key: DB_SSL_MODE
+        value: require
+      - key: DB_SCHEMA
+        value: whatsapp
+      - key: REDIS_HOST
+        fromService:
+          name: redis-dev
+          type: keyvalue
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: redis-dev
+          type: keyvalue
+          property: port
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_DB
+        value: "0"
+      - key: WORKER_ID
+        generateValue: true
+      - key: HOSTNAME
+        generateValue: true
+      - key: ENV
+        value: development
+      region: oregon
+      autoDeployTrigger: commit
+      branch: dev
+    
+    # Redis - Key-Value Store & Cache
+    - type: keyvalue
+      name: redis-dev
+      plan: starter
+      region: oregon
+      maxmemoryPolicy: allkeys-lru
+      ipAllowList: []
+    
+    # PostgreSQL Database
+    databases:
+    - name: database-dev
+      databaseName: rs_frotas_dev
+      user: rs_frotas_dev_user
+      plan: basic-256mb
+      region: oregon
+      ipAllowList: []
+      postgresMajorVersion: "16"
+      diskSizeGB: 5

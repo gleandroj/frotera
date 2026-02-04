@@ -1,0 +1,769 @@
+{
+  "common": {
+    "created": "Criado",
+    "creating": "Criando...",
+    "updated": "Atualizado",
+    "updating": "Atualizando...",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "tryAgain": "Tentar Novamente",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "view": "Visualizar",
+    "create": "Criar",
+    "update": "Atualizar",
+    "search": "Pesquisar",
+    "close": "Fechar",
+    "ok": "OK",
+    "yes": "Sim",
+    "no": "Não",
+    "name": "Nome",
+    "description": "Descrição",
+    "email": "Email",
+    "password": "Senha",
+    "phone": "Telefone",
+    "address": "Endereço",
+    "status": "Status",
+    "actions": "Ações",
+    "settings": "Configurações",
+    "profile": "Perfil",
+    "dashboard": "Painel",
+    "logout": "Sair",
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "confirm": "Confirmar",
+    "language": "Idioma",
+    "languageSwitcher": "Alterar Idioma",
+    "currentLanguage": "Idioma atual",
+    "notAvailable": "N/D",
+    "optional": "Opcional",
+    "found": "encontrado",
+    "tip": "Dica",
+    "showing": "Mostrando",
+    "to": "até",
+    "of": "de",
+    "dismiss": "Dispensar",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "done": "Concluído",
+    "copied": "Copiado",
+    "refresh": "Atualizar",
+    "continue": "Continuar"
+  },
+  "auth": {
+    "title": "Bem-vindo de volta",
+    "description": "Entre para gerenciar sua frota com inteligência e eficiência",
+    "loginTitle": "Faça login na sua conta",
+    "signupTitle": "Crie sua conta",
+    "emailLabel": "Endereço de email",
+    "emailPlaceholder": "seu@email.com",
+    "passwordLabel": "Senha",
+    "confirmPasswordLabel": "Confirme a senha",
+    "nameLabel": "Nome",
+    "namePlaceholder": "João Silva",
+    "nameOptional": "Nome (Opcional)",
+    "passwordPlaceholder": "Mínimo 8 caracteres",
+    "rememberMe": "Lembrar de mim",
+    "forgotPasswordLink": "Esqueceu sua senha?",
+    "loginButton": "Entrar",
+    "signupButton": "Criar conta",
+    "creatingAccount": "Criando conta...",
+    "noAccount": "Não tem uma conta?",
+    "hasAccount": "Já tem uma conta?",
+    "USER_ALREADY_EXISTS": "Usuário já existe",
+    "AUTH_INVALID_CREDENTIALS": "Email ou senha inválidos",
+    "AUTH_ACCOUNT_NOT_VERIFIED": "Conta não verificada. Email de verificação enviado. Verifique sua caixa de entrada ou spam para ativar sua conta.",
+    "INVITATION_ALREADY_ACCEPTED": "Convite já aceito",
+    "switchToSignup": "Cadastre-se",
+    "switchToLogin": "Entrar",
+    "invalidCredentials": "Email ou senha inválidos",
+    "emailRequired": "Email é obrigatório",
+    "passwordRequired": "Senha é obrigatória",
+    "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
+    "passwordsNotMatch": "As senhas não coincidem",
+    "accountCreatedSuccess": "Conta criada com sucesso! Verifique seu email para ativar sua conta.",
+    "signupError": "Falha ao criar conta. Tente novamente.",
+    "2faTitle": "Proteja Sua Conta",
+    "2faDescription": "Digite o código de 6 dígitos do seu aplicativo autenticador para completar o login",
+    "2faVerificationCode": "Código de Verificação",
+    "verifying": "Verificando...",
+    "verify": "Verificar",
+    "2faVerificationCodePlaceholder": "Digite o código de 6 dígitos",
+    "signingIn": "Entrando...",
+    "emailVerification": {
+      "success": "Email verificado com sucesso!",
+      "failed": "Falha ao verificar email"
+    },
+    "forgotPassword": {
+      "title": "Esqueceu a Senha?",
+      "description": "Digite seu endereço de email e enviaremos um link para redefinir sua senha.",
+      "emailAddress": "Endereço de Email",
+      "emailPlaceholder": "seu@email.com",
+      "sendResetLink": "Enviar Link de Redefinição",
+      "sending": "Enviando...",
+      "rememberPassword": "Lembra da sua senha?",
+      "backToLogin": "Voltar ao Login",
+      "emailSent": {
+        "title": "Email Enviado!",
+        "description": "Se uma conta com esse email existir, enviamos um link para redefinir a senha. Verifique seu email e siga as instruções.",
+        "backToLogin": "Voltar ao Login"
+      }
+    },
+    "resetPassword": {
+      "title": "Redefina Sua Senha",
+      "description": "Digite sua nova senha abaixo.",
+      "newPassword": "Nova Senha",
+      "newPasswordPlaceholder": "Digite sua nova senha",
+      "confirmNewPassword": "Confirme a Nova Senha",
+      "confirmNewPasswordPlaceholder": "Confirme sua nova senha",
+      "resetPassword": "Redefinir Senha",
+      "resettingPassword": "Redefinindo Senha...",
+      "rememberPassword": "Lembra da sua senha?",
+      "backToLogin": "Voltar ao Login",
+      "passwordRequirements": {
+        "title": "Requisitos da senha:",
+        "length": "Pelo menos 8 caracteres",
+        "uppercase": "Contém letras maiúsculas e minúsculas",
+        "number": "Contém pelo menos um número",
+        "special": "Contém pelo menos um caractere especial"
+      },
+      "success": {
+        "title": "Senha Redefinida com Sucesso!",
+        "description": "Sua senha foi atualizada. Agora você pode fazer login com sua nova senha.",
+        "continueToLogin": "Continuar para Login"
+      },
+      "invalidToken": {
+        "title": "Link de Redefinição Inválido",
+        "description": "Este link de redefinição de senha é inválido ou expirou.",
+        "requestNewLink": "Solicitar Novo Link",
+        "backToLogin": "Voltar ao Login"
+      }
+    },
+    "branding": {
+      "companyName": "RS Frotas",
+      "login": {
+        "heroTitle": "Gestão inteligente de frotas impulsionada por IA",
+        "heroDescription": "Rastreie, gerencie e otimize sua frota com tecnologia de ponta. Monitore veículos em tempo real, reduza custos e melhore a eficiência operacional.",
+        "features": {
+          "support247": "Rastreamento em Tempo Real 24/7",
+          "multiPlatform": "Gestão Completa de Veículos",
+          "analytics": "Relatórios e Análises Inteligentes"
+        }
+      },
+      "signup": {
+        "heroTitle": "Transforme a gestão da sua frota com inteligência artificial",
+        "heroDescription": "Comece hoje e tenha controle total sobre seus veículos. Reduza custos operacionais, aumente a segurança e maximize a produtividade da sua frota.",
+        "features": {
+          "freeTrial": "Teste Gratuito de 7 dias",
+          "freeTrialNoTrial": "Comece Agora",
+          "noChargesDuringTrial": "Sem cobranças durante o teste",
+          "quickSetup": "Configuração Rápida e Fácil"
+        }
+      }
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "general": "Geral",
+    "notifications": "Notificações",
+    "security": "Segurança",
+    "integrations": "Integrações",
+    "appearance": "Aparência",
+    "theme": "Tema",
+    "lightMode": "Claro",
+    "darkMode": "Escuro",
+    "systemMode": "Sistema",
+    "profile": {
+      "title": "Configurações do Perfil",
+      "description": "Gerencie suas informações pessoais e segurança da conta."
+    },
+    "organizations": {
+      "title": "Organizações",
+      "description": "Gerencie suas organizações e alterne entre elas",
+      "createOrganization": "Criar Organização",
+      "current": "Atual",
+      "switchTo": "Trocar Para",
+      "noOrganizationsFound": "Nenhuma organização encontrada",
+      "noOrganizationsDescription": "Você ainda não é membro de nenhuma organização. Crie sua primeira organização para começar.",
+      "createFirstOrganization": "Criar Sua Primeira Organização"
+    }
+  },
+  "errors": {
+    "generic": "Algo deu errado. Por favor, tente novamente.",
+    "network": "Erro de rede. Por favor, verifique sua conexão.",
+    "timeout": "Solicitação expirou. Por favor, tente novamente.",
+    "somethingWentWrong": "Algo deu errado!",
+    "applicationError": "Ocorreu um erro ao carregar a aplicação.",
+    "planLimitExceeded": "Limite do plano foi excedido",
+    "agentLimitExceeded": "Limite de agentes de IA foi atingido",
+    "whatsappLimitExceeded": "Limite de instâncias do WhatsApp foi atingido",
+    "memberLimitExceeded": "Limite de membros da equipe foi atingido",
+    "upgradeRequired": "Upgrade necessário para continuar",
+    "tryAgain": "Tentar Novamente",
+    "goHome": "Ir para Início",
+    "pageNotFound": "Página Não Encontrada",
+    "pageNotFoundDescription": "A página que você está procurando não existe ou foi movida.",
+    "signIn": "Entrar",
+    "systemDiagnostics": "Diagnósticos do Sistema"
+  },
+  "loading": {
+    "loadingConfiguration": "Carregando configuração...",
+    "verifyingEmail": "Verificando seu email...",
+    "settingUpWorkspace": "Configurando seu workspace...",
+    "loadingInvitationDetails": "Carregando detalhes do convite...",
+    "processing": "Processando..."
+  },
+  "homepage": {
+    "loading": "Carregando..."
+  },
+  "onboarding": {
+    "title": "Configuração Inicial",
+    "subtitle": "Vamos configurar seu sistema de suporte em alguns passos simples",
+    "setupProgress": "Progresso da Configuração",
+    "completed": "concluído",
+    "current": "atual",
+    "pending": "pendente",
+    "skipped": "pulado",
+    "currentStep": "Passo atual",
+    "clickToNavigate": "Clique para navegar para este passo",
+    "clickToResume": "Clique para retomar este passo",
+    "stepNotAvailable": "Passo não disponível",
+    "resumingSkippedStep": "Retomando passo pulado",
+    "back": "Voltar",
+    "step": "Passo",
+    "of": "de",
+    "setupComplete": "Configuração Concluída!",
+    "systemConfigured": "Seu sistema está configurado e pronto para uso.",
+    "goToDashboard": "Ir para o Painel",
+    "steps": {
+      "connectWhatsApp": {
+        "title": "Conectar WhatsApp",
+        "description": "Configure sua primeira instância do WhatsApp"
+      },
+      "createAgent": {
+        "title": "Criar Agente",
+        "description": "Configure um agente IA para atender seus clientes"
+      },
+      "testAgent": {
+        "title": "Testar Agente",
+        "description": "Converse com seu agente e veja como ele responde",
+        "noAgentWarning": "Nenhum agente foi criado na etapa anterior. Você pode pular esta etapa ou voltar para criar um agente primeiro.",
+        "skipTest": "Pular Teste",
+        "finish": "Finalizar",
+        "skip": "Pular"
+      },
+      "configureIntents": {
+        "title": "Configurar Intenções",
+        "description": "Adicionar intenções personalizadas (opcional)"
+      }
+    },
+    "createAgent": {
+      "title": "Configure seu Agente IA",
+      "description": "Escolha um modelo pré-configurado ou crie um agente personalizado",
+      "modes": {
+        "custom": {
+          "title": "Agente Personalizado",
+          "description": "Crie seu próprio agente do zero"
+        },
+        "template": {
+          "title": "Modelos Prontos",
+          "description": "Agentes pré-configurados para diferentes segmentos"
+        }
+      },
+      "templates": {
+        "chooseTemplate": "Escolha um modelo:",
+        "medical": {
+          "name": "Atendimento Médico",
+          "description": "Agente especializado em triagem e agendamento de consultas médicas",
+          "instructions": "Você é um assistente virtual para uma clínica médica. Sua função é realizar a triagem inicial de pacientes, agendar consultas, fornecer informações sobre procedimentos e orientar preparação de exames. Seja sempre cordial, empático e profissional. Nunca dê diagnósticos médicos, apenas colete informações e direcione ao profissional apropriado.",
+          "category": "Saúde"
+        },
+        "sales": {
+          "name": "Vendas Geral",
+          "description": "Agente focado em vendas e atendimento ao cliente",
+          "instructions": "Você é um consultor de vendas especializado em atendimento ao cliente. Sua missão é identificar necessidades dos clientes, apresentar produtos/serviços adequados, esclarecer dúvidas, negociar termos e fechar vendas. Seja persuasivo mas honesto, sempre focando nos benefícios para o cliente. Colete informações de contato e mantenha relacionamento próximo.",
+          "category": "Vendas"
+        }
+      },
+      "form": {
+        "agentName": "Nome do Agente",
+        "agentNamePlaceholder": "Ex: Assistente de Vendas",
+        "agentInstructions": "Instruções do Agente (Prompt)",
+        "agentInstructionsPlaceholder": "Descreva como o agente deve se comportar, que tipos de perguntas deve responder e como deve interagir com os clientes..."
+      },
+      "instructionModes": {
+        "type": "Digitar Instruções",
+        "record": "Gravar Áudio"
+      },
+      "recordAudio": {
+        "description": "Grave você mesmo descrevendo seu agente. Vamos transcrever e gerar um prompt profissional para você.",
+        "startRecording": "Iniciar Gravação",
+        "stopRecording": "Parar Gravação",
+        "recording": "Gravando...",
+        "generatePrompt": "Gerar Prompt",
+        "generatingPrompt": "Gerando prompt...",
+        "recordAgain": "Gravar Novamente",
+        "transcribing": "Transcrevendo áudio...",
+        "promptGenerated": "Prompt gerado com sucesso!",
+        "errorGeneratingPrompt": "Falha ao gerar prompt. Por favor, tente novamente."
+      },
+      "buttons": {
+        "createAgent": "Criar Agente",
+        "creatingAgent": "Criando agente...",
+        "updateAgent": "Atualizar Agente",
+        "updatingAgent": "Atualizando agente...",
+        "skip": "Pular"
+      },
+      "validation": {
+        "selectTemplate": "Selecione um modelo",
+        "agentNameRequired": "Nome do agente é obrigatório",
+        "agentNameTooLong": "Nome do agente deve ter menos de 100 caracteres",
+        "agentTypeRequired": "Tipo de agente é obrigatório",
+        "agentDescriptionTooLong": "Descrição do agente deve ter menos de 500 caracteres",
+        "agentInstructionsRequired": "Instruções do agente são obrigatórias",
+        "agentInstructionsTooLong": "Instruções do agente devem ter menos de 4000 caracteres",
+        "modelRequired": "Modelo de IA é obrigatório",
+        "temperatureRange": "Temperatura deve estar entre 0 e 2",
+        "maxTokensMin": "Máximo de tokens deve ser pelo menos 1",
+        "maxTokensMax": "Máximo de tokens deve ser menor que 4000",
+        "topPRange": "Top P deve estar entre 0 e 1",
+        "maxCallDurationRequired": "Duração máxima da chamada é obrigatória (mínimo 1 segundo)",
+        "endCallAfterSilenceMin": "Encerrar chamada após silêncio deve ser no mínimo 10 segundos",
+        "messageBufferTimeoutMin": "O tempo de buffer de mensagens deve ser no mínimo 1 segundo",
+        "messageBufferTimeoutMax": "O tempo de buffer de mensagens deve ser no máximo 300 segundos",
+        "typingIndicatorDurationMin": "A duração do indicador de digitando deve ser no mínimo 1 segundo",
+        "typingIndicatorDurationMax": "A duração do indicador de digitando deve ser no máximo 60 segundos"
+      },
+      "messages": {
+        "agentCreatedSuccessfully": "Agente criado com sucesso!",
+        "agentUpdatedSuccessfully": "Agente atualizado com sucesso!",
+        "errorCreatingAgent": "Erro ao criar agente",
+        "errorUpdatingAgent": "Erro ao atualizar agente",
+        "errorLoadingModels": "Erro ao carregar modelos de IA"
+      },
+      "loadingModels": "Carregando modelos...",
+      "selectModel": "Selecionar modelo de IA",
+      "noModelsAvailable": "Nenhum modelo disponível"
+    },
+    "editAgent": {
+      "title": "Editar Agente IA",
+      "description": "Modifique as configurações do seu agente personalizado"
+    },
+    "testAgent": {
+      "editPrompt": "Editar Prompt",
+      "restartSession": "Reiniciar Sessão",
+      "backToEdit": "Voltar para Editar",
+      "agentInstructions": "Instruções do Agente",
+      "agentInstructionsPlaceholder": "Descreva como o agente deve se comportar...",
+      "savePrompt": "Salvar Prompt",
+      "updatingPrompt": "Atualizando...",
+      "promptUpdatedSuccessfully": "Prompt atualizado com sucesso!",
+      "errorUpdatingPrompt": "Erro ao atualizar prompt",
+      "sessionRestartedSuccessfully": "Sessão reiniciada com sucesso!",
+      "errorRestartingSession": "Erro ao reiniciar sessão"
+    },
+    "connectWhatsApp": {
+      "title": "Conectar WhatsApp",
+      "description": "Clique no botão abaixo para conectar sua primeira instância do WhatsApp. O código QR aparecerá automaticamente para você escanear.",
+      "createNewDescription": "Você já possui uma instância do WhatsApp. Você pode criar uma nova instância se necessário.",
+      "buttons": {
+        "connectFirstInstance": "Conectar Primeira Instância",
+        "createNewInstance": "Criar Nova Instância",
+        "creatingInstance": "Criando instância...",
+        "skipForNow": "Pular por enquanto",
+        "updateQrCode": "Atualizar Código QR",
+        "updating": "Atualizando...",
+        "tryAgain": "Tentar Novamente",
+        "showInstructions": "Mostrar instruções",
+        "hideInstructions": "Ocultar instruções"
+      },
+      "status": {
+        "connected": "Conectado",
+        "disconnected": "Desconectado"
+      },
+      "success": {
+        "title": "WhatsApp Conectado!",
+        "description": "Seu WhatsApp foi conectado com sucesso. Avançando para o próximo passo..."
+      },
+      "qrCode": {
+        "title": "Código QR do WhatsApp",
+        "description": "Abra o WhatsApp no seu telefone e escaneie este código",
+        "loading": "Carregando código QR...",
+        "errorLoading": "Erro ao carregar código QR.",
+        "altText": "Código QR WhatsApp"
+      },
+      "instructions": {
+        "title": "Como escanear o Código QR:",
+        "steps": {
+          "step1": "Abra o WhatsApp no seu telefone",
+          "step2": "Toque nos três pontos (Menu) no canto superior",
+          "step3": "Selecione \"Aparelhos conectados\"",
+          "step4": "Toque em \"Conectar um aparelho\"",
+          "step5": "Aponte a câmera para o código QR acima"
+        }
+      },
+      "messages": {
+        "instanceCreatedSuccess": "Instância criada! Carregando código QR...",
+        "errorGettingQrCode": "Erro ao obter código QR",
+        "errorCreatingInstance": "Erro ao criar instância do WhatsApp",
+        "whatsappConnectedSuccessfully": "WhatsApp conectado com sucesso!"
+      }
+    }
+  },
+  "troubleshoot": {
+    "title": "Diagnósticos do Sistema",
+    "subtitle": "Verifique a saúde e o status da sua implantação RS Frotas",
+    "nextjsAppStatus": "Status da Aplicação Next.js",
+    "nestjsAppStatus": "Status da Aplicação Nest.js",
+    "lastChecked": "Última verificação",
+    "notChecked": "Não verificado",
+    "statusMessage": "Mensagem de Status",
+    "environment": "Ambiente",
+    "vercelInfo": "Informações Vercel",
+    "region": "Região",
+    "url": "URL",
+    "unknown": "Desconhecido",
+    "checking": "Verificando",
+    "online": "ONLINE",
+    "database": "Banco de Dados",
+    "emailService": "Serviço de Email",
+    "issuesFound": "Problemas Encontrados",
+    "quickActions": "Ações Rápidas",
+    "viewNextjsHealthData": "Ver Dados de Saúde Next.js",
+    "viewNestjsHealthData": "Ver Dados de Saúde Nest.js",
+    "goToHomePage": "Ir para Página Inicial",
+    "testLoginPage": "Testar Página de Login"
+  },
+  "invitation": {
+    "failedToLogOut": "Falha ao sair. Por favor, tente novamente.",
+    "invalidInvitation": "Convite inválido",
+    "invalidInvitationDescription": "O link do convite é inválido ou expirou.",
+    "invitationAlreadyAccepted": "Convite Já Aceito",
+    "errorLoadingInvitation": "Erro ao carregar convite",
+    "errorLoadingInvitationDescription": "Falha ao carregar detalhes do convite. Tente novamente.",
+    "failedToAcceptInvitation": "Falha ao aceitar convite",
+    "accountMismatch": "Conta Não Corresponde",
+    "accountMismatchDescription": "Este convite é para um endereço de email diferente",
+    "currentAccount": "Conta Atual",
+    "currentlyLoggedInAs": "Você está conectado como",
+    "invitationDetails": "Detalhes do Convite",
+    "thisInvitationIsFor": "Este convite é para",
+    "organization": "Organização",
+    "useDifferentAccount": "Usar uma conta diferente",
+    "createAccount": "Criar conta",
+    "needHelp": "Precisa de ajuda?",
+    "contactSupport": "Contatar suporte",
+    "acceptInvitation": "Aceitar Convite",
+    "joinOrganization": "Entrar em",
+    "email": "Email",
+    "role": "Função",
+    "invitedBy": "Convidado por",
+    "expires": "Expira",
+    "processing": "Processando...",
+    "logInToAccept": "Entrar para Aceitar"
+  },
+  "organizations": {
+    "createOrganization": "Criar Organização",
+    "createYourOrganization": "Crie sua Organização",
+    "organizationAutoCreated": "Uma organização será criada automaticamente. Se não especificar um nome, usaremos seu nome ou email.",
+    "updateOrganization": "Atualizar Organização",
+    "organizationName": "Nome da Organização",
+    "organizationSlug": "Slug da Organização",
+    "organizationDescription": "Descrição da Organização",
+    "organizationNamePlaceholder": "Digite o nome da organização",
+    "organizationSlugPlaceholder": "Digite o slug da organização",
+    "organizationDescriptionPlaceholder": "Digite a descrição da organização",
+    "creating": "Criando...",
+    "updating": "Atualizando...",
+    "organizationCreatedSuccessfully": "Organização criada com sucesso!",
+    "organizationUpdatedSuccessfully": "Organização atualizada com sucesso!",
+    "organizationCreatedDescription": "Sua organização foi configurada e você já pode começar a usar a plataforma.",
+    "failedToUpdateOrganization": "Falha ao atualizar organização",
+    "failedToLoadOrganization": "Falha ao carregar organização",
+    "organizationNotFound": "Organização não encontrada",
+    "editOrganizationDialogDescription": "Faça alterações nos detalhes da sua organização aqui.",
+    "createOrganizationDialogDescription": "Preencha os detalhes para criar uma nova organização.",
+    "successTitle": "Organização criada com sucesso!",
+    "successMessage": "A organização {{name}} foi criada e está pronta para uso.",
+    "goToDashboard": "Ir para o Painel",
+    "setupComplete": "Configuração Concluída",
+    "organizationSlugTaken": "Este slug de organização já está em uso. Tente outro.",
+    "failedToCreateOrganization": "Falha ao criar organização. Tente novamente.",
+    "redirectingToDashboard": "Redirecionando para o painel...",
+    "mustProvideNameAndSlug": "Você deve fornecer um nome e slug para sua organização.",
+    "setupFirstOrganization": "Configure sua primeira organização para começar a usar o RS Frotas",
+    "setupNewOrganization": "Configure uma nova organização para sua equipe",
+    "newUserAlert": "Como um novo usuário, você precisa criar uma organização para acessar os recursos da plataforma.",
+    "skipForNow": "Pular por enquanto",
+    "startNow": "Começar Agora",
+    "validation": {
+      "nameRequired": "Nome da organização é obrigatório",
+      "nameTooShort": "Nome da organização deve ter pelo menos 2 caracteres",
+      "nameTooLong": "Nome da organização deve ter menos de 100 caracteres",
+      "descriptionTooLong": "Descrição deve ter menos de 500 caracteres"
+    },
+    "descriptionOptional": "Descrição opcional para sua organização",
+    "createForm": {
+      "steps": {
+        "welcome": "Bem-vindo",
+        "organization": "Organização"
+      },
+      "back": "Voltar",
+      "organization": {
+        "title": "Detalhes da Organização",
+        "subtitle": "Conte-nos sobre sua organização para personalizar sua experiência",
+        "nameLabel": "Nome da Organização",
+        "namePlaceholder": "Acme Corp",
+        "descriptionLabel": "Descrição",
+        "descriptionPlaceholder": "O que sua organização faz?",
+        "descriptionHelp": "Opcional - Ajude-nos a entender seu negócio",
+        "createButton": "Criar Organização"
+      },
+      "success": {
+        "title": "Bem-vindo à Sua Organização!",
+        "trialActive": "Teste Ativo",
+        "settingUpWorkspace": "Configurando seu espaço de trabalho...",
+        "continueToOnboarding": "Continuar para Onboarding",
+        "continueToDashboard": "Continuar para o Painel",
+        "autoRedirectCountdown": "Redirecionando automaticamente em {{countdown}} segundo{{plural}}...",
+        "subtitle": "Sua organização foi criada com sucesso. Vamos configurar seu espaço de trabalho."
+      }
+    }
+  },
+  "navigation": {
+    "core": "Principal",
+    "communication": "Comunicação",
+    "management": "Gerenciamento",
+    "settings": "Configurações",
+    "dashboard": "Painel",
+    "chats": "Conversas",
+    "contacts": "Contatos",
+    "agents": "Agentes",
+    "team": "Equipe",
+    "whatsappInstances": "Instâncias WhatsApp",
+    "profile": "Perfil",
+    "organizations": "Organizações",
+    "logout": "Sair",
+    "switchOrganization": "Trocar Organização",
+    "accountSettings": "Configurações da Conta",
+    "sections": {
+      "overview": "Visão Geral",
+      "teamManagement": "Gerenciamento de Equipe",
+      "crmSales": "CRM & Vendas",
+      "automation": "Automação",
+      "channels": "Canais",
+      "settings": "Configurações"
+    },
+    "items": {
+      "dashboard": "Painel",
+      "setupInitial": "Configuração Inicial",
+      "teamMembers": "Membros da Equipe",
+      "contacts": "Contatos",
+      "chats": "Conversas",
+      "callHistory": "Histórico de Chamadas",
+      "batchCalls": "Ligações em Lote",
+      "calendars": "Calendários",
+      "aiAgents": "Agentes IA",
+      "campaigns": "Campanhas",
+      "bulkMessaging": "Mensagens em Massa",
+      "whatsappInstances": "Instâncias WhatsApp",
+      "instagramAccounts": "Contas Instagram",
+      "phoneNumbers": "Números de Telefone",
+      "organization": "Organização",
+      "integrationLogs": "Logs de Integração",
+      "profile": "Perfil",
+      "notifications": "Notificações"
+    },
+    "footer": {
+      "copyright": "© {{year}} RS Frotas",
+      "description": "Sistema de Rastreamento e Gestão de Frotas"
+    },
+    "badges": {
+      "soon": "Em Breve",
+      "new": "Novo",
+      "beta": "Beta"
+    },
+    "header": {
+      "switchOrganization": "Trocar Organização",
+      "manageOrganizations": "Gerenciar Organizações",
+      "createOrganization": "Criar Organização",
+      "myAccount": "Minha Conta",
+      "profileSettings": "Configurações do Perfil",
+      "organizations": "Organizações",
+      "signOut": "Sair"
+    }
+  },
+  "profile": {
+    "profileInformation": "Informações do Perfil",
+    "updatePersonalDetails": "Atualize seus dados pessoais.",
+    "nameLabel": "Nome",
+    "nameCannotBeEmpty": "O nome não pode estar vazio.",
+    "phoneNumberOptional": "Número de Telefone (Opcional)",
+    "publicDisplayName": "Este é seu nome de exibição público.",
+    "phoneDescription": "Usado para recuperação de conta ou notificações, se habilitado.",
+    "profileUpdatedSuccessfully": "Perfil atualizado com sucesso!",
+    "failedToUpdateProfile": "Falha ao atualizar perfil.",
+    "updating": "Atualizando...",
+    "invalidEmail": "Endereço de email inválido",
+    "emailLabel": "Endereço de Email"
+  },
+  "twoFactor": {
+    "title": "Autenticação de Dois Fatores (2FA)",
+    "description": "Melhore a segurança da sua conta habilitando a Autenticação de Dois Fatores.",
+    "enabled": "2FA está Habilitado",
+    "enabledDescription": "Sua conta está protegida com Autenticação de Dois Fatores.",
+    "disabled": "2FA está Desabilitado",
+    "disabledDescription": "Habilite o 2FA para adicionar uma camada extra de segurança à sua conta.",
+    "scanQrCode": "Escaneie o código QR com seu aplicativo autenticador (ex: Google Authenticator, Authy):",
+    "manualEntry": "Ou, digite esta chave manualmente no seu aplicativo autenticador:",
+    "verificationCode": "Código de Verificação",
+    "enterSixDigitCode": "Digite o código de 6 dígitos",
+    "verifying": "Verificando...",
+    "verifyAndEnable": "Verificar e Habilitar 2FA",
+    "confirmDisable": "Digite um código do seu aplicativo autenticador para confirmar a desabilitação do 2FA.",
+    "disabling": "Desabilitando...",
+    "confirmAndDisable": "Confirmar e Desabilitar 2FA",
+    "disable2FA": "Desabilitar 2FA",
+    "enable2FA": "Habilitar 2FA",
+    "setupSuccess": "2FA habilitado com sucesso!",
+    "disableSuccess": "2FA desabilitado com sucesso!",
+    "setupFailed": "Falha ao iniciar configuração do 2FA.",
+    "invalidCode": "Código de verificação inválido.",
+    "disableFailed": "Código de verificação inválido. Falha ao desabilitar 2FA.",
+    "enterVerificationCode": "Por favor, digite o código de verificação.",
+    "qrCodeAlt": "Código QR do 2FA"
+  },
+  "pageTitle": {
+    "default": "RS Frotas - Gestão Inteligente de Frotas",
+    "dashboard": "Painel",
+    "team": "Equipe",
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "verifyEmail": "Verificar Email",
+    "settings": "Configurações",
+    "createOrganization": "Criar Organização",
+    "acceptInvitation": "Aceitar Convite",
+    "profile": "Configurações de Perfil",
+    "organizations": "Configurações da Organização",
+    "resetPassword": "Redefinir Senha",
+    "forgotPassword": "Esqueci a Senha",
+    "notifications": "Notificações"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "unread": "não lidas",
+    "loading": "Carregando notificações...",
+    "noNotifications": "Nenhuma notificação",
+    "viewAll": "Ver todas as notificações",
+    "markAllAsRead": "Marcar todas como lidas",
+    "markAsRead": "Marcar como lida",
+    "all": "Todas",
+    "unreadOnly": "Apenas não lidas",
+    "readOnly": "Apenas lidas",
+    "filter": "Filtrar",
+    "empty": "Você ainda não tem notificações.",
+    "emptyFiltered": "Nenhuma notificação corresponde ao seu filtro."
+  },
+  "team": {
+    "title": "Membros da Equipe",
+    "description": "Gerencie os membros da sua equipe e suas permissões",
+    "members": "Membros",
+    "invitations": "Convites",
+    "joined": "Entrou em",
+    "noName": "Sem nome",
+    "inviteMember": "Convidar Membro",
+    "inviteDialog": {
+      "title": "Convidar Membro da Equipe",
+      "description": "Convide alguém para se juntar à {{organizationName}}",
+      "emailLabel": "Endereço de Email",
+      "emailPlaceholder": "colega@empresa.com",
+      "roleLabel": "Função",
+      "memberOption": "Membro",
+      "adminOption": "Administrador",
+      "sendButton": "Enviar Convite",
+      "sending": "Enviando...",
+      "validation": {
+        "emailRequired": "Email é obrigatório",
+        "emailInvalid": "Email inválido",
+        "emailTooLong": "Email muito longo (máximo 254 caracteres)",
+        "roleRequired": "Função é obrigatória",
+        "roleInvalid": "Função inválida"
+      }
+    },
+    "actions": {
+      "promoteToAdmin": "Promover a Administrador",
+      "demoteToMember": "Rebaixar a Membro",
+      "removeMember": "Remover Membro",
+      "resend": "Reenviar",
+      "revoke": "Revogar"
+    },
+    "confirmDialogs": {
+      "revokeInvitation": {
+        "title": "Revogar Convite",
+        "description": "Tem certeza de que deseja revogar este convite? Esta ação não pode ser desfeita."
+      },
+      "removeMember": {
+        "title": "Remover Membro",
+        "description": "Tem certeza de que deseja remover este membro da equipe? Eles perderão acesso à organização."
+      },
+      "cancel": "Cancelar",
+      "revoke": "Revogar",
+      "remove": "Remover"
+    },
+    "invitationDetails": {
+      "invitedBy": "Convidado por",
+      "sent": "Enviado em",
+      "expires": "Expira em"
+    },
+    "emptyStates": {
+      "noMembers": "Nenhum membro na equipe ainda",
+      "inviteFirstMember": "Convidar Primeiro Membro",
+      "noInvitations": "Nenhum convite pendente",
+      "sendFirstInvitation": "Enviar Primeiro Convite"
+    },
+    "toastMessages": {
+      "error": "Erro",
+      "memberRoleUpdated": "Função do membro atualizada",
+      "memberRoleUpdatedDescription": "A função do membro foi atualizada com sucesso",
+      "memberRemoved": "Membro removido",
+      "memberRemovedDescription": "O membro foi removido da equipe",
+      "invitationSent": "Convite enviado",
+      "invitationSentDescription": "Um email de convite foi enviado",
+      "invitationResent": "Convite reenviado",
+      "invitationResentDescription": "O email de convite foi reenviado",
+      "invitationRevoked": "Convite revogado",
+      "invitationRevokedDescription": "O convite foi revogado com sucesso"
+    },
+    "errorMessages": {
+      "failedToLoadMembers": "Falha ao carregar membros da equipe",
+      "failedToLoadInvitations": "Falha ao carregar convites",
+      "failedToUpdateMemberRole": "Falha ao atualizar função do membro",
+      "failedToRemoveMember": "Falha ao remover membro",
+      "failedToSendInvitation": "Falha ao enviar convite",
+      "failedToResendInvitation": "Falha ao reenviar convite",
+      "failedToRevokeInvitation": "Falha ao revogar convite",
+      "invitationAlreadySent": "Convite já enviado",
+      "invitationAlreadySentDescription": "Um convite já foi enviado para este email",
+      "userAlreadyExists": "Usuário já existe",
+      "userAlreadyExistsDescription": "Este usuário já é membro da organização",
+      "invitationExpired": "Convite expirado",
+      "invitationExpiredDescription": "Este convite expirou e precisa ser enviado novamente",
+      "invitationAlreadyAccepted": "Convite já aceito",
+      "invitationAlreadyAcceptedDescription": "Este convite já foi aceito"
+    }
+  },
+  "dashboard": {
+    "planLimits": {
+      "needMore": {
+        "upgrade": "Fazer Upgrade"
+      }
+    }
+  }
+}

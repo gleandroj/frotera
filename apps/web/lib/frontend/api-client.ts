@@ -1,0 +1,308 @@
+import axios, {
+  type AxiosError,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
+import { io, Socket } from "socket.io-client";
+import {
+  getLocalStorage,
+  removeLocalStorage,
+  setLocalStorage,
+} from "./client-utils";
+
+export const externalApiUrl = process.env.NEXT_PUBLIC_API_URL;
+export const internalApiUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+// Create axios instance
+export const externalApi = axios.create({
+  baseURL: externalApiUrl || "http://localhost:3001",
+  timeout: 10000,
+});
+
+// Create axios instance
+export const internalApi = axios.create({
+  baseURL: internalApiUrl || "http://localhost:3000",
+  timeout: 10000,
+});
+
+// Token management
+export const getAccessToken = (): string | null => {
+  return getLocalStorage("accessToken");
+};
+
+export const getRefreshToken = (): string | null => {
+  return getLocalStorage("refreshToken");
+};
+
+// Export a function to create a socket connection with latest auth/org info
+export function buildSocket(orgId: string): Socket {
+  return io((externalApiUrl || "http://localhost:3001") + "/messages", {
+    autoConnect: false,
+    transports: ["websocket", "polling"], // Fallback to polling if websocket fails
+    reconnection: false, // We handle reconnection manually for better control
+    auth: {
+      token: getAccessToken(),
+      organizationId: orgId,
+    },
+  });
+}
+
+const setTokens = (accessToken: string, refreshToken: string): void => {
+  setLocalStorage("accessToken", accessToken);
+  setLocalStorage("refreshToken", refreshToken);
+};
+
+const clearTokens = (): void => {
+  removeLocalStorage("accessToken");
+  removeLocalStorage("refreshToken");
+};
+
+// Request interceptor to add auth token and locale
+externalApi.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    // Only add token for requests to our domain
+    if (config.url?.startsWith("/")) {
+      const token = getAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    // Add locale header for potential future use
+    if (typeof document !== "undefined") {
+      const locale = document.documentElement.lang || "en";
+      config.headers["Accept-Language"] = locale;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for token refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
+externalApi.interceptors.response.use(
+  (response: AxiosResponse) => {
+    return response;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+    // Don't handle 401s for login endpoint
+    if (originalRequest.url?.includes("/api/auth/login")) {
+      return Promise.reject(error);
+    }
+
+    // Handle 401 errors (unauthorized)
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue the request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            // Use externalApi instead of undefined api
+            return externalApi(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = getRefreshToken();
+
+      if (!refreshToken) {
+        // No refresh token, redirect to login
+        clearTokens();
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
+      }
+
+      try {
+        // Attempt to refresh the token
+        const response = await axios.post(
+          `${externalApi.defaults.baseURL}/api/auth/refresh`,
+          {
+            refreshToken,
+          }
+        );
+
+        const { accessToken, refreshToken: newRefreshToken } =
+          response.data.tokens;
+
+        setTokens(accessToken, newRefreshToken);
+        processQueue(null, accessToken);
+
+        // Retry the original request with new token
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
+
+        // Use externalApi instead of undefined api
+        return externalApi(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, clear tokens and redirect to login
+        processQueue(refreshError, null);
+        clearTokens();
+
+        if (typeof window !== "undefined") {
+          // Show a toast or notification about session expiry
+          console.log("Session expired. Please log in again.");
+          window.location.href = "/login?expired=true";
+        }
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Handle service suspension (503)
+    if (error.response?.status === 503) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/suspended";
+      }
+      return Promise.reject(error);
+    }
+
+    // Handle other errors
+    if (error.response?.status === 403) {
+      // Forbidden - might need 2FA verification
+      const errorData = error.response.data as any;
+      if (errorData.error?.includes("2FA")) {
+        if (typeof window !== "undefined") {
+          window.location.href = "/2fa-verify";
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Auth-specific API calls
+export const authAPI = {
+  login: (email: string, password: string, twoFactorCode?: string) =>
+    externalApi.post("/api/auth/login", { email, password, twoFactorCode }),
+  signup: (
+    email: string, 
+    password: string, 
+    name?: string, 
+    language?: string,
+    organizationName?: string
+  ) =>
+    externalApi.post("/api/auth/signup", { 
+      email, 
+      password, 
+      name, 
+      language,
+      organizationName
+    }),
+  logout: () => externalApi.post("/api/auth/logout"),
+  refresh: (refreshToken: string) =>
+    externalApi.post("/api/auth/refresh", { refreshToken }),
+  setup2FA: () => externalApi.post("/api/auth/2fa/setup"),
+  verify2FA: (token: string, enable?: boolean) =>
+    externalApi.post("/api/auth/2fa/verify", { token, enable }),
+  disable2FA: (token: string) =>
+    externalApi.post("/api/auth/2fa/disable", { token }),
+  verifyEmail: (token: string) =>
+    externalApi.post("/api/auth/verify-email", { token }),
+  updateLanguage: (language: string) =>
+    externalApi.patch("/api/auth/language", { language }),
+};
+
+// Organization-specific API calls
+export const organizationAPI = {
+  create: (
+    name: string,
+    description?: string,
+    priceId?: string,
+    paymentMethodId?: string
+  ) =>
+    externalApi.post("/api/organizations", {
+      name,
+      description,
+      ...(priceId && paymentMethodId && { priceId, paymentMethodId }),
+    }),
+  getUserOrganizations: () => externalApi.get("/api/organizations"),
+  getDetails: (organizationId: string) =>
+    externalApi.get(`/api/organizations/${organizationId}`),
+  update: (
+    organizationId: string,
+    data: { name?: string; description?: string }
+  ) => externalApi.patch(`/api/organizations/${organizationId}`, data),
+  getMembers: (organizationId: string) =>
+    externalApi.get(`/api/organizations/${organizationId}/members`),
+  updateMemberRole: (organizationId: string, memberId: string, role: string) =>
+    externalApi.patch(
+      `/api/organizations/${organizationId}/members/${memberId}`,
+      { role }
+    ),
+  removeMember: (organizationId: string, memberId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/members/${memberId}`
+    )
+};
+
+// Invitation-specific API calls
+export const invitationAPI = {
+  send: (
+    email: string,
+    organizationId: string,
+    role: "ADMIN" | "MEMBER" = "MEMBER",
+    language?: string
+  ) =>
+    externalApi.post(`/api/organizations/${organizationId}/invitations`, {
+      email,
+      role,
+      language,
+    }),
+  accept: (token: string, data?: { password?: string; name?: string }) =>
+    externalApi.post(`/api/invitations/accept`, { token, ...data }),
+  check: (token: string) =>
+    externalApi.post(`/api/invitations/check`, { token }),
+  revoke: (organizationId: string, invitationId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/invitations/${invitationId}`
+    ),
+  resend: (organizationId: string, invitationId: string, language?: string) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/invitations/resend`,
+      {
+        invitationId,
+        language,
+      }
+    ),
+  list: (organizationId: string) =>
+    externalApi.get(`/api/organizations/${organizationId}/invitations`),
+};

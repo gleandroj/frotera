@@ -1,0 +1,13 @@
+{
+  "go.goroot": "/Users/gabrielleandrojuniorsiqueira/.asdf/installs/golang/1.22.3/go",
+  "go.gopath": "/Users/gabrielleandrojuniorsiqueira/.asdf/installs/golang/1.22.3/packages",
+  "go.toolsGopath": "/Users/gabrielleandrojuniorsiqueira/.asdf/installs/golang/1.22.3/packages",
+  "go.alternateTools": {
+    "go": "/Users/gabrielleandrojuniorsiqueira/.asdf/installs/golang/1.22.3/go/bin/go",
+    "dlv": "/Users/gabrielleandrojuniorsiqueira/.asdf/installs/golang/1.22.3/bin/dlv"
+  },
+  "go.useLanguageServer": true,
+  "gopls": {
+    "formatting.gofumpt": true
+  }
+}

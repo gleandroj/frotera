@@ -1,0 +1,108 @@
+{
+  "cursor.ai": {
+    "model": "claude-3.5-sonnet",
+    "temperature": 0.1,
+    "maxTokens": 4000,
+    "systemPrompt": "You are an expert TypeScript/React/Next.js/NestJS developer working on an AI Agent Platform monorepo. Follow the rules in .cursor/rules strictly. Focus on security, performance, and maintainable code. Use NestJS patterns for backend API development.",
+    "contextWindow": 200000,
+    "includeFiles": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.md",
+      "**/*.prisma",
+      "**/*.sql",
+      "**/*.spec.ts",
+      "**/*.e2e-spec.ts"
+    ],
+    "excludeFiles": [
+      "node_modules/**",
+      ".next/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "*.log",
+      ".env*"
+    ]
+  },
+  "editor": {
+    "formatOnSave": true,
+    "defaultFormatter": "prettier",
+    "tabSize": 2,
+    "insertSpaces": true,
+    "rulers": [80, 100],
+    "wordWrap": "bounded"
+  },
+  "typescript": {
+    "preferences": {
+      "includePackageJsonAutoImports": "auto",
+      "includeCompletionsForModuleExports": true,
+      "includeCompletionsWithSnippetText": true,
+      "includeCompletionsWithInsertText": true,
+      "allowIncompleteCompletions": true,
+      "allowRenameOfImportPath": true
+    },
+    "suggest": {
+      "autoImports": true,
+      "includeCompletionsForModuleExports": true,
+      "includeCompletionsWithSnippetText": true,
+      "includeCompletionsWithInsertText": true
+    }
+  },
+  "files": {
+    "associations": {
+      "*.prisma": "prisma",
+      "*.graphql": "graphql",
+      "*.gql": "graphql",
+      "*.spec.ts": "typescript",
+      "*.e2e-spec.ts": "typescript"
+    },
+    "exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.turbo": true,
+      "**/coverage": true,
+      "**/.nyc_output": true,
+      "**/*.log": true,
+      "**/.env*": true
+    }
+  },
+  "search": {
+    "exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.turbo": true,
+      "**/coverage": true,
+      "**/*.log": true
+    }
+  },
+  "emmet": {
+    "includeLanguages": {
+      "typescript": "html",
+      "typescriptreact": "html"
+    }
+  },
+  "tailwindCSS": {
+    "includeLanguages": {
+      "typescript": "html",
+      "typescriptreact": "html"
+    },
+    "experimental": {
+      "classRegex": [
+        "cn\\(([^)]*)\\)",
+        "clsx\\(([^)]*)\\)",
+        "classnames\\(([^)]*)\\)"
+      ]
+    }
+  },
+  "nest": {
+    "autoImport": true,
+    "suggestDecorators": true
+  }
+}

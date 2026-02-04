@@ -1,0 +1,30 @@
+{
+  "name": "rsfrotas",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "translate:i18n": "tsx scripts/translate-i18n.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "prettier": "^3.2.5",
+    "turbo": "latest",
+    "typescript": "^5",
+    "tsx": "^4.7.0"
+  },
+  "packageManager": "pnpm@8.15.4",
+  "dependencies": {
+    "rsfrotas": "link:",
+    "zod": "^3.25.51",
+    "openai": "^4.20.0"
+  }
+}

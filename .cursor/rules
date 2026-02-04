@@ -1,0 +1,390 @@
+# Cursor AI Rules for NEO Monorepo
+
+## Project Overview
+This is a monorepo containing an AI Agent Platform built with:
+- `apps/web`: Next.js 14 web application
+- `apps/api`: NestJS API application with TypeScript
+- `packages/shared`: Shared utilities and components
+- PostgreSQL database with Prisma ORM
+- Authentication with JWT and 2FA
+- Tailwind CSS + shadcn/ui for styling
+
+## Code Style & Standards
+
+### TypeScript
+- Use strict TypeScript configuration
+- Prefer explicit types over `any`
+- Use interfaces for object shapes, types for unions/primitives
+- Always include proper JSDoc comments for public APIs
+- Use class-validator for DTO validation
+- Use class-transformer for data transformation
+
+### React/Next.js (Frontend)
+- Use functional components with hooks
+- Prefer `useState` and `useEffect` over class components
+- Use Next.js 14 App Router patterns
+- Implement proper error boundaries
+- Use React.memo() for expensive components
+- Follow the "children as props" pattern for flexible components
+
+### NestJS (Backend)
+- Follow NestJS decorator patterns
+- Use dependency injection for services
+- Implement proper guards for authentication
+- Use interceptors for request/response transformation
+- Use pipes for validation
+- Use custom decorators for metadata
+- Follow module-based architecture
+- Use proper exception filters for error handling
+
+### File Organization
+- Use kebab-case for file names
+- Group related files in feature folders
+- Keep components close to where they're used
+- Use index files for clean imports
+- Separate business logic from UI components
+- Follow NestJS module structure: controllers, services, DTOs, entities
+
+### Naming Conventions
+- Components: PascalCase (e.g., `UserProfile.tsx`)
+- Files: kebab-case (e.g., `user-profile.tsx`)
+- Functions: camelCase (e.g., `getUserData`)
+- Constants: UPPER_SNAKE_CASE (e.g., `API_ENDPOINTS`)
+- Types/Interfaces: PascalCase (e.g., `UserProfile`)
+- NestJS Controllers: PascalCase with 'Controller' suffix (e.g., `UsersController`)
+- NestJS Services: PascalCase with 'Service' suffix (e.g., `UsersService`)
+- DTOs: PascalCase with 'Dto' suffix (e.g., `CreateUserDto`)
+
+## Architecture Guidelines
+
+### Monorepo Structure
+- Keep shared code in `packages/shared`
+- Use workspace dependencies for internal packages
+- Maintain clear boundaries between apps
+- Use Turbo for build orchestration
+- NestJS API in `apps/api` with module-based structure
+
+### Database & API (NestJS)
+- Use Prisma for database operations
+- Implement proper error handling in controllers
+- Use class-validator for DTO validation
+- Follow RESTful conventions
+- Implement proper authentication guards
+- Use interceptors for response transformation
+- Use exception filters for error handling
+- Implement proper logging with NestJS Logger
+
+### State Management
+- Use React Context for global state sparingly
+- Prefer local state with useState/useReducer
+- Use SWR or React Query for server state
+- Keep state as close to where it's used as possible
+
+## Security Best Practices
+
+### Authentication & Authorization
+- Always validate JWT tokens with NestJS guards
+- Implement proper role-based access control
+- Use secure session management
+- Sanitize user inputs
+- Implement rate limiting with NestJS interceptors
+- Use Passport.js strategies for authentication
+
+### Data Protection
+- Never expose sensitive data in client-side code
+- Use environment variables for secrets
+- Implement proper CORS policies
+- Validate all API inputs with class-validator
+- Use encryption for sensitive data
+
+## Performance Guidelines
+
+### Frontend
+- Use Next.js Image component for images
+- Implement proper code splitting
+- Use React.memo() for expensive renders
+- Optimize bundle size with tree shaking
+- Use proper loading states
+
+### Backend (NestJS)
+- Implement proper caching strategies
+- Use database indexes appropriately
+- Optimize database queries
+- Implement pagination for large datasets
+- Use compression middleware
+- Implement proper connection pooling
+- Use async/await properly in services
+
+## Testing Strategy
+
+### Unit Tests
+- Test business logic functions
+- Mock external dependencies
+- Use descriptive test names
+- Aim for high coverage on critical paths
+- Use Jest for NestJS testing
+- Test controllers, services, and guards separately
+
+### Integration Tests
+- Test API endpoints with Supertest
+- Test database operations
+- Use test databases for isolation
+- Test authentication flows
+- Test validation pipes
+
+### E2E Tests
+- Test critical user flows
+- Use Playwright or Cypress for frontend
+- Test authentication flows
+- Test API integration
+
+## Development Workflow
+
+### Git Practices
+- Use conventional commits
+- Create feature branches from main
+- Write descriptive commit messages
+- Keep commits atomic and focused
+
+### Code Review
+- Review for security vulnerabilities
+- Check for performance issues
+- Ensure proper error handling
+- Verify accessibility compliance
+- Check NestJS patterns and decorators
+
+## Dependencies & Tools
+
+### Package Management
+- Use pnpm as package manager
+- Keep dependencies up to date
+- Audit dependencies regularly
+- Use exact versions for critical packages
+
+### Development Tools
+- Use Prettier for code formatting
+- Use ESLint for code quality
+- Use TypeScript strict mode
+- Use Turbo for build optimization
+- Use NestJS CLI for scaffolding
+
+## Error Handling
+
+### Frontend
+- Implement proper error boundaries
+- Show user-friendly error messages
+- Log errors for debugging
+- Handle network errors gracefully
+
+### Backend (NestJS)
+- Use proper HTTP status codes
+- Return structured error responses
+- Use exception filters for global error handling
+- Log errors with context using NestJS Logger
+- Implement proper validation with class-validator
+
+## Accessibility
+
+### Standards
+- Follow WCAG 2.1 AA guidelines
+- Use semantic HTML elements
+- Provide proper alt text for images
+- Ensure keyboard navigation
+- Test with screen readers
+
+### Implementation
+- Use ARIA attributes appropriately
+- Maintain proper color contrast
+- Provide focus indicators
+- Test with accessibility tools
+
+## Documentation
+
+### Code Documentation
+- Document complex functions
+- Explain business logic
+- Use JSDoc for public APIs
+- Keep README files updated
+- Document NestJS modules and services
+
+### API Documentation
+- Document all endpoints with Swagger
+- Include request/response examples
+- Document error codes
+- Keep OpenAPI specs updated
+- Use NestJS Swagger decorators
+
+## Deployment & Environment
+
+### Environment Variables
+- Use .env.local for local development
+- Never commit secrets to version control
+- Use proper environment validation
+- Document required environment variables
+- Use ConfigModule for NestJS configuration
+
+### Build Process
+- Use Turbo for optimized builds
+- Implement proper CI/CD pipelines
+- Use Vercel for frontend deployment
+- Use appropriate hosting for NestJS API
+- Monitor build performance
+
+## Monitoring & Logging
+
+### Application Monitoring
+- Implement proper logging with NestJS Logger
+- Monitor performance metrics
+- Track user interactions
+- Set up error alerting
+- Use interceptors for request logging
+
+### Database Monitoring
+- Monitor query performance
+- Track connection usage
+- Set up backup monitoring
+- Monitor disk usage
+
+## Specific Rules for This Project
+
+### AI Agent Features
+- Implement proper prompt engineering
+- Handle AI API rate limits
+- Cache AI responses appropriately
+- Implement fallback mechanisms
+- Use NestJS services for AI operations
+
+### User Management
+- Implement proper user registration
+- Handle email verification
+- Implement password reset flows
+- Manage user sessions properly
+- Use NestJS guards for authentication
+
+### File Uploads
+- Validate file types and sizes
+- Implement secure file storage
+- Use proper file naming conventions
+- Handle upload errors gracefully
+- Use NestJS interceptors for file processing
+
+## Common Patterns to Follow
+
+### Frontend Component Patterns
+```typescript
+// Prefer this pattern for flexible components
+interface ComponentProps {
+  children: React.ReactNode;
+  className?: string;
+  // ... other props
+}
+
+export function Component({ children, className, ...props }: ComponentProps) {
+  return (
+    <div className={cn("base-styles", className)} {...props}>
+      {children}
+    </div>
+  );
+}
+```
+
+### NestJS Controller Patterns
+```typescript
+// Use this pattern for NestJS controllers
+@Controller('users')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async create(@Body() createUserDto: CreateUserDto) {
+    try {
+      const result = await this.usersService.create(createUserDto);
+      return { success: true, data: result };
+    } catch (error) {
+      throw new HttpException(
+        'FAILED_TO_CREATE_USER',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async findAll() {
+    return this.usersService.findAll();
+  }
+}
+```
+
+### NestJS Service Patterns
+```typescript
+// Use this pattern for NestJS services
+@Injectable()
+export class UsersService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logger: Logger
+  ) {}
+
+  async create(createUserDto: CreateUserDto) {
+    try {
+      const user = await this.prisma.user.create({
+        data: createUserDto,
+      });
+
+      this.logger.log(`User created: ${user.id}`);
+      return user;
+    } catch (error) {
+      this.logger.error('Failed to create user', error);
+      throw new HttpException(
+        'FAILED_TO_CREATE_USER',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+}
+```
+
+### DTO Patterns
+```typescript
+// Use this pattern for DTOs
+export class CreateUserDto {
+  @IsEmail()
+  @ApiProperty({ description: 'User email address' })
+  email: string;
+
+  @IsString()
+  @MinLength(8)
+  @ApiProperty({ description: 'User password' })
+  password: string;
+
+  @IsString()
+  @ApiProperty({ description: 'User name' })
+  name: string;
+}
+```
+
+### Database Query Patterns (NestJS)
+```typescript
+// Use this pattern for database operations in NestJS services
+async getUserData(userId: string) {
+  try {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('USER_NOT_FOUND');
+    }
+
+    return user;
+  } catch (error) {
+    this.logger.error('Failed to fetch user data', { userId, error });
+    throw error;
+  }
+}
+```
+
+Remember to always prioritize security, performance, and user experience in your implementations. Follow NestJS best practices and patterns for the backend API.

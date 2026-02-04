@@ -1,0 +1,97 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+.nyc_output
+
+# next.js
+.next/
+out/
+apps/web/.next/
+apps/web/out/
+standalone-build
+
+# NestJS
+apps/api/dist/
+apps/api/node_modules/
+
+
+# Turborepo
+.turbo
+
+# production
+dist/
+build/
+*.tsbuildinfo
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs
+*.log
+
+# Cache
+.cache
+.eslintcache
+.stylelintcache
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+.turbo
+
+# PWA files
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+
+
+# Shared package
+packages/shared/dist/
+packages/shared/node_modules/
+
+# AI Tools
+CLAUDE.md
+AGENTS.md
+.specify
+.claude
+
+# Dumps
+*.dump
