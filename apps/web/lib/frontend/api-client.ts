@@ -47,6 +47,20 @@ export function buildSocket(orgId: string): Socket {
   });
 }
 
+// Tracker positions WebSocket (namespace /tracker-positions)
+export function buildTrackerPositionsSocket(orgId: string): Socket {
+  const base = externalApiUrl || "http://localhost:3001";
+  return io(base + "/tracker-positions", {
+    autoConnect: false,
+    transports: ["websocket", "polling"],
+    reconnection: true,
+    auth: {
+      token: getAccessToken(),
+      organizationId: orgId,
+    },
+  });
+}
+
 const setTokens = (accessToken: string, refreshToken: string): void => {
   setLocalStorage("accessToken", accessToken);
   setLocalStorage("refreshToken", refreshToken);
@@ -305,4 +319,35 @@ export const invitationAPI = {
     ),
   list: (organizationId: string) =>
     externalApi.get(`/api/organizations/${organizationId}/invitations`),
+};
+
+// Tracker devices and positions
+export interface PositionHistoryQuery {
+  from?: string;
+  to?: string;
+  limit?: number;
+}
+
+export const trackerDevicesAPI = {
+  list: (organizationId: string) =>
+    externalApi.get(
+      `/api/organizations/${organizationId}/tracker-devices`
+    ),
+  get: (organizationId: string, deviceId: string) =>
+    externalApi.get(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}`
+    ),
+  getLastPosition: (organizationId: string, deviceId: string) =>
+    externalApi.get(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}/positions/last`
+    ),
+  getPositionHistory: (
+    organizationId: string,
+    deviceId: string,
+    query?: PositionHistoryQuery
+  ) =>
+    externalApi.get(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}/positions`,
+      { params: query }
+    ),
 };

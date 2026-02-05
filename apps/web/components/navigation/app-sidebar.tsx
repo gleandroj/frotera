@@ -17,6 +17,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Building2,
   Home,
+  Smartphone,
   User,
   Users,
 } from "lucide-react";
@@ -54,6 +55,12 @@ export function AppSidebar() {
           href: "/dashboard",
           icon: Home,
           current: pathname === "/dashboard",
+        },
+        {
+          name: t('navigation.items.devices'),
+          href: "/dashboard/devices",
+          icon: Smartphone,
+          current: pathname.startsWith("/dashboard/devices"),
         },
       ],
     },

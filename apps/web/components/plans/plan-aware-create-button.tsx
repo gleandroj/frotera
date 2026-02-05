@@ -55,8 +55,6 @@ export function PlanAwareCreateButton({
     <PlanLimitWrapper
       resourceType={resourceType}
       onAction={handleAction}
-      disabled={disabled}
-      isLoading={isLoading}
     >
       <Button
         variant={variant}
