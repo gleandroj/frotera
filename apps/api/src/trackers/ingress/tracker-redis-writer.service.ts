@@ -75,6 +75,17 @@ export class TrackerRedisWriterService {
       imei,
     });
 
+    const pubChannel = `tracker:position:${deviceId}`;
+    const payload = JSON.stringify({
+      latitude: position.latitude,
+      longitude: position.longitude,
+      altitude: position.altitude ?? null,
+      speed: position.speed ?? null,
+      heading: position.heading ?? null,
+      recordedAt: position.recordedAt,
+    });
+    await this.redis.publish(pubChannel, payload);
+
     this.logger.debug(`Pushed position for device ${deviceId}`);
   }
 
