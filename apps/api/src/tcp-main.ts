@@ -30,7 +30,7 @@ async function bootstrap() {
     process.exit(0);
   });
 
-  console.log(`TCP App process started on port ${process.env.TRACKER_TCP_PORT}.`);
+  console.log(`TCP App process started.`);
 }
 
 bootstrap();
