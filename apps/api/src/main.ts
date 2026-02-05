@@ -24,20 +24,14 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || "development",
-    integrations: [
-      nodeProfilingIntegration(),
-    ],
-    // Performance Monitoring
+    integrations: [nodeProfilingIntegration()],
     tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
-    // Set sampling rate for profiling - this is relative to tracesSampleRate
     profilesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
   });
 }
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // Get ConfigService once
   const configService = app.get(ConfigService);
 
   // Setup Redis adapter for WebSockets (BullMQ queues)
@@ -82,12 +76,8 @@ async function bootstrap() {
   });
 
   // Serve static files from public folder
-  // Path resolves to apps/api/public from the workspace root
   const publicPath = join(process.cwd(), "public");
-
-  app.useStaticAssets(publicPath, {
-    prefix: "/public/",
-  });
+  app.useStaticAssets(publicPath, { prefix: "/public/" });
 
   // Set global prefix
   app.setGlobalPrefix("api");
@@ -108,6 +98,7 @@ async function bootstrap() {
     .setVersion("1.0")
     .addBearerAuth()
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api", app, document);
 

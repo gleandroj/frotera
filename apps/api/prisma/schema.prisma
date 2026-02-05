@@ -53,11 +53,69 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships   OrganizationMember[]
-  invitations   Invitation[]
-  notifications Notification[]
+  memberships    OrganizationMember[]
+  invitations    Invitation[]
+  notifications  Notification[]
+  vehicles       Vehicle[]
+  trackerDevices TrackerDevice[]
 
   @@map("organizations")
+}
+
+enum TrackerModel {
+  X12_GT06
+  X22_NT20
+}
+
+model Vehicle {
+  id               String         @id @default(cuid())
+  organizationId   String
+  name             String?
+  plate            String?
+  trackerDeviceId  String?        @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  trackerDevice  TrackerDevice? @relation(fields: [trackerDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@map("vehicles")
+}
+
+model TrackerDevice {
+  id             String        @id @default(cuid())
+  organizationId String
+  imei           String        @unique
+  model          TrackerModel
+  name           String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle?
+  positions     DevicePosition[]
+
+  @@index([organizationId])
+  @@index([imei])
+  @@map("tracker_devices")
+}
+
+model DevicePosition {
+  id        String   @id @default(cuid())
+  deviceId  String
+  latitude  Float
+  longitude Float
+  altitude  Float?
+  speed     Float?
+  heading   Float?
+  recordedAt DateTime
+  createdAt DateTime @default(now())
+
+  device TrackerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, recordedAt])
+  @@map("device_positions")
 }
 
 model OrganizationMember {

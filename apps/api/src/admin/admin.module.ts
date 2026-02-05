@@ -11,6 +11,9 @@ const modelNames = [
   "OrganizationMember",
   "Invitation",
   "Notification",
+  "Vehicle",
+  "TrackerDevice",
+  "DevicePosition",
 ].sort();
 
 // Model name translations
@@ -21,6 +24,9 @@ const modelTranslations: Record<string, string> = {
   OrganizationMember: "Membros da Organização",
   Invitation: "Convites",
   Notification: "Notificações",
+  Vehicle: "Veículos",
+  TrackerDevice: "Dispositivos Rastreador",
+  DevicePosition: "Posições do Dispositivo",
 };
 
 // Navigation groups for organizing models by domain
@@ -28,6 +34,7 @@ const navigationGroups: Record<string, string> = {
   "users-organizations": "Usuários e Organizações",
   "authentication": "Autenticação",
   "notifications": "Notificações",
+  "trackers": "Rastreadores",
 };
 
 // Login page translations
@@ -48,6 +55,9 @@ const modelNavigationGroups: Record<string, string> = {
   Invitation: "users-organizations",
   VerificationToken: "authentication",
   Notification: "notifications",
+  Vehicle: "trackers",
+  TrackerDevice: "trackers",
+  DevicePosition: "trackers",
 };
 
 @Module({
