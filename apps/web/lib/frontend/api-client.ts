@@ -321,6 +321,74 @@ export const invitationAPI = {
     externalApi.get(`/api/organizations/${organizationId}/invitations`),
 };
 
+// Vehicles (with optional associated tracker device)
+export interface VehicleTrackerDevice {
+  id: string;
+  imei: string;
+  model: string;
+  name?: string | null;
+  connectedAt?: string | null;
+}
+
+export interface Vehicle {
+  id: string;
+  organizationId: string;
+  name?: string | null;
+  plate?: string | null;
+  trackerDeviceId?: string | null;
+  trackerDevice?: VehicleTrackerDevice | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** New device to create and link when creating a vehicle */
+export interface CreateVehicleNewDevicePayload {
+  imei: string;
+  model: string; // TrackerModel: X12_GT06 | X22_NT20
+  name?: string;
+}
+
+export interface CreateVehiclePayload {
+  name?: string;
+  plate?: string;
+  trackerDeviceId?: string;
+  /** Create and link a new tracker device (takes precedence over trackerDeviceId) */
+  newDevice?: CreateVehicleNewDevicePayload;
+}
+
+export interface UpdateVehiclePayload {
+  name?: string;
+  plate?: string;
+  trackerDeviceId?: string;
+}
+
+export const vehiclesAPI = {
+  list: (organizationId: string) =>
+    externalApi.get<Vehicle[]>(`/api/organizations/${organizationId}/vehicles`),
+  get: (organizationId: string, vehicleId: string) =>
+    externalApi.get<Vehicle>(
+      `/api/organizations/${organizationId}/vehicles/${vehicleId}`,
+    ),
+  create: (organizationId: string, payload: CreateVehiclePayload) =>
+    externalApi.post<Vehicle>(
+      `/api/organizations/${organizationId}/vehicles`,
+      payload,
+    ),
+  update: (
+    organizationId: string,
+    vehicleId: string,
+    payload: UpdateVehiclePayload,
+  ) =>
+    externalApi.patch<Vehicle>(
+      `/api/organizations/${organizationId}/vehicles/${vehicleId}`,
+      payload,
+    ),
+  delete: (organizationId: string, vehicleId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/vehicles/${vehicleId}`,
+    ),
+};
+
 // Tracker devices and positions
 export interface PositionHistoryQuery {
   from?: string;

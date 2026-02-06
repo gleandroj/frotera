@@ -7,6 +7,7 @@ import {
   IsString,
   Min,
   Max,
+  ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -130,6 +131,24 @@ export class PositionHistoryQueryDto {
 
 // ─── Vehicles ────────────────────────────────────────────────────────────────
 
+/** Minimal device info when returned nested in vehicle */
+export class VehicleTrackerDeviceDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  imei: string;
+
+  @ApiProperty({ enum: TrackerModel })
+  model: TrackerModel;
+
+  @ApiPropertyOptional()
+  name?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  connectedAt?: string | null;
+}
+
 export class VehicleResponseDto {
   @ApiProperty()
   id: string;
@@ -146,11 +165,31 @@ export class VehicleResponseDto {
   @ApiPropertyOptional()
   trackerDeviceId?: string | null;
 
+  /** Associated tracker device when included (list/get) */
+  @ApiPropertyOptional({ type: VehicleTrackerDeviceDto, nullable: true })
+  trackerDevice?: VehicleTrackerDeviceDto | null;
+
   @ApiProperty()
   createdAt: string;
 
   @ApiProperty()
   updatedAt: string;
+}
+
+/** Device info when creating a new tracker device with the vehicle */
+export class CreateVehicleNewDeviceDto {
+  @ApiProperty({ example: "123456789012345", description: "Device IMEI" })
+  @IsString()
+  imei: string;
+
+  @ApiProperty({ enum: TrackerModel, description: "Tracker model" })
+  @IsEnum(TrackerModel)
+  model: TrackerModel;
+
+  @ApiPropertyOptional({ description: "Optional device display name" })
+  @IsOptional()
+  @IsString()
+  name?: string;
 }
 
 export class CreateVehicleDto {
@@ -164,10 +203,19 @@ export class CreateVehicleDto {
   @IsString()
   plate?: string;
 
-  @ApiPropertyOptional({ description: "Link to existing tracker device" })
+  @ApiPropertyOptional({ description: "Link to existing tracker device (ignored if newDevice is set)" })
   @IsOptional()
   @IsString()
   trackerDeviceId?: string;
+
+  @ApiPropertyOptional({
+    description: "Create and link a new tracker device (IMEI + model). Takes precedence over trackerDeviceId.",
+    type: CreateVehicleNewDeviceDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateVehicleNewDeviceDto)
+  newDevice?: CreateVehicleNewDeviceDto;
 }
 
 export class UpdateVehicleDto {

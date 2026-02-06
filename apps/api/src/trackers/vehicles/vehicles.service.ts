@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { TrackerModel } from "@prisma/client";
 import { ApiCode } from "@/common/api-codes.enum";
 import { PrismaService } from "@/prisma/prisma.service";
 import {
@@ -6,24 +7,43 @@ import {
   UpdateVehicleDto,
   VehicleResponseDto,
 } from "../dto/index";
+import { TrackerDevicesService } from "../devices/tracker-devices.service";
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly devicesService: TrackerDevicesService,
+  ) {}
 
   async create(
     organizationId: string,
     dto: CreateVehicleDto,
   ): Promise<VehicleResponseDto> {
+    let trackerDeviceId: string | null = dto.trackerDeviceId ?? null;
+
+    if (dto.newDevice) {
+      const device = await this.devicesService.create(organizationId, {
+        imei: dto.newDevice.imei,
+        model: dto.newDevice.model,
+        name: dto.newDevice.name,
+      });
+      trackerDeviceId = device.id;
+    }
+
     const vehicle = await this.prisma.vehicle.create({
       data: {
         organizationId,
         name: dto.name,
         plate: dto.plate,
-        trackerDeviceId: dto.trackerDeviceId,
+        trackerDeviceId,
       },
     });
-    return this.toResponse(vehicle);
+    const withDevice = await this.prisma.vehicle.findUnique({
+      where: { id: vehicle.id },
+      include: { trackerDevice: true },
+    });
+    return this.toResponse(withDevice ?? vehicle);
   }
 
   async update(
@@ -56,6 +76,7 @@ export class VehiclesService {
   ): Promise<VehicleResponseDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: vehicleId, organizationId },
+      include: { trackerDevice: true },
     });
     if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
     return this.toResponse(vehicle);
@@ -75,21 +96,42 @@ export class VehiclesService {
     await this.prisma.vehicle.delete({ where: { id } });
   }
 
-  private toResponse(v: {
-    id: string;
-    organizationId: string;
-    name: string | null;
-    plate: string | null;
-    trackerDeviceId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): VehicleResponseDto {
+  private toResponse(
+    v: {
+      id: string;
+      organizationId: string;
+      name: string | null;
+      plate: string | null;
+      trackerDeviceId: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      trackerDevice?: {
+        id: string;
+        imei: string;
+        model: string;
+        name: string | null;
+        connectedAt?: Date | null;
+      } | null;
+    },
+  ): VehicleResponseDto {
     return {
       id: v.id,
       organizationId: v.organizationId,
       name: v.name ?? undefined,
       plate: v.plate ?? undefined,
       trackerDeviceId: v.trackerDeviceId ?? undefined,
+      trackerDevice: v.trackerDevice
+        ? {
+            id: v.trackerDevice.id,
+            imei: v.trackerDevice.imei,
+            model: v.trackerDevice.model as TrackerModel,
+            name: v.trackerDevice.name ?? undefined,
+            connectedAt:
+              v.trackerDevice.connectedAt != null
+                ? v.trackerDevice.connectedAt.toISOString()
+                : null,
+          }
+        : null,
       createdAt: v.createdAt.toISOString(),
       updatedAt: v.updatedAt.toISOString(),
     };

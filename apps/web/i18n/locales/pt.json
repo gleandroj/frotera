@@ -76,6 +76,43 @@
     "speed": "Velocidade",
     "speedUnit": "km/h"
   },
+  "vehicles": {
+    "selectOrganization": "Selecione uma organização para ver os veículos.",
+    "listDescription": "Lista de veículos da frota. Cada veículo pode ter um rastreador associado.",
+    "noVehicles": "Nenhum veículo cadastrado nesta organização.",
+    "viewDetails": "Ver detalhes",
+    "plate": "Placa",
+    "device": "Rastreador",
+    "noDevice": "Sem rastreador",
+    "backToVehicles": "← Voltar aos veículos",
+    "vehicle": "Veículo",
+    "vehicleNotFound": "Veículo não encontrado.",
+    "vehicleInformation": "Informações do veículo",
+    "noDeviceTracking": "Nenhum rastreador associado a este veículo. Associe um rastreador nas informações do veículo para ver o rastreamento em tempo real.",
+    "filterByName": "Filtrar por nome...",
+    "noResults": "Nenhum resultado.",
+    "createVehicle": "Novo veículo",
+    "editVehicle": "Editar veículo",
+    "deleteVehicle": "Excluir veículo",
+    "openActionsMenu": "Abrir menu de ações",
+    "confirmDelete": {
+      "title": "Excluir veículo",
+      "description": "Tem certeza que deseja excluir este veículo? Esta ação não pode ser desfeita."
+    },
+    "deviceAssociation": "Associação do rastreador",
+    "deviceOptionNone": "Sem rastreador",
+    "deviceOptionExisting": "Vincular rastreador existente",
+    "deviceOptionNew": "Cadastrar novo rastreador",
+    "imei": "IMEI",
+    "imeiPlaceholder": "Ex: 123456789012345",
+    "trackerModel": "Modelo do rastreador",
+    "deviceNameOptional": "Nome do rastreador (opcional)",
+    "imeiRequired": "Informe o IMEI do rastreador.",
+    "tabs": {
+      "info": "Informações",
+      "tracking": "Rastreamento em tempo real"
+    }
+  },
   "auth": {
     "title": "Bem-vindo de volta",
     "description": "Entre para gerenciar sua frota com inteligência e eficiência",
@@ -583,6 +620,7 @@
     "items": {
       "dashboard": "Painel",
       "devices": "Dispositivos",
+      "vehicles": "Veículos",
       "setupInitial": "Configuração Inicial",
       "teamMembers": "Membros da Equipe",
       "contacts": "Contatos",
