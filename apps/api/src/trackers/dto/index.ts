@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { TrackerModel } from "@prisma/client";
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -42,6 +43,24 @@ export class TrackerDeviceResponseDto {
   @ApiPropertyOptional()
   name?: string | null;
 
+  @ApiPropertyOptional()
+  serialSat?: string | null;
+
+  @ApiPropertyOptional()
+  equipmentModel?: string | null;
+
+  @ApiPropertyOptional()
+  individualPassword?: string | null;
+
+  @ApiPropertyOptional()
+  carrier?: string | null;
+
+  @ApiPropertyOptional()
+  simCardNumber?: string | null;
+
+  @ApiPropertyOptional()
+  cellNumber?: string | null;
+
   /** Set when device is connected to the tracker TCP server; null when disconnected. */
   @ApiPropertyOptional({ type: String, nullable: true })
   connectedAt?: string | null;
@@ -69,6 +88,36 @@ export class CreateTrackerDeviceDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serialSat?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  equipmentModel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  individualPassword?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  carrier?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  simCardNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cellNumber?: string;
 }
 
 export class UpdateTrackerDeviceDto {
@@ -76,6 +125,36 @@ export class UpdateTrackerDeviceDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serialSat?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  equipmentModel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  individualPassword?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  carrier?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  simCardNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cellNumber?: string;
 }
 
 // ─── Positions ───────────────────────────────────────────────────────────────
@@ -145,6 +224,21 @@ export class VehicleTrackerDeviceDto {
   @ApiPropertyOptional()
   name?: string | null;
 
+  @ApiPropertyOptional()
+  serialSat?: string | null;
+
+  @ApiPropertyOptional()
+  equipmentModel?: string | null;
+
+  @ApiPropertyOptional()
+  carrier?: string | null;
+
+  @ApiPropertyOptional()
+  simCardNumber?: string | null;
+
+  @ApiPropertyOptional()
+  cellNumber?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   connectedAt?: string | null;
 }
@@ -161,6 +255,30 @@ export class VehicleResponseDto {
 
   @ApiPropertyOptional()
   plate?: string | null;
+
+  @ApiPropertyOptional()
+  serial?: string | null;
+
+  @ApiPropertyOptional()
+  color?: string | null;
+
+  @ApiPropertyOptional()
+  year?: string | null;
+
+  @ApiPropertyOptional()
+  renavam?: string | null;
+
+  @ApiPropertyOptional()
+  chassis?: string | null;
+
+  @ApiPropertyOptional()
+  vehicleType?: string | null;
+
+  @ApiPropertyOptional()
+  inactive?: boolean;
+
+  @ApiPropertyOptional()
+  notes?: string | null;
 
   @ApiPropertyOptional()
   trackerDeviceId?: string | null;
@@ -190,6 +308,36 @@ export class CreateVehicleNewDeviceDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serialSat?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  equipmentModel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  individualPassword?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  carrier?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  simCardNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cellNumber?: string;
 }
 
 export class CreateVehicleDto {
@@ -202,6 +350,46 @@ export class CreateVehicleDto {
   @IsOptional()
   @IsString()
   plate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serial?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  year?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  renavam?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  chassis?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vehicleType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  inactive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
   @ApiPropertyOptional({ description: "Link to existing tracker device (ignored if newDevice is set)" })
   @IsOptional()
@@ -228,6 +416,46 @@ export class UpdateVehicleDto {
   @IsOptional()
   @IsString()
   plate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serial?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  year?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  renavam?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  chassis?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vehicleType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  inactive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -9,6 +9,7 @@ import { PrismaService } from "@/prisma/prisma.service";
 import {
   CreateTrackerDeviceDto,
   TrackerDeviceResponseDto,
+  UpdateTrackerDeviceDto,
   PositionResponseDto,
   PositionHistoryQueryDto,
 } from "../dto/index";
@@ -65,7 +66,13 @@ export class TrackerDevicesService {
         imei: dto.imei,
         model: dto.model,
         name: dto.name,
-      },
+        serialSat: dto.serialSat,
+        equipmentModel: dto.equipmentModel,
+        individualPassword: dto.individualPassword,
+        carrier: dto.carrier,
+        simCardNumber: dto.simCardNumber,
+        cellNumber: dto.cellNumber,
+      } as never,
     });
     return this.toDeviceResponse(device);
   }
@@ -92,11 +99,19 @@ export class TrackerDevicesService {
 
   async update(
     id: string,
-    data: { name?: string },
+    data: UpdateTrackerDeviceDto,
   ): Promise<TrackerDeviceResponseDto> {
+    const updateData: Record<string, string | undefined> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.serialSat !== undefined) updateData.serialSat = data.serialSat;
+    if (data.equipmentModel !== undefined) updateData.equipmentModel = data.equipmentModel;
+    if (data.individualPassword !== undefined) updateData.individualPassword = data.individualPassword;
+    if (data.carrier !== undefined) updateData.carrier = data.carrier;
+    if (data.simCardNumber !== undefined) updateData.simCardNumber = data.simCardNumber;
+    if (data.cellNumber !== undefined) updateData.cellNumber = data.cellNumber;
     const device = await this.prisma.trackerDevice.update({
       where: { id },
-      data,
+      data: updateData,
     });
     return this.toDeviceResponse(device);
   }
@@ -160,6 +175,12 @@ export class TrackerDevicesService {
     imei: string;
     model: TrackerModel;
     name: string | null;
+    serialSat?: string | null;
+    equipmentModel?: string | null;
+    individualPassword?: string | null;
+    carrier?: string | null;
+    simCardNumber?: string | null;
+    cellNumber?: string | null;
     connectedAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
@@ -171,6 +192,12 @@ export class TrackerDevicesService {
       imei: d.imei,
       model: d.model,
       name: d.name ?? undefined,
+      serialSat: d.serialSat ?? undefined,
+      equipmentModel: d.equipmentModel ?? undefined,
+      individualPassword: d.individualPassword ?? undefined,
+      carrier: d.carrier ?? undefined,
+      simCardNumber: d.simCardNumber ?? undefined,
+      cellNumber: d.cellNumber ?? undefined,
       connectedAt: d.connectedAt != null ? d.connectedAt.toISOString() : null,
       vehicleId: d.vehicle?.id,
       createdAt: d.createdAt.toISOString(),

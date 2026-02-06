@@ -70,8 +70,16 @@ enum TrackerModel {
 model Vehicle {
   id               String         @id @default(cuid())
   organizationId   String
-  name             String?
+  name             String?        // Make/model e.g. FIAT/PALIO FIRE
   plate            String?
+  serial           String?        // Serial e.g. SUN511533819
+  color            String?
+  year             String?        // Year e.g. 2015
+  renavam          String?
+  chassis          String?
+  vehicleType      String?        // Tipo de veículo
+  inactive         Boolean        @default(false)
+  notes            String?        // Informações / histórico
   trackerDeviceId  String?        @unique
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -84,15 +92,21 @@ model Vehicle {
 }
 
 model TrackerDevice {
-  id             String        @id @default(cuid())
-  organizationId String
-  imei           String        @unique
-  model          TrackerModel
-  name           String?
+  id                  String        @id @default(cuid())
+  organizationId      String
+  imei                String        @unique
+  model               TrackerModel
+  name                String?
+  serialSat           String?       // Serial satélite
+  equipmentModel      String?       // Modelo equipamento e.g. SUNT CH
+  individualPassword  String?       // Senha individual
+  carrier             String?       // Operadora (Dados CHIP)
+  simCardNumber       String?       // SimCard
+  cellNumber          String?       // N. Cel.
   /** Set when device connects to TCP server; null when disconnected. */
-  connectedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  connectedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vehicle       Vehicle?
