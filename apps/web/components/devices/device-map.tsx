@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
   Polyline,
   Marker,
   Popup,
+  useMap,
 } from "react-leaflet";
 import L from "leaflet";
 
 import "leaflet/dist/leaflet.css";
 import { useTranslation } from "@/i18n/useTranslation";
+
+function MapCenter({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [map, center, zoom]);
+  return null;
+}
 
 export interface PositionPoint {
   latitude: number;
@@ -68,30 +77,38 @@ export function DeviceMap({
     () => [...initialPositions, ...streamedPositions],
     [initialPositions, streamedPositions]
   );
-  const polylinePositions = useMemo(
-    () =>
-      allPositions.map((p) => [p.latitude, p.longitude] as [number, number]),
-    [allPositions]
-  );
+  /** Most recent position by recordedAt (API often returns newest-first, so index 0). */
+  const lastPositionByTime = useMemo((): PositionPoint | null => {
+    if (allPositions.length === 0) return lastPosition;
+    return allPositions.reduce((latest, p) =>
+      new Date(p.recordedAt) > new Date(latest.recordedAt) ? p : latest
+    );
+  }, [allPositions, lastPosition]);
+  /** Chronological order (oldest → newest) for drawing the route. */
+  const polylinePositions = useMemo(() => {
+    const sorted = [...allPositions].sort(
+      (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
+    );
+    return sorted.map((p) => [p.latitude, p.longitude] as [number, number]);
+  }, [allPositions]);
   const center = useMemo((): [number, number] => {
-    if (lastPosition) {
-      return [lastPosition.latitude, lastPosition.longitude];
-    }
-    if (allPositions.length > 0) {
-      const last = allPositions[allPositions.length - 1];
-      return [last.latitude, last.longitude];
+    if (lastPositionByTime) {
+      return [lastPositionByTime.latitude, lastPositionByTime.longitude];
     }
     return defaultCenter;
-  }, [lastPosition, allPositions]);
+  }, [lastPositionByTime]);
+
+  const zoom = 14;
 
   return (
     <div className={className}>
       <MapContainer
         center={center}
-        zoom={14}
+        zoom={zoom}
         scrollWheelZoom
         className="h-full w-full rounded-md"
       >
+        <MapCenter center={center} zoom={zoom} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -99,7 +116,7 @@ export function DeviceMap({
         {polylinePositions.length > 1 && (
           <Polyline positions={polylinePositions} color="#2563eb" weight={4} />
         )}
-        <LastPositionMarker position={lastPosition ?? allPositions[allPositions.length - 1] ?? null} />
+        <LastPositionMarker position={lastPositionByTime} />
       </MapContainer>
     </div>
   );
