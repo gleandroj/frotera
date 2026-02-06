@@ -50,9 +50,12 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly trackerDevices: TrackerDevicesService,
     private readonly redisWriter: TrackerRedisWriterService,
-  ) {}
+  ) {
+    this.logger.log(`Tracker TCP service constructor...`);
+  }
 
   async onModuleInit(): Promise<void> {
+    this.logger.log(`Tracker TCP server onModuleInit...`);
     const port = parseInt(
       this.config.get<string>("TRACKER_TCP_PORT") ?? "5023",
       10,
