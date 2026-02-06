@@ -30,8 +30,6 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
   private readonly deviceState = new Map<string, DeviceState>();
   private readonly batchMs: number;
   private readonly batchSize: number;
-  private messageHandler: ((channel: string, message: string) => void) | null =
-    null;
 
   constructor(
     @Inject(TRACKER_REDIS_SUB) private readonly redisSub: RedisClientType,
@@ -74,8 +72,23 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
       state.flushTimer = setInterval(() => {
         this.flush(deviceId);
       }, this.batchMs);
-      this.redisSub.subscribe(channel, (err) => {
-        if (err) this.logger.warn(`Redis subscribe error ${channel}: ${err}`);
+
+      // In node-redis v4+, the listener is passed directly to subscribe()
+      // and receives (message, channel) — there is no "message" event.
+      this.redisSub.subscribe(channel, (message, channel) => {
+        if (!channel.startsWith(CHANNEL_PREFIX)) return;
+        const id = channel.slice(CHANNEL_PREFIX.length);
+        const devState = this.deviceState.get(id);
+        if (!devState) return;
+        try {
+          const payload = JSON.parse(message) as PositionPayload;
+          devState.buffer.push(payload);
+          if (devState.buffer.length >= this.batchSize) {
+            this.flush(id);
+          }
+        } catch {
+          this.logger.warn(`Invalid position message on ${channel}`);
+        }
       });
     }
   }
@@ -106,26 +119,6 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
       this.deviceState.set(deviceId, state);
     }
     state.subscriberCount += 1;
-
-    if (!this.messageHandler) {
-      this.messageHandler = (channel: string, message: string) => {
-        if (!channel.startsWith(CHANNEL_PREFIX)) return;
-        const id = channel.slice(CHANNEL_PREFIX.length);
-        const state = this.deviceState.get(id);
-        if (!state) return;
-        try {
-          const payload = JSON.parse(message) as PositionPayload;
-          state.buffer.push(payload);
-          if (state.buffer.length >= this.batchSize) {
-            this.flush(id);
-          }
-        } catch {
-          this.logger.warn(`Invalid position message on ${channel}`);
-        }
-      };
-      this.redisSub.on("message", this.messageHandler);
-    }
-
     this.ensureSubscribed(deviceId);
   }
 
