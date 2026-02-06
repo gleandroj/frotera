@@ -339,6 +339,10 @@ importers:
         version: 5.9.2
 
   apps/simulator:
+    dependencies:
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
     devDependencies:
       '@types/node':
         specifier: ^22

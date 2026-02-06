@@ -14,6 +14,7 @@
  * Prerequisites: run the tracker TCP server (e.g. from api: pnpm run dev:tcp).
  */
 
+import "dotenv/config";
 import * as net from "net";
 import type { Socket } from "net";
 import type { TrackerTcpOptions } from "./types";
