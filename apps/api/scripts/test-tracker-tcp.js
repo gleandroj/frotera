@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Tracker TCP test: stream positions along a real route (point A → B) to simulate
- * a device moving at a given speed. Uses Google Directions API to get the path.
+ * a device moving at a given speed. Uses Google Routes API to get the path.
  *
  * Usage:
  *   node scripts/test-tracker-tcp.js <origin> <destination> [options]
@@ -16,13 +16,14 @@
  *   --imei=123456789012345
  *   --speed=50          Speed in km/h (default 50)
  *   --interval=10       Send position every N seconds (default 10)
- *   --api-key=KEY      Or set GOOGLE_MAPS_API_KEY
+ *   --api-key=KEY       Or set GOOGLE_MAPS_API_KEY
  *
  * Example:
  *   GOOGLE_MAPS_API_KEY=your_key node scripts/test-tracker-tcp.js "-23.55,-46.63" "-22.9,-47.06" --speed=60 --interval=15
  *   node scripts/test-tracker-tcp.js "Av Paulista, São Paulo" "Campinas" --speed=80
  *
  * Prerequisites: Start TCP process first: pnpm run start:tracker
+ * Google Cloud: enable "Routes API" (not legacy Directions API).
  */
 
 const net = require("net");
@@ -196,48 +197,85 @@ function interpolate(p1, p2, t) {
   };
 }
 
-/** Fetch route from Google Directions API; return { points, totalDistanceM, totalDurationSec }. */
+/** Build Routes API waypoint from "lat,lng" or address string. */
+function toWaypoint(input) {
+  const trimmed = String(input).trim();
+  const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+  if (match) {
+    return {
+      location: {
+        latLng: {
+          latitude: parseFloat(match[1]),
+          longitude: parseFloat(match[2]),
+        },
+      },
+    };
+  }
+  return { address: trimmed };
+}
+
+/** Parse duration string like "3600s" to seconds. */
+function parseDurationSec(str) {
+  if (!str || typeof str !== "string") return 0;
+  const m = str.match(/^(\d+(?:\.\d+)?)s$/);
+  return m ? Math.round(parseFloat(m[1])) : 0;
+}
+
+/** Fetch route from Google Routes API (v2); return { points, totalDistanceM, totalDurationSec }. */
 function fetchRoute(origin, destination, apiKey) {
   return new Promise((resolve, reject) => {
-    const originEnc = encodeURIComponent(origin);
-    const destEnc = encodeURIComponent(destination);
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originEnc}&destination=${destEnc}&key=${apiKey}`;
-    https
-      .get(url, (res) => {
-        let body = "";
-        res.on("data", (chunk) => (body += chunk));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(body);
-            if (data.status !== "OK") {
-              reject(new Error(`Directions API: ${data.status} - ${data.error_message || ""}`));
-              return;
-            }
-            const route = data.routes[0];
-            const leg = route.legs[0];
-            const polyline = route.overview_polyline?.points || leg.steps?.map((s) => s.polyline?.points).filter(Boolean).join("");
-            if (!polyline) {
-              reject(new Error("No polyline in route"));
-              return;
-            }
-            const points = decodePolyline(polyline);
-            let totalDistanceM = 0;
-            for (let i = 1; i < points.length; i++) {
-              totalDistanceM += haversineMeters(
-                points[i - 1].lat,
-                points[i - 1].lng,
-                points[i].lat,
-                points[i].lng
-              );
-            }
-            const totalDurationSec = leg.duration?.value ?? Math.round((totalDistanceM / 1000) * (3600 / 50)); // fallback ~50 km/h
-            resolve({ points, totalDistanceM, totalDurationSec });
-          } catch (e) {
-            reject(e);
+    const body = JSON.stringify({
+      origin: toWaypoint(origin),
+      destination: toWaypoint(destination),
+      travelMode: "DRIVE",
+      polylineEncoding: "ENCODED_POLYLINE",
+    });
+    const url = new URL("https://routes.googleapis.com/directions/v2:computeRoutes");
+    const opts = {
+      hostname: url.hostname,
+      path: url.pathname,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body, "utf8"),
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+      },
+    };
+    const req = https.request(opts, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode !== 200) {
+            const msg = json.error?.message || json.message || data;
+            reject(new Error(`Routes API: ${res.statusCode} - ${msg}`));
+            return;
           }
-        });
-      })
-      .on("error", reject);
+          const routes = json.routes;
+          if (!routes || routes.length === 0) {
+            reject(new Error("Routes API: no route found"));
+            return;
+          }
+          const route = routes[0];
+          const polyline = route.polyline?.encodedPolyline;
+          if (!polyline) {
+            reject(new Error("Routes API: no polyline in route"));
+            return;
+          }
+          const points = decodePolyline(polyline);
+          const totalDistanceM = route.distanceMeters ?? 0;
+          const totalDurationSec = parseDurationSec(route.duration) || Math.round((totalDistanceM / 1000) * (3600 / 50));
+          resolve({ points, totalDistanceM, totalDurationSec });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
   });
 }
 
