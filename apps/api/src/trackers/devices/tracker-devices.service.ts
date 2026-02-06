@@ -144,10 +144,12 @@ export class TrackerDevicesService {
     if (query.from) where.recordedAt = { ...where.recordedAt, gte: new Date(query.from) };
     if (query.to)
       where.recordedAt = { ...where.recordedAt, lte: new Date(query.to) };
+    const limit =
+      query.limit != null ? Number(query.limit) : 100;
     const list = await this.prisma.devicePosition.findMany({
       where,
       orderBy: { recordedAt: "desc" },
-      take: query.limit ?? 100,
+      take: Number.isInteger(limit) && limit > 0 ? limit : 100,
     });
     return list.map((p) => this.toPositionResponse(p));
   }
