@@ -23,11 +23,14 @@ import { getRoute } from "./routes";
 import { buildPositionSchedule } from "./schedule";
 import { parseArgs } from "./cli";
 
+const RECONNECT_DELAY_MS = 3000;
+
 async function runRouteMode(
   origin: string,
   destination: string,
   opts: TrackerTcpOptions,
   client: Socket,
+  onIntentionalClose?: () => void,
 ): Promise<void> {
   if (!opts.apiKey) {
     console.error("Missing Google Maps API key. Set GOOGLE_MAPS_API_KEY or use --api-key=KEY");
@@ -89,6 +92,7 @@ async function runRouteMode(
   const totalTimeSec = (schedule.length - 1) * opts.interval;
   setTimeout(() => {
     console.log("\nRoute simulation finished.");
+    onIntentionalClose?.();
     client.end();
   }, totalTimeSec * 1000 + 2000);
 }
@@ -98,6 +102,7 @@ function runSimpleMode(
   port: number,
   imei: string,
   client: Socket,
+  onIntentionalClose?: () => void,
 ): void {
   console.log("Simple test — host=%s port=%s imei=%s\n", host, port, imei);
   setTimeout(() => {
@@ -108,12 +113,26 @@ function runSimpleMode(
     client.write(buildLocationPacket(-23.55, -46.63, new Date(), 3, 0, 0));
     console.log("-> Location (-23.55, -46.63)");
   }, 600);
-  setTimeout(() => client.end(), 2000);
+  setTimeout(() => {
+    onIntentionalClose?.();
+    client.end();
+  }, 2000);
 }
 
-async function main(): Promise<void> {
-  const { positional, opts } = parseArgs();
-  const [origin, destination] = positional;
+async function runSession(
+  opts: TrackerTcpOptions,
+  origin: string | undefined,
+  destination: string | undefined,
+): Promise<void> {
+  let intentionalClose = false;
+  let reconnectScheduled = false;
+
+  const scheduleReconnect = (): void => {
+    if (intentionalClose || reconnectScheduled) return;
+    reconnectScheduled = true;
+    console.log("Reconnecting in %s s...\n", RECONNECT_DELAY_MS / 1000);
+    setTimeout(() => runSession(opts, origin, destination), RECONNECT_DELAY_MS);
+  };
 
   const client = net.createConnection(
     { host: opts.host, port: opts.port },
@@ -127,21 +146,37 @@ async function main(): Promise<void> {
   });
   client.on("error", (err: Error) => {
     console.error("Error:", err.message);
-    process.exitCode = 1;
+    if (!intentionalClose) scheduleReconnect();
   });
   client.on("close", (hadError: boolean) => {
-    if (!hadError) console.log("Connection closed.");
+    if (intentionalClose) {
+      if (!hadError) console.log("Connection closed.");
+      return;
+    }
+    console.log("Connection lost%s.", hadError ? " (error)" : "");
+    scheduleReconnect();
   });
+
+  const markIntentionalClose = (): void => {
+    intentionalClose = true;
+  };
 
   client.write(buildLoginPacket(opts.imei, 1));
   console.log("-> Login (IMEI %s)", opts.imei);
 
   if (origin && destination) {
     await new Promise((r) => setTimeout(r, 500));
-    await runRouteMode(origin, destination, opts, client);
+    await runRouteMode(origin, destination, opts, client, markIntentionalClose);
   } else {
-    runSimpleMode(opts.host, opts.port, opts.imei, client);
+    runSimpleMode(opts.host, opts.port, opts.imei, client, markIntentionalClose);
   }
+}
+
+async function main(): Promise<void> {
+  const { positional, opts } = parseArgs();
+  const [origin, destination] = positional;
+
+  await runSession(opts, origin, destination);
 }
 
 main().catch((err) => {
