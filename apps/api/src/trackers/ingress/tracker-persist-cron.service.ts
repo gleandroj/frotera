@@ -66,9 +66,9 @@ export class TrackerPersistCronService {
   }
 
   /**
-   * Cron: every minute, read batch from Redis stream and persist to Postgres.
+   * Cron: every 5 seconds, read batch from Redis stream and persist to Postgres.
    */
-  @Cron("* * * * *")
+  @Cron("*/5 * * * * *")
   async persistBatch(): Promise<void> {
     if (!this.groupCreated) return;
 
