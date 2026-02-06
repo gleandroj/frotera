@@ -2,20 +2,13 @@
 
 import { useAuth } from "@/lib/hooks/use-auth";
 import { customersAPI, type Customer } from "@/lib/frontend/api-client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
+import { getCustomerColumns } from "./columns";
 import { CustomerFormDialog } from "./customer-form-dialog";
 import { DeleteCustomerDialog } from "./delete-customer-dialog";
-import { Pencil, Trash2 } from "lucide-react";
 
 export default function CustomersPage() {
   const { t } = useTranslation();
@@ -53,6 +46,16 @@ export default function CustomersPage() {
     fetchCustomers();
   }, [currentOrganization?.id, fetchCustomers]);
 
+  const columns = useMemo(
+    () =>
+      getCustomerColumns(t, {
+        customers,
+        onEdit: setEditCustomer,
+        onDelete: setDeleteCustomer,
+      }),
+    [t, customers],
+  );
+
   if (!currentOrganization) {
     return (
       <div className="space-y-6">
@@ -65,15 +68,6 @@ export default function CustomersPage() {
       </div>
     );
   }
-
-  const getParentName = (parentId: string | null | undefined) => {
-    if (!parentId) return "—";
-    const parent = customers.find((c) => c.id === parentId);
-    return parent?.name ?? parentId;
-  };
-
-  const indentPx = 24;
-  const rootDepth = 0;
 
   return (
     <div className="space-y-6">
@@ -99,71 +93,13 @@ export default function CustomersPage() {
         <p className="text-muted-foreground">{t("customers.noCustomers")}</p>
       )}
       {!loading && !error && customers.length > 0 && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 w-[50%] px-3 py-2 text-xs font-medium">
-                  {t("common.name")}
-                </TableHead>
-                <TableHead className="h-9 text-muted-foreground w-[30%] px-3 py-2 text-xs font-medium">
-                  {t("customers.parent")}
-                </TableHead>
-                <TableHead className="h-9 w-[100px] px-3 py-2 text-xs font-medium">
-                  {t("common.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((c) => {
-                const depth = c.depth ?? 0;
-                const isRoot = depth === rootDepth;
-                return (
-                  <TableRow key={c.id} className={isRoot ? "bg-muted/30" : undefined}>
-                    <TableCell className="px-3 py-2">
-                      <div
-                        className="flex items-center gap-1 min-w-0"
-                        style={{ paddingLeft: depth * indentPx }}
-                      >
-                        {depth > 0 && (
-                          <span className="shrink-0 text-muted-foreground/60 select-none text-xs" aria-hidden>
-                            └
-                          </span>
-                        )}
-                        <span className="font-medium truncate text-sm">{c.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-3 py-2 text-muted-foreground text-sm">
-                      {getParentName(c.parentId)}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setEditCustomer(c)}
-                          aria-label={t("common.edit")}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setDeleteCustomer(c)}
-                          aria-label={t("common.delete")}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable<Customer, unknown>
+          columns={columns}
+          data={customers}
+          filterPlaceholder={t("customers.filterByName")}
+          filterColumnId="name"
+          noResultsLabel={t("customers.noResults")}
+        />
       )}
 
       <CustomerFormDialog

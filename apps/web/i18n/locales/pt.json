@@ -149,6 +149,8 @@
   "customers": {
     "listDescription": "Clientes em hierarquia. Associe veículos a clientes e restrinja o acesso dos usuários por cliente.",
     "noCustomers": "Nenhum cliente cadastrado.",
+    "filterByName": "Filtrar por nome...",
+    "noResults": "Nenhum resultado.",
     "createCustomer": "Novo cliente",
     "editCustomer": "Editar cliente",
     "parent": "Cliente pai",
