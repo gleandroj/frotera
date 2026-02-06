@@ -73,7 +73,7 @@ export class TrackerPersistCronService {
     if (!this.groupCreated) return;
 
     try {
-      this.logger.debug(`Reading up to ${BATCH_SIZE} messages from stream ${this.streamKey}`);
+      this.logger.log(`Reading up to ${BATCH_SIZE} messages from stream ${this.streamKey}`);
       const reply = await this.redis.sendCommand([
         "XREADGROUP",
         "GROUP",
