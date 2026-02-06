@@ -154,6 +154,7 @@ export default function DeviceLivePage() {
 
       {!loading && !loadError && (
         <DeviceMapDynamic
+          key={deviceId}
           initialPositions={initialHistory}
           streamedPositions={streamedAsPoints}
           lastPosition={lastPosition}

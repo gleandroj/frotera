@@ -2,6 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  reactStrictMode: false,
   output: "standalone",
   typescript: {
     ignoreBuildErrors: false,
