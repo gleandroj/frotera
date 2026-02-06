@@ -16,12 +16,10 @@ import { Check, Languages } from "lucide-react";
 import { useCallback } from "react";
 import { languages as supportedLanguages, fallbackLanguage } from "@/i18n/settings";
 
-const languages = [
-  { code: "en", name: "English", flag: "🇺🇸" },
+// Display options for the language selector (only supported languages from i18n/settings)
+const languageOptions: { code: string; name: string; flag: string }[] = [
   { code: "pt", name: "Português (BR)", flag: "🇧🇷" },
-  { code: "de", name: "Deutsch", flag: "🇩🇪" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-];
+].filter((lang) => supportedLanguages.includes(lang.code));
 
 export function LanguageSwitcherLink() {
   const { t, i18n, currentLanguage } = useTranslation()
@@ -66,7 +64,7 @@ export function LanguageSwitcherLink() {
     [i18n, currentLanguage, isAuthenticated, refreshUser]
   )
 
-  const currentLanguageData = languages.find(lang => lang.code === currentLanguage)
+  const currentLanguageData = languageOptions.find(lang => lang.code === currentLanguage)
 
   return (
     <DropdownMenu>
@@ -80,12 +78,12 @@ export function LanguageSwitcherLink() {
         >
           <Languages className="h-4 w-4" />
           {currentLanguageData?.flag}
-          <span className="hidden sm:inline">{currentLanguageData?.name}</span>
+          {/* <span className="hidden sm:inline">{currentLanguageData?.name}</span> */}
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="min-w-[160px]">
-        {languages.map((lang) => {
+        {languageOptions.map((lang) => {
           const isActive = currentLanguage === lang.code;
           return (
             <DropdownMenuItem
