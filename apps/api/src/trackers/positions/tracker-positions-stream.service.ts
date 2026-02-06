@@ -32,6 +32,7 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
 
   setServer(server: Server): void {
     this.server = server;
+    this.logger.log("Socket.IO server set for position stream");
   }
 
   private getChannel(deviceId: string): string {
@@ -43,9 +44,15 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
   }
 
   private async ensureSubscribed(deviceId: string): Promise<void> {
+    this.logger.log(`ensureSubscribed: deviceId=${deviceId}`);
     const channel = this.getChannel(deviceId);
     const state = this.deviceState.get(deviceId);
-    if (!state || state.subscriberCount === 0) return;
+    if (!state || state.subscriberCount === 0) {
+      this.logger.debug(
+        `Skip Redis subscribe for device ${deviceId}: no subscribers (count=${state?.subscriberCount ?? 0})`,
+      );
+      return;
+    }
 
     const listener = (message: string, ch: string) => {
       if (!ch.startsWith(CHANNEL_PREFIX)) return;
@@ -54,12 +61,15 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
       try {
         const payload = JSON.parse(message) as PositionPayload;
         this.server.to(this.getRoom(id)).emit("positions:batch", [payload]);
+        this.logger.debug(
+          `Emitted position to room device:${id} (${payload.latitude},${payload.longitude})`,
+        );
       } catch {
         this.logger.warn(`Invalid position message on ${ch}`);
       }
     };
     await this.redisSub.subscribe(channel, listener);
-    this.logger.debug(`Subscribed to Redis channel ${channel} for device ${deviceId}`);
+    this.logger.log(`Subscribed to Redis channel ${channel} for device ${deviceId} (subscribers=${state.subscriberCount})`);
   }
 
   private async unsubscribeFromDevice(deviceId: string): Promise<void> {
@@ -69,7 +79,7 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
     const channel = this.getChannel(deviceId);
     await this.redisSub.unsubscribe(channel);
     this.deviceState.delete(deviceId);
-    this.logger.debug(`Unsubscribed from Redis channel ${channel}`);
+    this.logger.log(`Unsubscribed from Redis channel ${channel} for device ${deviceId}`);
   }
 
   async addSubscriber(deviceId: string): Promise<void> {
@@ -79,20 +89,29 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
       this.deviceState.set(deviceId, state);
     }
     state.subscriberCount += 1;
+    this.logger.debug(`Added subscriber for device ${deviceId} (total=${state.subscriberCount})`);
     await this.ensureSubscribed(deviceId);
   }
 
   async removeSubscriber(deviceId: string): Promise<void> {
     const state = this.deviceState.get(deviceId);
-    if (!state) return;
+    if (!state) {
+      this.logger.debug(`removeSubscriber: no state for device ${deviceId}`);
+      return;
+    }
 
     state.subscriberCount -= 1;
+    this.logger.debug(`Removed subscriber for device ${deviceId} (remaining=${state.subscriberCount})`);
     if (state.subscriberCount <= 0) {
       await this.unsubscribeFromDevice(deviceId);
     }
   }
 
   async onModuleDestroy(): Promise<void> {
+    const count = this.deviceState.size;
+    if (count > 0) {
+      this.logger.log(`Unsubscribing from ${count} device channel(s) on destroy`);
+    }
     for (const deviceId of this.deviceState.keys()) {
       await this.unsubscribeFromDevice(deviceId);
     }

@@ -35,7 +35,10 @@ export function useTrackerPositions(
 
     socket.on("connect", () => {
       setConnected(true);
-      socket.emit("subscribe", { deviceId: stableDeviceId });
+      setTimeout(() => {
+        socket.emit("subscribe", { deviceId: stableDeviceId });
+      }, 1000);
+      console.log("connected to tracker positions socket");
     });
 
     socket.on("disconnect", () => {
