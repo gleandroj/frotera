@@ -146,7 +146,7 @@ export class TrackerPositionsGateway
         subs;
     }
     subs.add(deviceId);
-    this.streamService.addSubscriber(deviceId);
+    await this.streamService.addSubscriber(deviceId);
   }
 
   @SubscribeMessage("unsubscribe")

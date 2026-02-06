@@ -9,6 +9,9 @@
  */
 import { NestFactory } from "@nestjs/core";
 import { TcpAppModule } from "./tcp-app.module";
+import { RedisIoAdapter } from "./websockets/redis-io-adapter";
+import { ConfigService } from "@nestjs/config";
+import { NestExpressApplication } from "@nestjs/platform-express";
 
 if (!(BigInt.prototype as any).toJSON) {
   (BigInt.prototype as any).toJSON = function () {
@@ -17,7 +20,13 @@ if (!(BigInt.prototype as any).toJSON) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(TcpAppModule);
+  const app = await NestFactory.create<NestExpressApplication>(TcpAppModule);
+  const configService = app.get(ConfigService);
+
+  // Setup Redis adapter for WebSockets (BullMQ queues)
+  const redisIoAdapter = new RedisIoAdapter(configService, app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   // Graceful shutdown
   process.on("SIGINT", async () => {

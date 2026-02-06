@@ -73,6 +73,7 @@ export class TrackerPersistCronService {
     if (!this.groupCreated) return;
 
     try {
+      this.logger.debug(`Reading up to ${BATCH_SIZE} messages from stream ${this.streamKey}`);
       const reply = await this.redis.sendCommand([
         "XREADGROUP",
         "GROUP",
@@ -86,7 +87,11 @@ export class TrackerPersistCronService {
       ]);
 
       const messages = parseStreamReply(reply);
-      if (messages.length === 0) return;
+      if (messages.length === 0) {
+        this.logger.debug("No pending messages in stream");
+        return;
+      }
+      this.logger.log(`Read ${messages.length} messages from stream`);
 
       const rows: Array<{
         deviceId: string;
@@ -110,6 +115,9 @@ export class TrackerPersistCronService {
           recordedAt,
         } = message;
         if (!deviceId || !latitude || !longitude || !recordedAt) {
+          this.logger.warn(
+            `Skipping invalid message id=${id}: missing required fields (deviceId=${!!deviceId}, lat=${!!latitude}, lng=${!!longitude}, recordedAt=${!!recordedAt})`,
+          );
           idsToAck.push(id);
           continue;
         }
@@ -125,6 +133,8 @@ export class TrackerPersistCronService {
         idsToAck.push(id);
       }
 
+      const chunkCount = Math.ceil(rows.length / CHUNK_SIZE);
+      this.logger.debug(`Persisting ${rows.length} positions in ${chunkCount} chunk(s)`);
       for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
         const chunk = rows.slice(i, i + CHUNK_SIZE);
         await this.prisma.devicePosition.createMany({
@@ -140,9 +150,10 @@ export class TrackerPersistCronService {
           CONSUMER_GROUP,
           ...idsToAck,
         ]);
+        this.logger.debug(`Acked ${idsToAck.length} message(s) in stream`);
       }
 
-      this.logger.debug(`Persisted ${rows.length} positions to Postgres`);
+      this.logger.log(`Persisted ${rows.length} positions to Postgres (acked ${idsToAck.length} messages)`);
     } catch (err) {
       this.logger.error(
         `Persist batch failed: ${err instanceof Error ? err.message : String(err)}`,
