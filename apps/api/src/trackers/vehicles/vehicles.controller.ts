@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -12,6 +13,7 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
+import { ApiCode } from "@/common/api-codes.enum";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { CustomersService } from "@/customers/customers.service";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
@@ -24,6 +26,7 @@ import { VehiclesService } from "./vehicles.service";
 
 interface RequestWithAllowedCustomers extends ExpressRequest {
   allowedCustomerIds: string[] | null;
+  organizationMember: { role: string };
 }
 
 @ApiTags("vehicles")
@@ -36,6 +39,12 @@ export class VehiclesController {
     private readonly customersService: CustomersService,
   ) {}
 
+  private requireAdminOrOwner(member: { role: string }) {
+    if (member.role !== "OWNER" && member.role !== "ADMIN") {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
   @Post()
   @ApiOperation({ summary: "Create a vehicle" })
   @ApiResponse({ status: 201, type: VehicleResponseDto })
@@ -46,6 +55,7 @@ export class VehiclesController {
     @Body() body: CreateVehicleDto,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
+    this.requireAdminOrOwner(req.organizationMember);
     return this.vehiclesService.create(
       organizationId,
       body,
@@ -109,6 +119,7 @@ export class VehiclesController {
     @Body() body: UpdateVehicleDto,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
+    this.requireAdminOrOwner(req.organizationMember);
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,
@@ -131,6 +142,7 @@ export class VehiclesController {
     @Param("vehicleId") vehicleId: string,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<void> {
+    this.requireAdminOrOwner(req.organizationMember);
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,

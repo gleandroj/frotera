@@ -78,9 +78,11 @@ export default function VehiclesPage() {
             {t("vehicles.listDescription")}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          {t("vehicles.createVehicle")}
-        </Button>
+        {currentOrganization?.role !== "MEMBER" && (
+          <Button onClick={() => setCreateOpen(true)}>
+            {t("vehicles.createVehicle")}
+          </Button>
+        )}
       </div>
 
       {loading && (
@@ -110,6 +112,7 @@ export default function VehiclesPage() {
         vehicle={null}
         organizationId={currentOrganization.id}
         onSuccess={fetchVehicles}
+        defaultCustomerId={selectedCustomerId ?? undefined}
       />
       <VehicleFormDialog
         open={!!editVehicle}
@@ -117,6 +120,7 @@ export default function VehiclesPage() {
         vehicle={editVehicle ?? null}
         organizationId={currentOrganization.id}
         onSuccess={fetchVehicles}
+        defaultCustomerId={selectedCustomerId ?? undefined}
       />
       <DeleteVehicleDialog
         open={!!deleteVehicle}

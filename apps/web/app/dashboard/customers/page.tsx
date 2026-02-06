@@ -80,9 +80,11 @@ export default function CustomersPage() {
             {t("customers.listDescription")}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          {t("customers.createCustomer")}
-        </Button>
+        {currentOrganization?.role !== "MEMBER" && (
+          <Button onClick={() => setCreateOpen(true)}>
+            {t("customers.createCustomer")}
+          </Button>
+        )}
       </div>
 
       {loading && (
@@ -109,6 +111,7 @@ export default function CustomersPage() {
         organizationId={currentOrganization.id}
         customers={customers}
         onSuccess={fetchCustomers}
+        defaultParentId={selectedCustomerId ?? undefined}
       />
       <CustomerFormDialog
         open={!!editCustomer}
@@ -117,6 +120,7 @@ export default function CustomersPage() {
         organizationId={currentOrganization.id}
         customers={customers}
         onSuccess={fetchCustomers}
+        defaultParentId={selectedCustomerId ?? undefined}
       />
       <DeleteCustomerDialog
         open={!!deleteCustomer}

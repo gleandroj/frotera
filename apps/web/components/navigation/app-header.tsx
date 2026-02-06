@@ -60,6 +60,7 @@ interface AppHeaderProps {
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
   const router = useRouter();
   const {
+    user,
     organizations,
     currentOrganization,
     selectedCustomerId,
@@ -73,7 +74,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
   const [headerCustomers, setHeaderCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const { t } = useTranslation();
-  const canManageOrganizations = currentOrganization?.role !== "MEMBER";
+  const canManageOrganizations = user?.isSuperAdmin === true && currentOrganization?.role !== "MEMBER";
 
   const loadHeaderCustomers = useCallback(() => {
     if (!currentOrganization?.id) {

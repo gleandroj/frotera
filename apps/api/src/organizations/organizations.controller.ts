@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
 import { CreateOrganizationDto, CreateOrganizationResponseDto, OrganizationResponseDto, OrganizationsListResponseDto, UpdateOrganizationDto, UpdateOrganizationResponseDto } from './organizations.dto';
 import { OrganizationsService } from './organizations.service';
 
@@ -13,9 +14,11 @@ export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new organization' })
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Create a new organization (superadmin only)' })
   @ApiResponse({ status: 201, type: CreateOrganizationResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Superadmin only' })
   async createOrganization(
     @Request() req: ExpressRequest & { user: { userId: string } },
     @Body() body: CreateOrganizationDto,

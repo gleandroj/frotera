@@ -167,6 +167,9 @@ export class CustomersService {
     dto: CreateCustomerDto,
     allowedCustomerIds: string[] | null,
   ): Promise<CustomerResponseDto> {
+    if (!dto.parentId || (typeof dto.parentId === "string" && dto.parentId.trim() === "")) {
+      throw new BadRequestException(ApiCode.CUSTOMER_PARENT_REQUIRED);
+    }
     if (dto.parentId) {
       const parent = await this.prisma.customer.findFirst({
         where: { id: dto.parentId, organizationId },

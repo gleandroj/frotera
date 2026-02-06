@@ -48,6 +48,8 @@ interface VehicleFormDialogProps {
   vehicle: Vehicle | null;
   organizationId: string;
   onSuccess: () => void;
+  /** When creating, pre-select this client when provided and present in the list. */
+  defaultCustomerId?: string | null;
 }
 
 interface TrackerDeviceOption {
@@ -87,7 +89,11 @@ export interface VehicleFormValues {
   newCellNumber: string;
 }
 
-function getInitialValues(vehicle: Vehicle | null, isEdit: boolean): VehicleFormValues {
+function getInitialValues(
+  vehicle: Vehicle | null,
+  isEdit: boolean,
+  defaultCustomerId?: string | null
+): VehicleFormValues {
   const base = {
     name: emptyStr(vehicle?.name),
     plate: emptyStr(vehicle?.plate),
@@ -99,7 +105,9 @@ function getInitialValues(vehicle: Vehicle | null, isEdit: boolean): VehicleForm
     vehicleType: emptyStr(vehicle?.vehicleType),
     inactive: vehicle?.inactive ?? false,
     notes: emptyStr(vehicle?.notes),
-    customerId: emptyStr(vehicle?.customerId),
+    customerId: isEdit
+      ? emptyStr(vehicle?.customerId)
+      : (defaultCustomerId && defaultCustomerId.trim() ? defaultCustomerId : ""),
     trackerDeviceId: emptyStr(vehicle?.trackerDeviceId),
     deviceOption: "none" as DeviceOption,
     newImei: "",
@@ -112,11 +120,13 @@ function getInitialValues(vehicle: Vehicle | null, isEdit: boolean): VehicleForm
     newSimCardNumber: "",
     newCellNumber: "",
   };
-  if (isEdit) return base;
   return base;
 }
 
-function buildVehicleFormSchema(t: (key: string) => string) {
+function buildVehicleFormSchema(
+  t: (key: string) => string,
+  isEdit: boolean
+) {
   return z
     .object({
       name: z.string().optional(),
@@ -134,7 +144,14 @@ function buildVehicleFormSchema(t: (key: string) => string) {
       vehicleType: z.string().optional(),
       inactive: z.boolean().optional(),
       notes: z.string().optional(),
-      customerId: z.string().optional(),
+      customerId: isEdit
+        ? z.string().optional()
+        : z
+            .string()
+            .min(1, t("vehicles.customerRequired"))
+            .refine((v) => (v?.trim() ?? "").length > 0, {
+              message: t("vehicles.customerRequired"),
+            }),
       trackerDeviceId: z.string().optional(),
       deviceOption: z.enum(["none", "existing", "new"]).optional(),
       newImei: z.string().optional(),
@@ -164,6 +181,7 @@ export function VehicleFormDialog({
   vehicle,
   organizationId,
   onSuccess,
+  defaultCustomerId,
 }: VehicleFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!vehicle;
@@ -173,8 +191,22 @@ export function VehicleFormDialog({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
 
-  const validationSchema = buildVehicleFormSchema(t);
-  const initialValues = getInitialValues(vehicle, isEdit);
+  const validationSchema = buildVehicleFormSchema(t, isEdit);
+  const effectiveDefaultCustomerId =
+    !isEdit && customers.length > 0
+      ? defaultCustomerId && customers.some((c) => c.id === defaultCustomerId)
+        ? defaultCustomerId
+        : customers.length === 1
+          ? customers[0].id
+          : ""
+      : undefined;
+  const initialValues = getInitialValues(
+    vehicle,
+    isEdit,
+    effectiveDefaultCustomerId !== undefined
+      ? effectiveDefaultCustomerId
+      : defaultCustomerId
+  );
 
   useEffect(() => {
     if (!open || !organizationId) return;
@@ -284,7 +316,15 @@ export function VehicleFormDialog({
           validateOnChange
           validateOnBlur
         >
-          {({ values, setFieldValue, isSubmitting, errors, touched, status }) => (
+          {({ values, setFieldValue, isSubmitting, errors, touched, status }) => {
+            const customerRequired = !isEdit;
+            const customerSelectValue =
+              values.customerId || (customerRequired ? "" : "none");
+            const customerPlaceholder = customerRequired
+              ? t("vehicles.selectClient")
+              : t("customers.noParent");
+
+            return (
             <Form className="space-y-6" noValidate>
               {status && (
                 <p className="text-destructive text-sm" role="alert">
@@ -385,17 +425,21 @@ export function VehicleFormDialog({
                 <div className="space-y-2">
                   <Label htmlFor="vehicle-customer">{t("vehicles.customer")}</Label>
                   <Select
-                    value={values.customerId || "none"}
+                    value={customerSelectValue}
                     onValueChange={(v) =>
                       setFieldValue("customerId", v === "none" ? "" : v)
                     }
                     disabled={loadingCustomers}
                   >
                     <SelectTrigger id="vehicle-customer">
-                      <SelectValue placeholder={t("customers.noParent")} />
+                      <SelectValue placeholder={customerPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">{t("customers.noParent")}</SelectItem>
+                      {!customerRequired && (
+                        <SelectItem value="none">
+                          {t("customers.noParent")}
+                        </SelectItem>
+                      )}
                       {customers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           <span
@@ -408,6 +452,11 @@ export function VehicleFormDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {customerRequired && errors.customerId && touched.customerId && (
+                    <p className="text-destructive text-sm">
+                      {errors.customerId}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -653,7 +702,8 @@ export function VehicleFormDialog({
                 </Button>
               </DialogFooter>
             </Form>
-          )}
+          );
+          }}
         </Formik>
       </DialogContent>
     </Dialog>

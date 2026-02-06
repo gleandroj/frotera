@@ -1,5 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { SuperAdminGuard } from "../auth/guards/super-admin.guard";
 import { CustomersModule } from "../customers/customers.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { OrganizationMemberGuard } from "./guards/organization-member.guard";
@@ -13,7 +14,7 @@ import { OrganizationsService } from "./organizations.service";
     CustomersModule,
   ],
   controllers: [OrganizationsController],
-  providers: [OrganizationsService, OrganizationMemberGuard],
+  providers: [OrganizationsService, OrganizationMemberGuard, SuperAdminGuard],
   exports: [OrganizationsService, OrganizationMemberGuard],
 })
 export class OrganizationsModule {}

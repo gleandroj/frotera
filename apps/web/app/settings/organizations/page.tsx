@@ -25,17 +25,17 @@ export default function OrganizationsPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organizations, currentOrganization, refreshAndSwitchOrganization } =
+  const { user, organizations, currentOrganization, refreshAndSwitchOrganization } =
     useAuth();
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Members cannot access organization management
+  // Only superadmin can see and manage organizations
   useEffect(() => {
-    if (currentOrganization?.role === "MEMBER") {
+    if (!user?.isSuperAdmin) {
       router.replace("/dashboard");
     }
-  }, [currentOrganization?.role, router]);
+  }, [user?.isSuperAdmin, router]);
 
   // Check if we should open edit dialog based on URL param
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function OrganizationsPage() {
     return org.role === 'OWNER' || org.role === 'ADMIN';
   };
 
-  if (currentOrganization?.role === "MEMBER") {
+  if (!user?.isSuperAdmin) {
     return null;
   }
 

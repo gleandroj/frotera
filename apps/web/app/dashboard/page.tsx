@@ -5,15 +5,15 @@ import { CreateOrganizationDialog } from "@/components/organizations";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
-  const { organizations } = useAuth();
+  const { user, organizations } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   useEffect(() => {
-    // If user has no organizations, show the create dialog
-    if (organizations && organizations.length === 0) {
+    // Only superadmin can create organizations; show create dialog only when they have none
+    if (user?.isSuperAdmin && organizations && organizations.length === 0) {
       setShowCreateDialog(true);
     }
-  }, [organizations]);
+  }, [user?.isSuperAdmin, organizations]);
 
   return (
     <div className="space-y-6">

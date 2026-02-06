@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type { Prisma, TrackerModel } from "@prisma/client";
 import { ApiCode } from "@/common/api-codes.enum";
 import { PrismaService } from "@/prisma/prisma.service";
@@ -25,7 +30,14 @@ export class VehiclesService {
     dto: CreateVehicleDto,
     allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
-    const customerId = dto.customerId ?? null;
+    const rawCustomerId = dto.customerId;
+    if (
+      rawCustomerId == null ||
+      (typeof rawCustomerId === "string" && rawCustomerId.trim() === "")
+    ) {
+      throw new BadRequestException(ApiCode.VEHICLE_CUSTOMER_REQUIRED);
+    }
+    const customerId = rawCustomerId;
     if (allowedCustomerIds !== null) {
       if (customerId === null) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);

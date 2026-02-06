@@ -30,6 +30,8 @@ interface CustomerFormDialogProps {
   organizationId: string;
   customers: Customer[];
   onSuccess: () => void;
+  /** When creating, pre-select this parent when provided and present in the list. */
+  defaultParentId?: string | null;
 }
 
 export function CustomerFormDialog({
@@ -39,17 +41,35 @@ export function CustomerFormDialog({
   organizationId,
   customers,
   onSuccess,
+  defaultParentId,
 }: CustomerFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!customer;
 
+  const parentOptions = customers.filter(
+    (c) => !isEdit || c.id !== customer?.id
+  );
+
+  const getInitialParentId = () => {
+    if (isEdit) return customer?.parentId ?? "";
+    if (defaultParentId && parentOptions.some((c) => c.id === defaultParentId)) {
+      return defaultParentId;
+    }
+    if (parentOptions.length === 1) return parentOptions[0].id;
+    return "";
+  };
+
   const formik = useFormik({
     initialValues: {
       name: customer?.name ?? "",
-      parentId: customer?.parentId ?? "",
+      parentId: getInitialParentId(),
     },
     enableReinitialize: true,
     onSubmit: async (values) => {
+      if (!isEdit && !values.parentId?.trim()) {
+        formik.setFieldError("parentId", t("customers.parentRequired"));
+        return;
+      }
       try {
         if (isEdit) {
           await customersAPI.update(organizationId, customer.id, {
@@ -80,13 +100,16 @@ export function CustomerFormDialog({
     formik.resetForm();
     formik.setValues({
       name: customer?.name ?? "",
-      parentId: customer?.parentId ?? "",
+      parentId: getInitialParentId(),
     });
-  }, [open, customer?.id]);
+  }, [open, customer?.id, defaultParentId]);
 
-  const parentOptions = customers.filter(
-    (c) => !isEdit || c.id !== customer?.id
-  );
+  const parentRequired = !isEdit;
+  const parentSelectValue =
+    formik.values.parentId || (parentRequired ? "" : "none");
+  const parentSelectPlaceholder = parentRequired
+    ? t("customers.selectParent")
+    : t("customers.noParent");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,16 +135,21 @@ export function CustomerFormDialog({
           <div className="space-y-2">
             <Label htmlFor="parentId">{t("customers.parent")}</Label>
             <Select
-              value={formik.values.parentId || "none"}
+              value={
+                formik.values.parentId ||
+                (parentRequired ? "" : "none")
+              }
               onValueChange={(v) =>
                 formik.setFieldValue("parentId", v === "none" ? "" : v)
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder={t("customers.noParent")} />
+                <SelectValue placeholder={parentSelectPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">{t("customers.noParent")}</SelectItem>
+                {!parentRequired && (
+                  <SelectItem value="none">{t("customers.noParent")}</SelectItem>
+                )}
                 {parentOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <span
@@ -136,6 +164,11 @@ export function CustomerFormDialog({
                 ))}
               </SelectContent>
             </Select>
+            {parentRequired && formik.errors.parentId && (
+              <p className="text-sm text-destructive">
+                {formik.errors.parentId}
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button

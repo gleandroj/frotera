@@ -66,7 +66,7 @@ export function ProfileForm() {
     try {
       const response = await externalApi.patch("/api/users/profile", data);
       await refreshUser(); // Refresh user context
-      toast.success(response.data.message || t('profile.profileUpdatedSuccessfully'));
+      toast.success(t('profile.profileUpdatedSuccessfully'));
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error || t('profile.failedToUpdateProfile');

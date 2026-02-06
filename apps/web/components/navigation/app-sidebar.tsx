@@ -48,8 +48,9 @@ export function AppSidebar() {
   const { currentOrganization, user } = useAuth();
 
   const isMember = currentOrganization?.role === "MEMBER";
+  const isSuperAdmin = user?.isSuperAdmin === true;
   const settingsItems: NavigationItem[] = [
-    ...(!isMember
+    ...(!isMember && isSuperAdmin
       ? [
           {
             name: t('navigation.items.organization'),
