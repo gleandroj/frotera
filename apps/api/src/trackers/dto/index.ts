@@ -41,6 +41,10 @@ export class TrackerDeviceResponseDto {
   @ApiPropertyOptional()
   name?: string | null;
 
+  /** Set when device is connected to the tracker TCP server; null when disconnected. */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  connectedAt?: string | null;
+
   @ApiPropertyOptional()
   vehicleId?: string | null;
 

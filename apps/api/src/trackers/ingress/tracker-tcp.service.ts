@@ -7,6 +7,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import * as net from "net";
 import { TrackerModel } from "@prisma/client";
+import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
 import { TrackerRedisWriterService } from "./tracker-redis-writer.service";
 import {
@@ -48,6 +49,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
     private readonly trackerDevices: TrackerDevicesService,
     private readonly redisWriter: TrackerRedisWriterService,
   ) {
@@ -75,7 +77,32 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       this.server = null;
       this.logger.log("Tracker TCP server closed");
     }
+    for (const ctx of this.socketContexts.values()) {
+      if (ctx.deviceId) this.markDisconnected(ctx.deviceId);
+    }
     this.socketContexts.clear();
+  }
+
+  private markConnected(deviceId: string): void {
+    this.prisma.trackerDevice
+      .update({
+        where: { id: deviceId },
+        data: { connectedAt: new Date() },
+      })
+      .catch((err) =>
+        this.logger.warn(`Failed to set device ${deviceId} connected: ${err.message}`),
+      );
+  }
+
+  private markDisconnected(deviceId: string): void {
+    this.prisma.trackerDevice
+      .update({
+        where: { id: deviceId },
+        data: { connectedAt: null },
+      })
+      .catch((err) =>
+        this.logger.warn(`Failed to set device ${deviceId} disconnected: ${err.message}`),
+      );
   }
 
   private handleConnection(socket: net.Socket): void {
@@ -107,12 +134,16 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
 
     socket.on("end", () => {
       this.logger.debug(`Connection ended: ${remote}`);
+      const ctx = this.socketContexts.get(socket);
       this.socketContexts.delete(socket);
+      if (ctx?.deviceId) this.markDisconnected(ctx.deviceId);
     });
 
     socket.on("error", (err) => {
       this.logger.warn(`Socket error: ${err.message}`);
+      const ctx = this.socketContexts.get(socket);
       this.socketContexts.delete(socket);
+      if (ctx?.deviceId) this.markDisconnected(ctx.deviceId);
     });
   }
 
@@ -186,10 +217,12 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
         );
         ctx.deviceId = deviceId;
         ctx.imei = imei;
+        this.markConnected(deviceId);
         this.logger.log(`Auto-registered device IMEI ${imei} -> deviceId ${deviceId}`);
       } else if (device) {
         ctx.deviceId = device.id;
         ctx.imei = device.imei;
+        this.markConnected(device.id);
         this.logger.debug(`GT06 login OK: deviceId=${device.id}, imei=${imei}`);
       } else {
         this.logger.debug(`GT06 login: unknown IMEI ${imei}, no auto-register`);

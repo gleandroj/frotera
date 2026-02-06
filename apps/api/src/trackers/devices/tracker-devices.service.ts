@@ -160,6 +160,7 @@ export class TrackerDevicesService {
     imei: string;
     model: TrackerModel;
     name: string | null;
+    connectedAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
     vehicle?: { id: string } | null;
@@ -170,6 +171,7 @@ export class TrackerDevicesService {
       imei: d.imei,
       model: d.model,
       name: d.name ?? undefined,
+      connectedAt: d.connectedAt != null ? d.connectedAt.toISOString() : null,
       vehicleId: d.vehicle?.id,
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),

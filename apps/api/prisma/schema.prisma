@@ -89,6 +89,8 @@ model TrackerDevice {
   imei           String        @unique
   model          TrackerModel
   name           String?
+  /** Set when device connects to TCP server; null when disconnected. */
+  connectedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
