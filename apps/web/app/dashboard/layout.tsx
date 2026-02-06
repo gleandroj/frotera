@@ -1,6 +1,6 @@
 import { getServerTranslation } from "@/lib/i18n-server";
 import type { Metadata } from "next";
-import { AppLayout } from "@/components/navigation/app-layout";
+import { DashboardBreadcrumbsLayout } from "./dashboard-breadcrumbs-layout";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation();
@@ -17,5 +17,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppLayout>{children}</AppLayout>;
+  return <DashboardBreadcrumbsLayout>{children}</DashboardBreadcrumbsLayout>;
 }

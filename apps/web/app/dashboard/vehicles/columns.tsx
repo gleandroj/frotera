@@ -29,6 +29,7 @@ export function getVehicleColumns(
   return [
     {
       accessorKey: "name",
+      meta: { labelKey: "common.name" },
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -45,6 +46,7 @@ export function getVehicleColumns(
     },
     {
       accessorKey: "plate",
+      meta: { labelKey: "vehicles.plate" },
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -65,6 +67,7 @@ export function getVehicleColumns(
         row.trackerDevice
           ? `${row.trackerDevice.imei} ${row.trackerDevice.model}`
           : "",
+      meta: { labelKey: "vehicles.device" },
       header: t("vehicles.device"),
       cell: ({ row }) => {
         const device = row.original.trackerDevice;

@@ -327,6 +327,11 @@ export interface VehicleTrackerDevice {
   imei: string;
   model: string;
   name?: string | null;
+  serialSat?: string | null;
+  equipmentModel?: string | null;
+  carrier?: string | null;
+  simCardNumber?: string | null;
+  cellNumber?: string | null;
   connectedAt?: string | null;
 }
 
@@ -335,6 +340,14 @@ export interface Vehicle {
   organizationId: string;
   name?: string | null;
   plate?: string | null;
+  serial?: string | null;
+  color?: string | null;
+  year?: string | null;
+  renavam?: string | null;
+  chassis?: string | null;
+  vehicleType?: string | null;
+  inactive?: boolean;
+  notes?: string | null;
   trackerDeviceId?: string | null;
   trackerDevice?: VehicleTrackerDevice | null;
   createdAt: string;
@@ -346,11 +359,25 @@ export interface CreateVehicleNewDevicePayload {
   imei: string;
   model: string; // TrackerModel: X12_GT06 | X22_NT20
   name?: string;
+  serialSat?: string;
+  equipmentModel?: string;
+  individualPassword?: string;
+  carrier?: string;
+  simCardNumber?: string;
+  cellNumber?: string;
 }
 
 export interface CreateVehiclePayload {
   name?: string;
   plate?: string;
+  serial?: string;
+  color?: string;
+  year?: string;
+  renavam?: string;
+  chassis?: string;
+  vehicleType?: string;
+  inactive?: boolean;
+  notes?: string;
   trackerDeviceId?: string;
   /** Create and link a new tracker device (takes precedence over trackerDeviceId) */
   newDevice?: CreateVehicleNewDevicePayload;
@@ -359,6 +386,14 @@ export interface CreateVehiclePayload {
 export interface UpdateVehiclePayload {
   name?: string;
   plate?: string;
+  serial?: string;
+  color?: string;
+  year?: string;
+  renavam?: string;
+  chassis?: string;
+  vehicleType?: string;
+  inactive?: boolean;
+  notes?: string;
   trackerDeviceId?: string;
 }
 

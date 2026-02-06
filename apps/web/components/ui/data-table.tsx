@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Settings2 } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -38,7 +39,7 @@ export interface DataTableProps<TData, TValue> {
   /** Optional: filter placeholder and column id to filter (e.g. "name" or "plate"). If not set, no filter input is shown. */
   filterPlaceholder?: string;
   filterColumnId?: string;
-  /** Optional: "no results" message when filtered/empty */
+  /** Optional: "no results" message when filtered/empty. Defaults to translated dataTable.noResults. */
   noResultsLabel?: string;
 }
 
@@ -47,8 +48,9 @@ export function DataTable<TData, TValue>({
   data,
   filterPlaceholder,
   filterColumnId,
-  noResultsLabel = "No results.",
+  noResultsLabel,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -87,7 +89,7 @@ export function DataTable<TData, TValue>({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="ml-auto h-8">
               <Settings2 className="mr-2 h-4 w-4" />
-              View
+              {t("dataTable.view")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[150px]">
@@ -97,16 +99,20 @@ export function DataTable<TData, TValue>({
                 (column) =>
                   typeof column.accessorFn !== "undefined" && column.getCanHide()
               )
-              .map((column) => (
+              .map((column) => {
+              const labelKey = (column.columnDef.meta as { labelKey?: string } | undefined)?.labelKey;
+              const label = labelKey ? t(labelKey) : column.id;
+              return (
                 <DropdownMenuCheckboxItem
                   key={column.id}
                   className="capitalize"
                   checked={column.getIsVisible()}
                   onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 >
-                  {column.id}
+                  {label}
                 </DropdownMenuCheckboxItem>
-              ))}
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -152,7 +158,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  {noResultsLabel}
+                  {noResultsLabel ?? t("dataTable.noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -162,7 +168,7 @@ export function DataTable<TData, TValue>({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-sm">
-          {table.getFilteredRowModel().rows.length} row(s) total.
+          {t("dataTable.rowsTotal", { count: table.getFilteredRowModel().rows.length })}
         </p>
         <div className="flex items-center space-x-2">
           <Button
@@ -172,7 +178,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
-            <span className="sr-only">Go to first page</span>
+            <span className="sr-only">{t("dataTable.goToFirstPage")}</span>
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -182,7 +188,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <span className="sr-only">Go to previous page</span>
+            <span className="sr-only">{t("dataTable.goToPreviousPage")}</span>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -192,7 +198,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            <span className="sr-only">Go to next page</span>
+            <span className="sr-only">{t("dataTable.goToNextPage")}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
@@ -202,7 +208,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
-            <span className="sr-only">Go to last page</span>
+            <span className="sr-only">{t("dataTable.goToLastPage")}</span>
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>

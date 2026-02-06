@@ -57,6 +57,15 @@
     "refresh": "Atualizar",
     "continue": "Continuar"
   },
+  "dataTable": {
+    "view": "Exibir",
+    "rowsTotal": "{{count}} linha(s) no total.",
+    "goToFirstPage": "Ir para a primeira página",
+    "goToPreviousPage": "Ir para a página anterior",
+    "goToNextPage": "Ir para a próxima página",
+    "goToLastPage": "Ir para a última página",
+    "noResults": "Nenhum resultado."
+  },
   "devices": {
     "selectOrganization": "Selecione uma organização para ver os dispositivos.",
     "listDescription": "Lista de rastreadores. Clique em \"Ver ao vivo\" para visualizar a posição em tempo real.",
@@ -82,9 +91,11 @@
     "noVehicles": "Nenhum veículo cadastrado nesta organização.",
     "viewDetails": "Ver detalhes",
     "plate": "Placa",
+    "plateRequired": "Informe a placa do veículo.",
     "device": "Rastreador",
     "noDevice": "Sem rastreador",
     "backToVehicles": "← Voltar aos veículos",
+    "viewVehicle": "Visualizar veículo",
     "vehicle": "Veículo",
     "vehicleNotFound": "Veículo não encontrado.",
     "vehicleInformation": "Informações do veículo",
@@ -108,10 +119,31 @@
     "trackerModel": "Modelo do rastreador",
     "deviceNameOptional": "Nome do rastreador (opcional)",
     "imeiRequired": "Informe o IMEI do rastreador.",
+    "sectionGeneral": "Geral",
+    "sectionDevice": "Rastreador",
+    "sectionSimData": "Dados CHIP",
+    "serial": "Serial",
+    "color": "Cor",
+    "year": "Ano",
+    "renavam": "Renavam",
+    "chassis": "Chassi",
+    "vehicleType": "Tipo de veículo",
+    "inactive": "Inativo",
+    "notes": "Informações / Histórico",
+    "notesPlaceholder": "Instalação, retirada, observações...",
+    "equipmentModel": "Modelo equipamento",
+    "serialSat": "Serial satélite",
+    "individualPassword": "Senha individual",
+    "carrier": "Operadora",
+    "simCardNumber": "SimCard",
+    "cellNumber": "N. Cel.",
     "tabs": {
       "info": "Informações",
       "tracking": "Rastreamento em tempo real"
-    }
+    },
+    "toastCreated": "Veículo criado com sucesso.",
+    "toastUpdated": "Veículo atualizado com sucesso.",
+    "toastError": "Falha ao salvar veículo. Tente novamente."
   },
   "auth": {
     "title": "Bem-vindo de volta",

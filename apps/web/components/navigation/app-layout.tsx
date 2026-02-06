@@ -6,15 +6,17 @@ import type React from "react";
 import { AppHeader } from "./app-header";
 import { AppSidebar } from "./app-sidebar";
 
-interface AppLayoutProps {
-  children: React.ReactNode;
-  breadcrumbs?: Array<{
-    label: string;
-    href?: string;
-  }>;
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
 }
 
-export function AppLayout({ children, breadcrumbs }: AppLayoutProps) {
+interface AppLayoutProps {
+  children: React.ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+export function AppLayout({ children, breadcrumbs = [] }: AppLayoutProps) {
   return (
     <RequireAuth>
       <SidebarProvider>

@@ -6,13 +6,15 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { vehiclesAPI, trackerDevicesAPI } from "@/lib/frontend/api-client";
 import { useTrackerPositions } from "@/lib/hooks/use-tracker-positions";
 import type { PositionPoint } from "@/components/devices/device-map";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import type { Vehicle } from "@/lib/frontend/api-client";
+import { ArrowLeft, Info, MapPin, Pencil } from "lucide-react";
+import { VehicleFormDialog } from "../vehicle-form-dialog";
 
 const DeviceMapDynamic = dynamic(
   () =>
@@ -54,8 +56,17 @@ export default function VehicleDetailPage() {
   const [initialHistory, setInitialHistory] = useState<PositionPoint[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const deviceId = vehicle?.trackerDevice?.id ?? null;
+
+  const refetchVehicle = useCallback(() => {
+    if (!vehicleId || !currentOrganization?.id) return;
+    vehiclesAPI
+      .get(currentOrganization.id, vehicleId)
+      .then((res) => setVehicle(res.data as Vehicle))
+      .catch(() => {});
+  }, [vehicleId, currentOrganization?.id]);
 
   const {
     positions: streamedPositions,
@@ -135,14 +146,30 @@ export default function VehicleDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/vehicles">{t("vehicles.backToVehicles")}</Link>
-          </Button>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">
-            {displayName}
-          </h1>
+      {/* Page header: back + title + subtitle + action (reference pattern) */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button variant="ghost" size="icon" className="shrink-0 -ml-2" asChild>
+              <Link href="/dashboard/vehicles" aria-label={t("vehicles.backToVehicles")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight">
+                {t("vehicles.viewVehicle")}
+              </h1>
+              <p className="text-sm text-muted-foreground truncate">
+                {vehicle ? displayName : t("common.loading")}
+              </p>
+            </div>
+          </div>
+          {vehicle && currentOrganization?.id && (
+            <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={() => setEditDialogOpen(true)}>
+              <Pencil className="h-4 w-4" />
+              {t("common.edit")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -156,68 +183,154 @@ export default function VehicleDetailPage() {
 
       {!loading && !loadError && vehicle && (
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="info">{t("vehicles.tabs.info")}</TabsTrigger>
-            <TabsTrigger value="tracking">{t("vehicles.tabs.tracking")}</TabsTrigger>
+          <TabsList className="w-full max-w-md h-auto flex flex-row gap-0 p-0 bg-transparent border-b border-border rounded-none">
+            <TabsTrigger
+              value="info"
+              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold"
+            >
+              <Info className="h-4 w-4" />
+              {t("vehicles.tabs.info")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="tracking"
+              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold"
+            >
+              <MapPin className="h-4 w-4" />
+              {t("vehicles.tabs.tracking")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="info" className="mt-6">
-            <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">
-                {t("vehicles.vehicleInformation")}
-              </h2>
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <dt className="text-sm text-muted-foreground">{t("common.name")}</dt>
-                  <dd className="mt-1">{vehicle.name ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">{t("vehicles.plate")}</dt>
-                  <dd className="mt-1 font-medium">{vehicle.plate ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">{t("vehicles.device")}</dt>
-                  <dd className="mt-1">
-                    {vehicle.trackerDevice ? (
-                      <div className="space-y-1">
-                        <span className="font-mono text-sm">
-                          {vehicle.trackerDevice.imei}
-                        </span>
-                        <span className="text-muted-foreground text-sm ml-1">
-                          ({vehicle.trackerDevice.model})
-                        </span>
-                        {vehicle.trackerDevice.name && (
-                          <span className="block text-sm text-muted-foreground">
-                            {vehicle.trackerDevice.name}
-                          </span>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          {vehicle.trackerDevice.connectedAt ? (
-                            <Badge variant="default" className="text-green-600 bg-green-500/20">
-                              {t("devices.connected")}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              {t("devices.disconnected")}
-                            </Badge>
-                          )}
-                        </div>
+            <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">
+                  {t("vehicles.sectionGeneral")}
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t("vehicles.vehicleInformation")}
+                </p>
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("common.name")}</dt>
+                    <dd className="mt-1">{vehicle.name ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.plate")}</dt>
+                    <dd className="mt-1 font-medium">{vehicle.plate ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.serial")}</dt>
+                    <dd className="mt-1 font-mono text-sm">{vehicle.serial ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.color")}</dt>
+                    <dd className="mt-1">{vehicle.color ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.year")}</dt>
+                    <dd className="mt-1">{vehicle.year ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.vehicleType")}</dt>
+                    <dd className="mt-1">{vehicle.vehicleType ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.renavam")}</dt>
+                    <dd className="mt-1">{vehicle.renavam ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.chassis")}</dt>
+                    <dd className="mt-1 font-mono text-sm">{vehicle.chassis ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.inactive")}</dt>
+                    <dd className="mt-1">{vehicle.inactive ? t("common.yes") : t("common.no")}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.notes")}</dt>
+                    <dd className="mt-1 text-sm whitespace-pre-wrap">{vehicle.notes ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t("common.created")}</dt>
+                    <dd className="mt-1 text-sm">
+                      {vehicle.createdAt
+                        ? new Date(vehicle.createdAt).toLocaleString()
+                        : "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold mb-1">
+                  {t("vehicles.device")}
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t("vehicles.deviceAssociation")}
+                </p>
+                {vehicle.trackerDevice ? (
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-sm text-muted-foreground">{t("vehicles.imei")}</dt>
+                      <dd className="mt-1 font-mono text-sm">{vehicle.trackerDevice.imei}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">{t("vehicles.trackerModel")}</dt>
+                      <dd className="mt-1">{vehicle.trackerDevice.model}</dd>
+                    </div>
+                    {vehicle.trackerDevice.name && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("common.name")}</dt>
+                        <dd className="mt-1">{vehicle.trackerDevice.name}</dd>
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {t("vehicles.noDevice")}
-                      </span>
                     )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">{t("common.created")}</dt>
-                  <dd className="mt-1 text-sm">
-                    {vehicle.createdAt
-                      ? new Date(vehicle.createdAt).toLocaleString()
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
+                    {vehicle.trackerDevice.equipmentModel && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("vehicles.equipmentModel")}</dt>
+                        <dd className="mt-1">{vehicle.trackerDevice.equipmentModel}</dd>
+                      </div>
+                    )}
+                    {vehicle.trackerDevice.serialSat && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("vehicles.serialSat")}</dt>
+                        <dd className="mt-1 font-mono text-sm">{vehicle.trackerDevice.serialSat}</dd>
+                      </div>
+                    )}
+                    {vehicle.trackerDevice.carrier && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("vehicles.carrier")}</dt>
+                        <dd className="mt-1">{vehicle.trackerDevice.carrier}</dd>
+                      </div>
+                    )}
+                    {vehicle.trackerDevice.simCardNumber && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("vehicles.simCardNumber")}</dt>
+                        <dd className="mt-1 font-mono text-sm">{vehicle.trackerDevice.simCardNumber}</dd>
+                      </div>
+                    )}
+                    {vehicle.trackerDevice.cellNumber && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">{t("vehicles.cellNumber")}</dt>
+                        <dd className="mt-1">{vehicle.trackerDevice.cellNumber}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-sm text-muted-foreground">{t("common.status")}</dt>
+                      <dd className="mt-1">
+                        {vehicle.trackerDevice.connectedAt ? (
+                          <Badge variant="default" className="text-green-600 bg-green-500/20">
+                            {t("devices.connected")}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            {t("devices.disconnected")}
+                          </Badge>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p className="text-muted-foreground">{t("vehicles.noDevice")}</p>
+                )}
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="tracking" className="mt-6">
@@ -256,6 +369,19 @@ export default function VehicleDetailPage() {
             )}
           </TabsContent>
         </Tabs>
+      )}
+
+      {currentOrganization?.id && vehicle && (
+        <VehicleFormDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          vehicle={vehicle}
+          organizationId={currentOrganization.id}
+          onSuccess={() => {
+            refetchVehicle();
+            setEditDialogOpen(false);
+          }}
+        />
       )}
     </div>
   );
