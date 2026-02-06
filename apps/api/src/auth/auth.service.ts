@@ -1,6 +1,7 @@
 import { ApiCode } from "@/common/api-codes.enum";
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -12,6 +13,7 @@ import * as QRCode from "qrcode";
 import { EmailService } from "../email/email.service";
 import { OrganizationsService } from "../organizations/organizations.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SettingsService } from "../settings/settings.service";
 import { TokenService } from "../utils/tokens";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
@@ -28,7 +30,8 @@ export class AuthService {
     private configService: ConfigService,
     private tokenService: TokenService,
     private emailService: EmailService,
-    private organizationsService: OrganizationsService
+    private organizationsService: OrganizationsService,
+    private settingsService: SettingsService,
   ) {}
 
   async login(loginDto: LoginDto) {
@@ -104,6 +107,11 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto) {
+    const signupEnabled = await this.settingsService.isSignupEnabled();
+    if (!signupEnabled) {
+      throw new ForbiddenException(ApiCode.AUTH_SIGNUP_DISABLED);
+    }
+
     const {
       email,
       password,
@@ -136,22 +144,20 @@ export class AuthService {
       },
     });
 
-    // Always create organization - use provided name or fallback to user's name or email
+    // Create organization only if feature flag allows (default: invitation-only, no org on signup)
     let organization = null;
-    const orgName = organizationName?.trim() || name?.trim() || email.split('@')[0];
-
-    try {
-      const orgResult = await this.organizationsService.createOrganization(
-        user.id,
-        {
-          name: orgName,
-          description: undefined,
-        }
-      );
-      organization = orgResult.organization;
-    } catch (error) {
-      // Log error but don't fail the signup
-      console.error('Failed to create organization during signup:', error);
+    const createOrgEnabled = await this.settingsService.isSignupCreateOrganizationEnabled();
+    if (createOrgEnabled) {
+      const orgName = organizationName?.trim() || name?.trim() || email.split('@')[0];
+      try {
+        const orgResult = await this.organizationsService.createOrganization(
+          user.id,
+          { name: orgName, description: undefined },
+        );
+        organization = orgResult.organization;
+      } catch (error) {
+        console.error('Failed to create organization during signup:', error);
+      }
     }
 
     // Generate and send verification token

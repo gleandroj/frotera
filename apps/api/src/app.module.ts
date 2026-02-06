@@ -11,6 +11,7 @@ import { InvitationsModule } from "./invitations/invitations.module";
 import { MembersModule } from "./members/members.module";
 import { OrganizationsModule } from "./organizations/organizations.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { SettingsModule } from "./settings/settings.module";
 import { UsersModule } from "./users/users.module";
 import { AppConfigModule } from "./config/config.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -23,6 +24,7 @@ import { TrackersModule } from "./trackers/trackers.module";
       envFilePath: "../../.env",
     }),
     ScheduleModule.forRoot(),
+    SettingsModule,
     AuthModule,
     UsersModule,
     PrismaModule,

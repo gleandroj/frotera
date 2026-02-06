@@ -47,6 +47,26 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
 
+  const isMember = currentOrganization?.role === "MEMBER";
+  const settingsItems: NavigationItem[] = [
+    ...(!isMember
+      ? [
+          {
+            name: t('navigation.items.organization'),
+            href: "/settings/organizations",
+            icon: Building2,
+            current: pathname.startsWith("/settings/organizations"),
+          },
+        ]
+      : []),
+    {
+      name: t('navigation.items.profile'),
+      href: "/settings/profile",
+      icon: User,
+      current: pathname.startsWith("/settings/profile"),
+    },
+  ];
+
   const mainNavigation: NavigationSection[] = [
     {
       title: t('navigation.sections.overview'),
@@ -84,20 +104,7 @@ export function AppSidebar() {
     },
     {
       title: t('navigation.sections.settings'),
-      items: [
-        {
-          name: t('navigation.items.organization'),
-          href: "/settings/organizations",
-          icon: Building2,
-          current: pathname.startsWith("/settings/organizations"),
-        },
-        {
-          name: t('navigation.items.profile'),
-          href: "/settings/profile",
-          icon: User,
-          current: pathname.startsWith("/settings/profile"),
-        },
-      ],
+      items: settingsItems,
     },
   ];
 

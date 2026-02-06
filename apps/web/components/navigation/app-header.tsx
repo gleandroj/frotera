@@ -73,6 +73,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
   const [headerCustomers, setHeaderCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const { t } = useTranslation();
+  const canManageOrganizations = currentOrganization?.role !== "MEMBER";
 
   const loadHeaderCustomers = useCallback(() => {
     if (!currentOrganization?.id) {
@@ -206,24 +207,28 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 </div>
               </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => router.push("/settings/organizations")}
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              {t('navigation.header.manageOrganizations')}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => {
-                setOrgDropdownOpen(false);
-                setCreateOrgDialogOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('navigation.header.createOrganization')}
-            </DropdownMenuItem>
+            {canManageOrganizations && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => router.push("/settings/organizations")}
+                >
+                  <Building2 className="w-4 h-4 mr-2" />
+                  {t('navigation.header.manageOrganizations')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setOrgDropdownOpen(false);
+                    setCreateOrgDialogOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t('navigation.header.createOrganization')}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -325,13 +330,15 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             <User className="w-4 h-4 mr-2" />
             {t('navigation.header.profileSettings')}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="cursor-pointer"
-            onClick={() => router.push("/settings/organizations")}
-          >
-            <Building2 className="w-4 h-4 mr-2" />
-            {t('navigation.header.organizations')}
-          </DropdownMenuItem>
+          {canManageOrganizations && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => router.push("/settings/organizations")}
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              {t('navigation.header.organizations')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer"

@@ -30,6 +30,13 @@ export default function OrganizationsPage() {
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+  // Members cannot access organization management
+  useEffect(() => {
+    if (currentOrganization?.role === "MEMBER") {
+      router.replace("/dashboard");
+    }
+  }, [currentOrganization?.role, router]);
+
   // Check if we should open edit dialog based on URL param
   useEffect(() => {
     const orgIdFromUrl = searchParams.get('edit');
@@ -86,6 +93,10 @@ export default function OrganizationsPage() {
   const canEditOrganization = (org: any) => {
     return org.role === 'OWNER' || org.role === 'ADMIN';
   };
+
+  if (currentOrganization?.role === "MEMBER") {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

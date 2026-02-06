@@ -186,9 +186,12 @@
     "USER_ALREADY_EXISTS": "Usuário já existe",
     "AUTH_INVALID_CREDENTIALS": "Email ou senha inválidos",
     "AUTH_ACCOUNT_NOT_VERIFIED": "Conta não verificada. Email de verificação enviado. Verifique sua caixa de entrada ou spam para ativar sua conta.",
+    "AUTH_SIGNUP_DISABLED": "O cadastro público está desativado. Acesso apenas por convite.",
     "INVITATION_ALREADY_ACCEPTED": "Convite já aceito",
     "switchToSignup": "Cadastre-se",
     "switchToLogin": "Entrar",
+    "signupDisabled": "O cadastro público está desativado. Acesso apenas por convite.",
+    "backToLogin": "Voltar ao Login",
     "invalidCredentials": "Email ou senha inválidos",
     "emailRequired": "Email é obrigatório",
     "passwordRequired": "Senha é obrigatória",
@@ -785,6 +788,8 @@
   "team": {
     "title": "Membros da Equipe",
     "description": "Gerencie os membros da sua equipe e suas permissões",
+    "showingMembersFor": "Membros de {{organizationName}}",
+    "selectOrganization": "Selecione uma organização para ver os membros da equipe.",
     "members": "Membros",
     "invitations": "Convites",
     "joined": "Entrou em",
@@ -799,6 +804,7 @@
       "memberOption": "Membro",
       "adminOption": "Administrador",
       "fullAccess": "Acesso completo à organização",
+      "fullAccessRestrictedHint": "Você tem acesso apenas a alguns clientes; não pode conceder acesso à organização inteira.",
       "customerAccess": "Acesso por cliente",
       "customerAccessHint": "Se nenhum cliente for selecionado, o usuário não terá acesso a dados de veículos/clientes.",
       "sendButton": "Enviar Convite",
@@ -825,7 +831,8 @@
       "title": "Editar Membro",
       "description": "Alterar função e acesso aos clientes de {{name}}",
       "saveButton": "Salvar alterações",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "editingSelfHint": "Apenas o dono da organização pode alterar sua função e acesso aos clientes."
     },
     "confirmDialogs": {
       "revokeInvitation": {
@@ -882,7 +889,13 @@
       "invitationExpired": "Convite expirado",
       "invitationExpiredDescription": "Este convite expirou e precisa ser enviado novamente",
       "invitationAlreadyAccepted": "Convite já aceito",
-      "invitationAlreadyAcceptedDescription": "Este convite já foi aceito"
+      "invitationAlreadyAcceptedDescription": "Este convite já foi aceito",
+      "cannotGrantFullAccess": "Você não pode conceder acesso à organização inteira",
+      "cannotGrantFullAccessDescription": "Seu acesso é limitado a alguns clientes; só é possível atribuir acesso dentro do seu escopo.",
+      "cannotChangeOwnRole": "Você não pode alterar sua própria função",
+      "cannotChangeOwnRoleDescription": "Apenas o dono da organização pode alterar sua função.",
+      "cannotEditOwnAccess": "Você não pode editar seu próprio acesso aos clientes",
+      "cannotEditOwnAccessDescription": "Apenas o dono da organização pode alterar seu acesso aos clientes."
     }
   },
   "dashboard": {

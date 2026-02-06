@@ -81,6 +81,26 @@ export class CustomersService {
     return result.map((r) => r.id);
   }
 
+  /**
+   * Reduce customer IDs to the minimal "root" set: only IDs that have no parent
+   * in the given set (or have no parent at all). Storing only roots means
+   * "access to parent" automatically includes all descendants at read time.
+   */
+  async getRootCustomerIds(
+    organizationId: string,
+    customerIds: string[],
+  ): Promise<string[]> {
+    if (customerIds.length === 0) return [];
+    const customers = await this.prisma.customer.findMany({
+      where: { id: { in: customerIds }, organizationId },
+      select: { id: true, parentId: true },
+    });
+    const idSet = new Set(customerIds);
+    return customers
+      .filter((c) => !c.parentId || !idSet.has(c.parentId))
+      .map((c) => c.id);
+  }
+
   async list(
     organizationId: string,
     allowedCustomerIds: string[] | null,

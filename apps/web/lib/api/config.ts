@@ -2,6 +2,8 @@ import { externalApi } from "../frontend/api-client";
 
 export interface PublicConfig {
   trialDays: number;
+  /** When false, signup is disabled (invitation-only mode). Controlled in AdminJS App Settings. */
+  signupEnabled: boolean;
 }
 
 /**
@@ -29,8 +31,8 @@ export async function getPublicConfig(): Promise<PublicConfig> {
     return config;
   } catch (error) {
     console.error('Error fetching public config:', error);
-    // Return default config (no trial) as fallback
-    return { trialDays: 0 };
+    // Return default config (invitation-only) as fallback
+    return { trialDays: 0, signupEnabled: false };
   }
 }
 

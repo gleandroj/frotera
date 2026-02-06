@@ -1,29 +1,25 @@
-"use client";
-
 import { SignupForm } from "@/components/auth/signup-form";
 import { Logo } from "@/components/icons/logo";
-import { useTranslation } from "@/i18n/useTranslation";
-import { configApi } from "@/lib/api/config";
-import { useEffect, useState } from "react";
+import { getPublicConfig } from "@/lib/api/config";
+import { getServerTranslation } from "@/lib/i18n-server";
+import { redirect } from "next/navigation";
 
-export default function SignupPage() {
-  const { t } = useTranslation();
-  const [trialDays, setTrialDays] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+type PageProps = {
+  searchParams: Promise<{ token?: string }> | { token?: string };
+};
 
-  useEffect(() => {
-    configApi.get()
-      .then((config) => {
-        setTrialDays(config.trialDays);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch config:', error);
-        setTrialDays(0);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+export default async function SignupPage({ searchParams }: PageProps) {
+  const [config, { t }] = await Promise.all([
+    getPublicConfig(),
+    getServerTranslation(),
+  ]);
+
+  const params = await Promise.resolve(searchParams);
+  const invitationToken = params?.token ?? null;
+
+  if (!config.signupEnabled && !invitationToken) {
+    redirect("/login?signup=disabled");
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex">
@@ -42,37 +38,6 @@ export default function SignupPage() {
               {t("auth.branding.signup.heroDescription")}
             </p>
             <div className="grid grid-cols-1 gap-4 pt-8">
-              {trialDays > 0 ? (
-                <>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-lg">{t("auth.branding.signup.features.freeTrial")}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-lg">{t("auth.branding.signup.features.noChargesDuringTrial")}</span>
-                  </div>
-                </>
-              ) : (
-                !loading && (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-lg">{t("auth.branding.signup.features.freeTrialNoTrial")}</span>
-                  </div>
-                )
-              )}
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -84,7 +49,6 @@ export default function SignupPage() {
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12">
           <div className="w-96 h-96 bg-white/5 rounded-full"></div>
         </div>

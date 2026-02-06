@@ -263,3 +263,14 @@ model Notification {
   @@index([type])
   @@map("notifications")
 }
+
+// Single-row table: feature flags editable in AdminJS. Default = invitation-only (both false).
+model AppSettings {
+  id                            String   @id @default(cuid())
+  signupEnabled                 Boolean  @default(false)
+  signupCreateOrganizationEnabled Boolean @default(false)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  @@map("app_settings")
+}

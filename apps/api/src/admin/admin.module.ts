@@ -5,6 +5,7 @@ import { PrismaModule } from "../prisma/prisma.module";
 import { PrismaService } from "../prisma/prisma.service";
 
 const modelNames = [
+  "AppSettings",
   "User",
   "VerificationToken",
   "Organization",
@@ -18,6 +19,7 @@ const modelNames = [
 
 // Model name translations
 const modelTranslations: Record<string, string> = {
+  AppSettings: "Configurações do Sistema",
   User: "Usuários",
   VerificationToken: "Tokens de Verificação",
   Organization: "Organizações",
@@ -31,6 +33,7 @@ const modelTranslations: Record<string, string> = {
 
 // Navigation groups for organizing models by domain
 const navigationGroups: Record<string, string> = {
+  "settings": "Configurações",
   "users-organizations": "Usuários e Organizações",
   "authentication": "Autenticação",
   "notifications": "Notificações",
@@ -49,6 +52,7 @@ const loginPageTranslations = {
 
 // Map models to their navigation groups
 const modelNavigationGroups: Record<string, string> = {
+  AppSettings: "settings",
   User: "users-organizations",
   Organization: "users-organizations",
   OrganizationMember: "users-organizations",
@@ -216,6 +220,26 @@ const modelNavigationGroups: Record<string, string> = {
                   };
 
                   return userResource;
+                }
+
+                // AppSettings: feature flags (signup, create org on signup) - single row edited in AdminJS
+                if (name === "AppSettings") {
+                  return {
+                    ...baseResource,
+                    options: {
+                      ...baseResource.options,
+                      properties: {
+                        signupEnabled: {
+                          description: "Se ativo, usuários podem se cadastrar pela tela de signup. Desativado = modo apenas por convite.",
+                        },
+                        signupCreateOrganizationEnabled: {
+                          description: "Se ativo (e signup habilitado), ao se cadastrar uma organização é criada para o usuário. Desativado = só convites criam org.",
+                        },
+                        createdAt: { isVisible: { list: false } },
+                        updatedAt: { isVisible: { list: false } },
+                      },
+                    },
+                  };
                 }
 
                 // Special handling for VerificationToken to hide sensitive token data

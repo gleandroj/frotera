@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { AuthService } from "../auth/auth.service";
+import { CustomersService } from "../customers/customers.service";
 import { EmailService } from "../email/email.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -24,7 +25,8 @@ export class InvitationsService {
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private customersService: CustomersService,
   ) {}
 
   async createInvitation(
@@ -53,7 +55,21 @@ export class InvitationsService {
       });
     }
 
-    if (customerRestricted && (customerIds?.length ?? 0) > 0) {
+    // A member restricted to certain customers cannot grant full organization access
+    const inviterAllowedIds = await this.customersService.getAllowedCustomerIds(
+      { id: organizationMember.id, customerRestricted: organizationMember.customerRestricted },
+      organizationId,
+    );
+    if (inviterAllowedIds !== null) {
+      if (!customerRestricted || (customerIds?.length ?? 0) === 0) {
+        throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
+      }
+      const allowedSet = new Set(inviterAllowedIds);
+      const invalid = customerIds!.filter((id: string) => !allowedSet.has(id));
+      if (invalid.length > 0) {
+        throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+      }
+    } else if (customerRestricted && (customerIds?.length ?? 0) > 0) {
       const customersInOrg = await this.prisma.customer.findMany({
         where: { id: { in: customerIds! }, organizationId },
         select: { id: true },
@@ -95,6 +111,15 @@ export class InvitationsService {
       });
     }
 
+    // Store only root customers: access to a parent automatically includes all descendants at read time
+    let customerIdsToStore = customerIds;
+    if (customerRestricted && (customerIdsToStore?.length ?? 0) > 0) {
+      customerIdsToStore = await this.customersService.getRootCustomerIds(
+        organizationId,
+        customerIdsToStore!,
+      );
+    }
+
     // Create invitation
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -108,8 +133,8 @@ export class InvitationsService {
         expiresAt,
         inviterId: userId,
         customerRestricted,
-        customers: customerRestricted && customerIds?.length
-          ? { create: customerIds.map((customerId: string) => ({ customerId })) }
+        customers: customerRestricted && (customerIdsToStore?.length ?? 0) > 0
+          ? { create: customerIdsToStore!.map((customerId: string) => ({ customerId })) }
           : undefined,
       },
       include: { customers: { include: { customer: true } } },

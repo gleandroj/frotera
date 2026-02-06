@@ -23,10 +23,15 @@ export class ConfigController {
           description: "Number of trial days (0 = no trial)",
           example: 0,
         },
+        signupEnabled: {
+          type: "boolean",
+          description: "Whether public signup is enabled (AdminJS feature flag)",
+          example: false,
+        },
       },
     },
   })
-  getConfig() {
+  async getConfig() {
     return this.configService.getPublicConfig();
   }
 }

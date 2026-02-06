@@ -90,6 +90,21 @@ async function seedAdminUser() {
   };
 }
 
+async function seedAppSettings() {
+  const existing = await prisma.appSettings.findFirst();
+  if (existing) {
+    console.log("⚙️  App settings already exist (signup / create-org flags)");
+    return;
+  }
+  await prisma.appSettings.create({
+    data: {
+      signupEnabled: false,
+      signupCreateOrganizationEnabled: false,
+    },
+  });
+  console.log("✅ App settings created (invitation-only: signup disabled, create org on signup disabled)");
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -101,6 +116,12 @@ async function main() {
   console.log("🚀 Starting Database Seeding");
   console.log("=============================");
   console.log(`Admin User: ${options.seedAdminUser ? "YES" : "SKIP"}`);
+  console.log("");
+
+  // Seed App Settings (feature flags) first
+  console.log("⚙️  Seeding App Settings (feature flags)");
+  console.log("----------------------------------------");
+  await seedAppSettings();
   console.log("");
 
   let adminUserCreated = false;

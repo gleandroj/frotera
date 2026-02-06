@@ -1,11 +1,20 @@
-"use client";
-
 import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons/logo";
-import { useTranslation } from "@/i18n/useTranslation";
+import { getPublicConfig } from "@/lib/api/config";
+import { getServerTranslation } from "@/lib/i18n-server";
 
-export default function LoginPage() {
-  const { t } = useTranslation();
+type PageProps = {
+  searchParams: Promise<{ redirect?: string; signup?: string }> | { redirect?: string; signup?: string };
+};
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const [config, { t }] = await Promise.all([
+    getPublicConfig(),
+    getServerTranslation(),
+  ]);
+
+  const params = await Promise.resolve(searchParams);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex">
       {/* Left side - Branding */}
@@ -50,7 +59,6 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12">
           <div className="w-96 h-96 bg-white/5 rounded-full"></div>
         </div>
@@ -67,7 +75,11 @@ export default function LoginPage() {
               <Logo variant="auto" size="md" />
             </div>
           </div>
-          <AuthForm />
+          <AuthForm
+            signupEnabled={config.signupEnabled ?? false}
+            redirect={params.redirect ?? undefined}
+            signupDisabledParam={params.signup ?? undefined}
+          />
         </div>
       </div>
     </div>

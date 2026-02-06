@@ -15,18 +15,28 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { AxiosError } from "axios";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type AuthStep = "login" | "2fa";
 
-export function AuthForm() {
+export type AuthFormProps = {
+  signupEnabled: boolean;
+  redirect?: string;
+  signupDisabledParam?: string;
+};
+
+export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { login } = useAuth();
-  const redirect = searchParams.get("redirect");
+
+  useEffect(() => {
+    if (signupDisabledParam === "disabled") {
+      toast.info(t("auth.signupDisabled"));
+    }
+  }, [signupDisabledParam, t]);
 
   // Form state
   const [step, setStep] = useState<AuthStep>("login");
@@ -226,15 +236,17 @@ export function AuthForm() {
                   {t("auth.forgotPasswordLink")}
                 </Link>
               </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">{t("auth.noAccount")}</span>{" "}
-                <Link
-                  href="/signup"
-                  className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                >
-                  {t("auth.switchToSignup")}
-                </Link>
-              </div>
+              {signupEnabled && (
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">{t("auth.noAccount")}</span>{" "}
+                  <Link
+                    href="/signup"
+                    className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  >
+                    {t("auth.switchToSignup")}
+                  </Link>
+                </div>
+              )}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <LanguageSwitcherLink />
               </div>

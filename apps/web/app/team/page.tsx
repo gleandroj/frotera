@@ -104,6 +104,30 @@ type EditMemberFormValues = {
   customerIds: string[];
 };
 
+/** Get all descendant customer ids for a given id (parent implies children). */
+function getDescendantIds(
+  customerId: string,
+  customers: { id: string; parentId?: string | null }[],
+): string[] {
+  const byParent = new Map<string | null, { id: string }[]>();
+  for (const c of customers) {
+    const key = c.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push({ id: c.id });
+  }
+  const result: string[] = [];
+  const stack = [customerId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    const children = byParent.get(id) ?? [];
+    for (const ch of children) {
+      result.push(ch.id);
+      stack.push(ch.id);
+    }
+  }
+  return result;
+}
+
 export default function TeamPage() {
   const { t, currentLanguage } = useTranslation();
   const router = useRouter();
@@ -309,6 +333,12 @@ export default function TeamPage() {
           });
           break;
 
+        case 'MEMBER_CANNOT_GRANT_FULL_ACCESS':
+          toast.error(t('team.errorMessages.cannotGrantFullAccess'), {
+            description: t('team.errorMessages.cannotGrantFullAccessDescription'),
+          });
+          break;
+
         default:
           // Show generic error with actual backend message
           toast.error(t('team.toastMessages.error'), {
@@ -396,10 +426,42 @@ export default function TeamPage() {
     }
   };
 
+  // Load members and invitations only for the currently selected organization.
+  // Clear list when org changes so we never show another org's data.
   useEffect(() => {
-    loadTeamMembers();
-    loadInvitations();
-  }, [currentOrganization, activeTab]);
+    const orgId = currentOrganization?.id;
+    if (!orgId) {
+      setMembers([]);
+      setInvitations([]);
+      setLoadingMembers(false);
+      setLoadingInvitations(false);
+      return;
+    }
+    setMembers([]);
+    setInvitations([]);
+    const load = async () => {
+      setLoadingMembers(true);
+      setLoadingInvitations(true);
+      try {
+        const [membersRes, invitationsRes] = await Promise.all([
+          organizationAPI.getMembers(orgId),
+          invitationAPI.list(orgId),
+        ]);
+        setMembers(membersRes.data.memberships ?? []);
+        setInvitations(invitationsRes.data.invitations ?? []);
+      } catch (err: any) {
+        const errorMessage =
+          err.response?.data?.error ||
+          err.message ||
+          t('team.errorMessages.failedToLoadMembers');
+        toast.error(t('team.toastMessages.error'), { description: errorMessage });
+      } finally {
+        setLoadingMembers(false);
+        setLoadingInvitations(false);
+      }
+    };
+    load();
+  }, [currentOrganization?.id, activeTab, t]);
 
   useEffect(() => {
     if (!inviteDialogOpen || !currentOrganization?.id) return;
@@ -443,11 +505,33 @@ export default function TeamPage() {
         description: t('team.toastMessages.memberUpdatedDescription'),
       });
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || t('team.errorMessages.failedToUpdateMember');
-      toast.error(t('team.toastMessages.error'), {
-        description: errorMessage,
-      });
+      const errorCode = err.response?.data?.errorCode;
+      const backendMessage = err.response?.data?.message;
+      const fallbackMessage = err.message || t('team.errorMessages.failedToUpdateMember');
+      const description = backendMessage && backendMessage.trim() !== '' ? backendMessage : fallbackMessage;
+
+      switch (errorCode) {
+        case 'MEMBER_CANNOT_GRANT_FULL_ACCESS':
+          toast.error(t('team.errorMessages.cannotGrantFullAccess'), {
+            description: t('team.errorMessages.cannotGrantFullAccessDescription'),
+          });
+          break;
+        case 'MEMBER_CANNOT_CHANGE_OWN_ROLE':
+          toast.error(t('team.errorMessages.cannotChangeOwnRole'), {
+            description: t('team.errorMessages.cannotChangeOwnRoleDescription'),
+          });
+          break;
+        case 'MEMBER_CANNOT_EDIT_OWN_ACCESS':
+          toast.error(t('team.errorMessages.cannotEditOwnAccess'), {
+            description: t('team.errorMessages.cannotEditOwnAccessDescription'),
+          });
+          break;
+        default:
+          toast.error(t('team.toastMessages.error'), {
+            description,
+          });
+          break;
+      }
     }
   };
 
@@ -524,6 +608,9 @@ export default function TeamPage() {
     currentOrganization?.role === "OWNER" ||
     currentOrganization?.role === "ADMIN";
 
+  const currentUserMembership = members.find((m) => m.user.id === user?.id);
+  const currentUserRestricted = currentUserMembership?.customerRestricted === true;
+
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "N/A";
     try {
@@ -540,8 +627,20 @@ export default function TeamPage() {
   };
 
 
-  //TODO: Review it
-  if (!currentOrganization || loadingMembers || loadingInvitations) {
+  if (!currentOrganization) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('team.title')}</h1>
+          <p className="text-muted-foreground mt-1">
+            {t('team.selectOrganization')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingMembers || loadingInvitations) {
     return (
       <SkeletonPageLayout showTabs={true} showCreateButton={true}>
         <TeamMembersTableSkeleton />
@@ -555,7 +654,7 @@ export default function TeamPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('team.title')}</h1>
           <p className="text-muted-foreground">
-            {t('team.description')}
+            {t('team.showingMembersFor', { organizationName: currentOrganization.name })}
           </p>
         </div>
         {canManageTeam && (
@@ -583,7 +682,7 @@ export default function TeamPage() {
                 initialValues={{
                   email: "",
                   role: "MEMBER" as "ADMIN" | "MEMBER",
-                  fullAccess: true,
+                  fullAccess: !currentUserRestricted,
                   customerIds: [] as string[],
                 }}
                 validationSchema={toFormikValidationSchema(InvitationFormSchema)}
@@ -633,21 +732,23 @@ export default function TeamPage() {
                       />
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="invite-fullAccess"
-                        checked={values.fullAccess}
-                        onCheckedChange={(v) => {
-                          setFieldValue("fullAccess", v === true);
-                          if (v === true) setFieldValue("customerIds", []);
-                        }}
-                      />
-                      <Label htmlFor="invite-fullAccess" className="font-normal cursor-pointer">
-                        {t('team.inviteDialog.fullAccess')}
-                      </Label>
-                    </div>
+                    {!currentUserRestricted && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="invite-fullAccess"
+                          checked={values.fullAccess}
+                          onCheckedChange={(v) => {
+                            setFieldValue("fullAccess", v === true);
+                            if (v === true) setFieldValue("customerIds", []);
+                          }}
+                        />
+                        <Label htmlFor="invite-fullAccess" className="font-normal cursor-pointer">
+                          {t('team.inviteDialog.fullAccess')}
+                        </Label>
+                      </div>
+                    )}
 
-                    {!values.fullAccess && (
+                    {(currentUserRestricted || !values.fullAccess) && (
                       <div className="space-y-2">
                         <Label>{t('team.inviteDialog.customerAccess')}</Label>
                         <p className="text-xs text-muted-foreground">
@@ -659,7 +760,9 @@ export default function TeamPage() {
                           ) : inviteCustomers.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('customers.noCustomers')}</p>
                           ) : (
-                            inviteCustomers.map((c) => (
+                            inviteCustomers.map((c) => {
+                              const parentSelected = c.parentId != null && values.customerIds.includes(c.parentId);
+                              return (
                               <div
                                 key={c.id}
                                 className="flex items-center space-x-2 py-1"
@@ -668,21 +771,25 @@ export default function TeamPage() {
                                 <Checkbox
                                   id={`invite-customer-${c.id}`}
                                   checked={values.customerIds.includes(c.id)}
+                                  disabled={parentSelected}
                                   onCheckedChange={(v) => {
+                                    const idsToAdd = v === true ? [c.id, ...getDescendantIds(c.id, inviteCustomers)] : [];
+                                    const idsToRemove = v === false ? [c.id, ...getDescendantIds(c.id, inviteCustomers)] : [];
                                     const next = v === true
-                                      ? [...values.customerIds, c.id]
-                                      : values.customerIds.filter((id) => id !== c.id);
+                                      ? [...new Set([...values.customerIds, ...idsToAdd])]
+                                      : values.customerIds.filter((id) => !idsToRemove.includes(id));
                                     setFieldValue("customerIds", next);
                                   }}
                                 />
                                 <Label
                                   htmlFor={`invite-customer-${c.id}`}
-                                  className="font-normal cursor-pointer text-sm"
+                                  className={`font-normal text-sm ${parentSelected ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                                 >
                                   {c.name}
                                 </Label>
                               </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </div>
@@ -756,12 +863,16 @@ export default function TeamPage() {
                 : ''}
             </DialogDescription>
           </DialogHeader>
-          {memberToEdit && (
+          {memberToEdit && (() => {
+            const isEditingSelf = memberToEdit.user.id === user?.id;
+            const canEditOwnAccess = currentOrganization?.role === "OWNER";
+            const disableRoleAndAccess = isEditingSelf && !canEditOwnAccess;
+            return (
             <Formik<EditMemberFormValues>
               key={memberToEdit.id}
               initialValues={{
                 role: (memberToEdit.role === "OWNER" ? "ADMIN" : memberToEdit.role) as "ADMIN" | "MEMBER",
-                fullAccess: !memberToEdit.customerRestricted,
+                fullAccess: currentUserRestricted ? false : !memberToEdit.customerRestricted,
                 customerIds: memberToEdit.customers?.map((c) => c.id) ?? [],
               }}
               validationSchema={toFormikValidationSchema(EditMemberFormSchema)}
@@ -769,13 +880,21 @@ export default function TeamPage() {
             >
               {({ values, setFieldValue, isSubmitting, errors, touched }) => (
                 <Form className="space-y-4 px-1" noValidate>
+                  {disableRoleAndAccess && (
+                    <p className="text-xs text-muted-foreground">
+                      {t('team.editDialog.editingSelfHint')}
+                    </p>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="edit-role">{t('team.inviteDialog.roleLabel')}</Label>
                     <Select
                       value={values.role}
                       onValueChange={(value: "ADMIN" | "MEMBER") => setFieldValue("role", value)}
                     >
-                      <SelectTrigger className={errors.role && touched.role ? "border-red-500" : ""}>
+                      <SelectTrigger
+                        disabled={disableRoleAndAccess}
+                        className={errors.role && touched.role ? "border-red-500" : ""}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -785,32 +904,36 @@ export default function TeamPage() {
                     </Select>
                     <ErrorMessage name="role" component="div" className="text-sm text-red-500 mt-1" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-fullAccess"
-                      checked={values.fullAccess}
-                      onCheckedChange={(v) => {
-                        setFieldValue("fullAccess", v === true);
-                        if (v === true) setFieldValue("customerIds", []);
-                      }}
-                    />
-                    <Label htmlFor="edit-fullAccess" className="font-normal cursor-pointer">
-                      {t('team.inviteDialog.fullAccess')}
-                    </Label>
-                  </div>
-                  {!values.fullAccess && (
+                  {!currentUserRestricted && !disableRoleAndAccess && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-fullAccess"
+                        checked={values.fullAccess}
+                        onCheckedChange={(v) => {
+                          setFieldValue("fullAccess", v === true);
+                          if (v === true) setFieldValue("customerIds", []);
+                        }}
+                      />
+                      <Label htmlFor="edit-fullAccess" className="font-normal cursor-pointer">
+                        {t('team.inviteDialog.fullAccess')}
+                      </Label>
+                    </div>
+                  )}
+                  {(currentUserRestricted || disableRoleAndAccess || !values.fullAccess) && (
                     <div className="space-y-2">
                       <Label>{t('team.inviteDialog.customerAccess')}</Label>
                       <p className="text-xs text-muted-foreground">
                         {t('team.inviteDialog.customerAccessHint')}
                       </p>
-                      <div className="max-h-48 overflow-y-auto rounded-md border p-2 space-y-1">
+                      <div className={`max-h-48 overflow-y-auto rounded-md border p-2 space-y-1 ${disableRoleAndAccess ? "pointer-events-none opacity-60" : ""}`}>
                         {loadingEditMemberCustomers ? (
                           <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
                         ) : editMemberCustomers.length === 0 ? (
                           <p className="text-sm text-muted-foreground">{t('customers.noCustomers')}</p>
                         ) : (
-                          editMemberCustomers.map((c) => (
+                          editMemberCustomers.map((c) => {
+                            const parentSelected = c.parentId != null && values.customerIds.includes(c.parentId);
+                            return (
                             <div
                               key={c.id}
                               className="flex items-center space-x-2 py-1"
@@ -819,22 +942,27 @@ export default function TeamPage() {
                               <Checkbox
                                 id={`edit-customer-${c.id}`}
                                 checked={values.customerIds.includes(c.id)}
+                                disabled={disableRoleAndAccess || parentSelected}
                                 onCheckedChange={(v) => {
+                                  if (disableRoleAndAccess || parentSelected) return;
+                                  const idsToAdd = v === true ? [c.id, ...getDescendantIds(c.id, editMemberCustomers)] : [];
+                                  const idsToRemove = v === false ? [c.id, ...getDescendantIds(c.id, editMemberCustomers)] : [];
                                   const next =
                                     v === true
-                                      ? [...values.customerIds, c.id]
-                                      : values.customerIds.filter((id) => id !== c.id);
+                                      ? [...new Set([...values.customerIds, ...idsToAdd])]
+                                      : values.customerIds.filter((id) => !idsToRemove.includes(id));
                                   setFieldValue("customerIds", next);
                                 }}
                               />
                               <Label
                                 htmlFor={`edit-customer-${c.id}`}
-                                className="font-normal cursor-pointer text-sm"
+                                className={`font-normal text-sm ${disableRoleAndAccess || parentSelected ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                               >
                                 {c.name}
                               </Label>
                             </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -845,7 +973,8 @@ export default function TeamPage() {
                 </Form>
               )}
             </Formik>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

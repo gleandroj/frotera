@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { CustomersService } from "../customers/customers.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   DeleteMemberResponseDto,
@@ -16,7 +17,10 @@ import {
 
 @Injectable()
 export class MembersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private customersService: CustomersService,
+  ) {}
 
   async getMembers(
     userId: string,
@@ -95,9 +99,22 @@ export class MembersService {
       throw new NotFoundException(ApiCode.MEMBER_NOT_FOUND);
     }
 
-    // Prevent changing own role
-    if (data.role !== undefined && memberToUpdate.userId === userId) {
+    const isEditingSelf = memberToUpdate.userId === userId;
+
+    // Prevent changing own role (only OWNER can change own role via different flow if needed)
+    if (data.role !== undefined && isEditingSelf) {
       throw new BadRequestException(ApiCode.MEMBER_CANNOT_CHANGE_OWN_ROLE);
+    }
+
+    // Only organization OWNER can edit their own customer access (restricted/ customerIds)
+    if (
+      isEditingSelf &&
+      userMembership.role !== OrganizationRole.OWNER &&
+      (data.customerRestricted !== undefined || data.customerIds !== undefined)
+    ) {
+      throw new BadRequestException({
+        errorCode: ApiCode.MEMBER_CANNOT_EDIT_OWN_ACCESS,
+      });
     }
 
     // Only owners can assign owner role
@@ -110,12 +127,46 @@ export class MembersService {
       );
     }
 
+    // A member restricted to certain customers cannot grant full organization access
+    const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
+      {
+        id: userMembership.id,
+        customerRestricted: userMembership.customerRestricted,
+      },
+      organizationId,
+    );
+    if (editorAllowedIds !== null) {
+      if (data.customerRestricted === false) {
+        throw new BadRequestException({
+          errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS,
+        });
+      }
+      if (data.customerIds !== undefined && data.customerIds.length > 0) {
+        const allowedSet = new Set(editorAllowedIds);
+        const invalid = data.customerIds.filter((id) => !allowedSet.has(id));
+        if (invalid.length > 0) {
+          throw new BadRequestException({
+            errorCode: ApiCode.COMMON_INVALID_INPUT,
+          });
+        }
+      }
+    }
+
     const updateData: {
       role?: OrganizationRole;
       customerRestricted?: boolean;
     } = {};
     if (data.role !== undefined) updateData.role = data.role;
     if (data.customerRestricted !== undefined) updateData.customerRestricted = data.customerRestricted;
+
+    // Store only root customers: access to a parent automatically includes all descendants at read time
+    let customerIdsToStore = data.customerIds ?? (data.customerRestricted ? [] : undefined);
+    if (customerIdsToStore !== undefined && customerIdsToStore.length > 0) {
+      customerIdsToStore = await this.customersService.getRootCustomerIds(
+        organizationId,
+        customerIdsToStore,
+      );
+    }
 
     const updatedMember = await this.prisma.$transaction(async (tx) => {
       const member = await tx.organizationMember.update({
@@ -139,10 +190,9 @@ export class MembersService {
         await tx.organizationMemberCustomer.deleteMany({
           where: { organizationMemberId: memberId },
         });
-        const customerIds = data.customerIds ?? (data.customerRestricted ? [] : undefined);
-        if (customerIds !== undefined && customerIds.length > 0) {
+        if (customerIdsToStore !== undefined && customerIdsToStore.length > 0) {
           await tx.organizationMemberCustomer.createMany({
-            data: customerIds.map((customerId) => ({
+            data: customerIdsToStore.map((customerId) => ({
               organizationMemberId: memberId,
               customerId,
             })),
