@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   MapContainer,
   TileLayer,
@@ -10,6 +11,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
+import { Truck } from "lucide-react";
 
 import "leaflet/dist/leaflet.css";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -33,14 +35,45 @@ export interface PositionPoint {
 
 const defaultCenter: [number, number] = [-15.77972, -47.92972];
 
+const MARKER_SIZE = 44;
+
 function LastPositionMarker({ position }: { position: PositionPoint | null }) {
   const { t } = useTranslation();
   if (!position) return null;
+  const heading = position.heading ?? 0;
   const icon = L.divIcon({
-    className: "device-marker",
-    html: `<div style="width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    className: "device-marker device-marker-vehicle",
+    html: renderToStaticMarkup(
+      <div
+        style={{
+          width: MARKER_SIZE,
+          height: MARKER_SIZE,
+          borderRadius: "50%",
+          background: "#2563eb",
+          border: "3px solid white",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            transform: `rotate(${heading}deg)`,
+            width: 24,
+            height: 24,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Truck size={24} color="white" strokeWidth={2} />
+        </div>
+      </div>
+    ),
+    iconSize: [MARKER_SIZE, MARKER_SIZE],
+    iconAnchor: [MARKER_SIZE / 2, MARKER_SIZE / 2],
   });
   return (
     <Marker
@@ -52,7 +85,7 @@ function LastPositionMarker({ position }: { position: PositionPoint | null }) {
         <div className="text-sm">
           <div>{t("devices.lastUpdate")}: {new Date(position.recordedAt).toLocaleString()}</div>
           {position.speed != null && (
-            <div>{t("devices.speed")}: {position.speed} {t("devices.speedUnit")}</div>
+            <div>{t("devices.speed")}: {Number(position.speed).toFixed(2)} {t("devices.speedUnit")}</div>
           )}
         </div>
       </Popup>
