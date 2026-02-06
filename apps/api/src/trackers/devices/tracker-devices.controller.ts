@@ -43,7 +43,7 @@ export class TrackerDevicesController {
 
   @Get()
   @ApiOperation({ summary: "List tracker devices for the organization" })
-  @ApiResponse({ status: 200, type: [TrackerDeviceResponseDto] })
+  @ApiResponse({ status: 200, type: () => [TrackerDeviceResponseDto] })
   @ApiResponse({ status: 403, description: "Forbidden" })
   async list(
     @Param("organizationId") organizationId: string,
@@ -104,7 +104,7 @@ export class TrackerDevicesController {
 
   @Get(":deviceId/positions")
   @ApiOperation({ summary: "Get position history" })
-  @ApiResponse({ status: 200, type: [PositionResponseDto] })
+  @ApiResponse({ status: 200, type: () => [PositionResponseDto] })
   async getPositionHistory(
     @Param("organizationId") organizationId: string,
     @Param("deviceId") deviceId: string,

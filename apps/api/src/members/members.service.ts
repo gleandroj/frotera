@@ -10,6 +10,7 @@ import {
   DeleteMemberResponseDto,
   MembersListResponseDto,
   OrganizationRole,
+  UpdateMemberDto,
   UpdateMemberResponseDto,
 } from "./members.dto";
 
@@ -45,6 +46,7 @@ export class MembersService {
             createdAt: true,
           },
         },
+        customers: { include: { customer: true } },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -54,16 +56,18 @@ export class MembersService {
         id: member.id,
         role: member.role as OrganizationRole,
         joinedAt: member.createdAt,
+        customerRestricted: member.customerRestricted,
+        customers: member.customers?.map((mc) => ({ id: mc.customer.id, name: mc.customer.name })) ?? [],
         user: member.user,
       })),
     };
   }
 
-  async updateMemberRole(
+  async updateMember(
     userId: string,
     organizationId: string,
     memberId: string,
-    role: OrganizationRole
+    data: UpdateMemberDto
   ): Promise<UpdateMemberResponseDto> {
     // Check if user is owner/admin of the organization
     const userMembership = await this.prisma.organizationMember.findFirst({
@@ -92,13 +96,13 @@ export class MembersService {
     }
 
     // Prevent changing own role
-    if (memberToUpdate.userId === userId) {
+    if (data.role !== undefined && memberToUpdate.userId === userId) {
       throw new BadRequestException(ApiCode.MEMBER_CANNOT_CHANGE_OWN_ROLE);
     }
 
     // Only owners can assign owner role
     if (
-      role === OrganizationRole.OWNER &&
+      data.role === OrganizationRole.OWNER &&
       userMembership.role !== OrganizationRole.OWNER
     ) {
       throw new ForbiddenException(
@@ -106,20 +110,61 @@ export class MembersService {
       );
     }
 
-    // Update member role
-    const updatedMember = await this.prisma.organizationMember.update({
-      where: { id: memberId },
-      data: { role },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            createdAt: true,
+    const updateData: {
+      role?: OrganizationRole;
+      customerRestricted?: boolean;
+    } = {};
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.customerRestricted !== undefined) updateData.customerRestricted = data.customerRestricted;
+
+    const updatedMember = await this.prisma.$transaction(async (tx) => {
+      const member = await tx.organizationMember.update({
+        where: { id: memberId },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              createdAt: true,
+            },
           },
+          customers: { include: { customer: true } },
         },
-      },
+      });
+
+      // Sync customer access when customerRestricted or customerIds provided
+      if (data.customerRestricted !== undefined || data.customerIds !== undefined) {
+        await tx.organizationMemberCustomer.deleteMany({
+          where: { organizationMemberId: memberId },
+        });
+        const customerIds = data.customerIds ?? (data.customerRestricted ? [] : undefined);
+        if (customerIds !== undefined && customerIds.length > 0) {
+          await tx.organizationMemberCustomer.createMany({
+            data: customerIds.map((customerId) => ({
+              organizationMemberId: memberId,
+              customerId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.organizationMember.findUniqueOrThrow({
+        where: { id: memberId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              createdAt: true,
+            },
+          },
+          customers: { include: { customer: true } },
+        },
+      });
     });
 
     return {
@@ -127,8 +172,14 @@ export class MembersService {
       member: {
         id: updatedMember.id,
         role: updatedMember.role as OrganizationRole,
-        user: updatedMember.user,
         joinedAt: updatedMember.createdAt,
+        customerRestricted: updatedMember.customerRestricted,
+        customers:
+          updatedMember.customers?.map((mc) => ({
+            id: mc.customer.id,
+            name: mc.customer.name,
+          })) ?? [],
+        user: updatedMember.user,
       },
     };
   }

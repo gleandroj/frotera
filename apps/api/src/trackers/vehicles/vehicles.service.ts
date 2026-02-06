@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma, TrackerModel } from "@prisma/client";
 import { ApiCode } from "@/common/api-codes.enum";
 import { PrismaService } from "@/prisma/prisma.service";
@@ -9,8 +9,8 @@ import {
 } from "../dto/index";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
 
-type VehicleWithDevice = Prisma.VehicleGetPayload<{
-  include: { trackerDevice: true };
+type VehicleWithDeviceAndCustomer = Prisma.VehicleGetPayload<{
+  include: { trackerDevice: true; customer: true };
 }>;
 
 @Injectable()
@@ -23,7 +23,18 @@ export class VehiclesService {
   async create(
     organizationId: string,
     dto: CreateVehicleDto,
+    allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
+    const customerId = dto.customerId ?? null;
+    if (allowedCustomerIds !== null) {
+      if (customerId === null) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+      if (!allowedCustomerIds.includes(customerId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
+
     let trackerDeviceId: string | null = dto.trackerDeviceId ?? null;
 
     if (dto.newDevice) {
@@ -55,19 +66,26 @@ export class VehiclesService {
         inactive: dto.inactive ?? false,
         notes: dto.notes,
         trackerDeviceId,
+        customerId,
       },
     });
     const withDevice = await this.prisma.vehicle.findUnique({
       where: { id: vehicle.id },
-      include: { trackerDevice: true },
+      include: { trackerDevice: true, customer: true },
     });
-    return this.toResponse((withDevice ?? vehicle) as VehicleWithDevice);
+    return this.toResponse((withDevice ?? vehicle) as VehicleWithDeviceAndCustomer);
   }
 
   async update(
     id: string,
     dto: UpdateVehicleDto,
+    allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
+    if (dto.customerId !== undefined && allowedCustomerIds !== null) {
+      if (dto.customerId !== null && !allowedCustomerIds.includes(dto.customerId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     const data = Object.fromEntries(
       (Object.entries(dto) as [keyof UpdateVehicleDto, unknown][]).filter(
         ([, value]) => value !== undefined,
@@ -79,15 +97,15 @@ export class VehiclesService {
     });
     const withDevice = await this.prisma.vehicle.findUnique({
       where: { id: vehicle.id },
-      include: { trackerDevice: true },
+      include: { trackerDevice: true, customer: true },
     });
-    return this.toResponse((withDevice ?? vehicle) as VehicleWithDevice);
+    return this.toResponse((withDevice ?? vehicle) as VehicleWithDeviceAndCustomer);
   }
 
   async findById(id: string) {
     const vehicle = await this.prisma.vehicle.findUnique({
       where: { id },
-      include: { trackerDevice: true },
+      include: { trackerDevice: true, customer: true },
     });
     if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
     return vehicle;
@@ -96,30 +114,61 @@ export class VehiclesService {
   async findByOrganizationAndId(
     organizationId: string,
     vehicleId: string,
+    allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: vehicleId, organizationId },
-      include: { trackerDevice: true },
+      include: { trackerDevice: true, customer: true },
     });
     if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
-    return this.toResponse(vehicle);
+    if (allowedCustomerIds !== null) {
+      const allowed =
+        vehicle.customerId === null ? false : allowedCustomerIds.includes(vehicle.customerId);
+      if (!allowed) throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+    return this.toResponse(vehicle as VehicleWithDeviceAndCustomer);
   }
 
   async listByOrganization(
     organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerIds?: string[] | null,
   ): Promise<VehicleResponseDto[]> {
+    const where: Prisma.VehicleWhereInput = { organizationId };
+    const effectiveIds = filterCustomerIds !== undefined && filterCustomerIds !== null
+      ? filterCustomerIds
+      : allowedCustomerIds;
+    if (effectiveIds !== null) {
+      if (effectiveIds.length === 0) return [];
+      where.customerId = { in: effectiveIds };
+    }
     const list = await this.prisma.vehicle.findMany({
-      where: { organizationId },
-      include: { trackerDevice: true },
+      where,
+      include: { trackerDevice: true, customer: true },
     });
-    return list.map((v) => this.toResponse(v));
+    return list.map((v) => this.toResponse(v as VehicleWithDeviceAndCustomer));
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(
+    id: string,
+    allowedCustomerIds: string[] | null,
+  ): Promise<void> {
+    if (allowedCustomerIds !== null) {
+      const vehicle = await this.prisma.vehicle.findUnique({
+        where: { id },
+        select: { customerId: true },
+      });
+      if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+      const allowed =
+        vehicle.customerId === null
+          ? false
+          : allowedCustomerIds.includes(vehicle.customerId);
+      if (!allowed) throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
     await this.prisma.vehicle.delete({ where: { id } });
   }
 
-  private toResponse(v: VehicleWithDevice): VehicleResponseDto {
+  private toResponse(v: VehicleWithDeviceAndCustomer): VehicleResponseDto {
     return {
       id: v.id,
       organizationId: v.organizationId,
@@ -134,6 +183,10 @@ export class VehiclesService {
       inactive: v.inactive,
       notes: v.notes ?? undefined,
       trackerDeviceId: v.trackerDeviceId ?? undefined,
+      customerId: v.customerId ?? undefined,
+      customer: v.customer
+        ? { id: v.customer.id, name: v.customer.name }
+        : null,
       trackerDevice: v.trackerDevice
         ? {
             id: v.trackerDevice.id,

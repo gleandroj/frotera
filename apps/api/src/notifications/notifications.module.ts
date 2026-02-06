@@ -1,13 +1,14 @@
 import { Module } from "@nestjs/common";
-import { NotificationsService } from "./notifications.service";
-import { NotificationsController } from "./notifications.controller";
-import { PrismaModule } from "../prisma/prisma.module";
-import { EmailModule } from "../email/email.module";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "../auth/auth.module";
+import { CustomersModule } from "../customers/customers.module";
+import { EmailModule } from "../email/email.module";
+import { PrismaModule } from "../prisma/prisma.module";
+import { NotificationsController } from "./notifications.controller";
+import { NotificationsService } from "./notifications.service";
 
 @Module({
-  imports: [PrismaModule, EmailModule, ConfigModule, AuthModule],
+  imports: [PrismaModule, EmailModule, ConfigModule, AuthModule, CustomersModule],
   controllers: [NotificationsController],
   providers: [NotificationsService],
   exports: [NotificationsService],

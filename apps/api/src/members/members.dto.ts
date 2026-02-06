@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum OrganizationRole {
   OWNER = 'OWNER',
@@ -13,6 +13,27 @@ export class UpdateMemberRoleDto {
   role: OrganizationRole;
 }
 
+export class UpdateMemberDto {
+  @ApiPropertyOptional({ enum: OrganizationRole })
+  @IsOptional()
+  @IsEnum(OrganizationRole)
+  role?: OrganizationRole;
+
+  @ApiPropertyOptional({ description: 'Whether member is restricted to specific customers' })
+  @IsOptional()
+  @IsBoolean()
+  customerRestricted?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Customer IDs the member can access (when customerRestricted is true)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  customerIds?: string[];
+}
+
 export class MemberResponseDto {
   @ApiProperty()
   id: string;
@@ -22,6 +43,16 @@ export class MemberResponseDto {
 
   @ApiProperty()
   joinedAt: Date;
+
+  @ApiProperty({ description: 'Whether member is restricted to specific customers' })
+  customerRestricted: boolean;
+
+  @ApiProperty({
+    description: 'Customers the member has access to (when customerRestricted)',
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+  })
+  customers: { id: string; name: string }[];
 
   @ApiProperty()
   user: {
@@ -33,7 +64,7 @@ export class MemberResponseDto {
 }
 
 export class MembersListResponseDto {
-  @ApiProperty({ type: [MemberResponseDto] })
+  @ApiProperty({ type: () => [MemberResponseDto] })
   memberships: MemberResponseDto[];
 }
 
@@ -41,7 +72,7 @@ export class UpdateMemberResponseDto {
   @ApiProperty()
   message: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: () => MemberResponseDto })
   member: MemberResponseDto;
 }
 

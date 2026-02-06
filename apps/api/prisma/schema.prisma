@@ -58,8 +58,29 @@ model Organization {
   notifications  Notification[]
   vehicles       Vehicle[]
   trackerDevices TrackerDevice[]
+  customers      Customer[]
 
   @@map("organizations")
+}
+
+model Customer {
+  id             String    @id @default(cuid())
+  organizationId String
+  parentId       String?
+  name           String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         Customer?      @relation("CustomerHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Customer[]     @relation("CustomerHierarchy")
+  vehicles       Vehicle[]
+  memberAccess   OrganizationMemberCustomer[]
+  invitationAccess InvitationCustomer[]
+
+  @@index([organizationId])
+  @@index([parentId])
+  @@map("customers")
 }
 
 enum TrackerModel {
@@ -81,13 +102,16 @@ model Vehicle {
   inactive         Boolean        @default(false)
   notes            String?        // Informações / histórico
   trackerDeviceId  String?        @unique
+  customerId       String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   trackerDevice  TrackerDevice? @relation(fields: [trackerDeviceId], references: [id], onDelete: SetNull)
+  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
+  @@index([customerId])
   @@map("vehicles")
 }
 
@@ -135,10 +159,11 @@ model DevicePosition {
 }
 
 model OrganizationMember {
-  id             String @id @default(cuid())
-  role           Role   @default(MEMBER)
-  userId         String
-  organizationId String
+  id                 String   @id @default(cuid())
+  role               Role     @default(MEMBER)
+  userId             String
+  organizationId     String
+  customerRestricted Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -146,19 +171,33 @@ model OrganizationMember {
   // Relations
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customers    OrganizationMemberCustomer[]
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")
 }
 
+model OrganizationMemberCustomer {
+  id                 String @id @default(cuid())
+  organizationMemberId String
+  customerId         String
+
+  organizationMember OrganizationMember @relation(fields: [organizationMemberId], references: [id], onDelete: Cascade)
+  customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationMemberId, customerId])
+  @@map("organizationMemberCustomers")
+}
+
 model Invitation {
-  id             String           @id @default(cuid())
-  email          String
-  token          String           @unique
-  role           Role             @default(MEMBER)
-  status         InvitationStatus @default(PENDING)
-  organizationId String
-  inviterId      String?
+  id                 String           @id @default(cuid())
+  email              String
+  token              String           @unique
+  role               Role             @default(MEMBER)
+  status             InvitationStatus @default(PENDING)
+  organizationId     String
+  inviterId          String?
+  customerRestricted Boolean          @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -167,8 +206,21 @@ model Invitation {
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   inviter      User?        @relation(fields: [inviterId], references: [id])
+  customers    InvitationCustomer[]
 
   @@map("invitations")
+}
+
+model InvitationCustomer {
+  id           String @id @default(cuid())
+  invitationId String
+  customerId   String
+
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, customerId])
+  @@map("invitationCustomers")
 }
 
 enum Role {

@@ -7,6 +7,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { createClient } from "redis";
 import type { RedisClientType } from "redis";
+import { CustomersModule } from "@/customers/customers.module";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { AuthModule } from "@/auth/auth.module";
 import { TRACKER_REDIS, TrackerRedisWriterService } from "./ingress/tracker-redis-writer.service";
@@ -21,7 +22,7 @@ import {
 import { TrackerPositionsGateway } from "./positions/tracker-positions.gateway";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule],
+  imports: [ConfigModule, PrismaModule, AuthModule, CustomersModule],
   controllers: [TrackerDevicesController, VehiclesController],
   providers: [
     {

@@ -19,6 +19,9 @@ export const externalApi = axios.create({
   timeout: 10000,
 });
 
+/** Alias for server-side or legacy usage (e.g. dashboard API) */
+export const apiClient = externalApi;
+
 // Create axios instance
 export const internalApi = axios.create({
   baseURL: internalApiUrl || "http://localhost:3000",
@@ -277,15 +280,64 @@ export const organizationAPI = {
   ) => externalApi.patch(`/api/organizations/${organizationId}`, data),
   getMembers: (organizationId: string) =>
     externalApi.get(`/api/organizations/${organizationId}/members`),
-  updateMemberRole: (organizationId: string, memberId: string, role: string) =>
+  updateMember: (
+    organizationId: string,
+    memberId: string,
+    data: { role?: string; customerRestricted?: boolean; customerIds?: string[] }
+  ) =>
     externalApi.patch(
       `/api/organizations/${organizationId}/members/${memberId}`,
-      { role }
+      data
     ),
   removeMember: (organizationId: string, memberId: string) =>
     externalApi.delete(
       `/api/organizations/${organizationId}/members/${memberId}`
     )
+};
+
+// Customer type and API
+export interface Customer {
+  id: string;
+  organizationId: string;
+  parentId?: string | null;
+  name: string;
+  depth?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListParams {
+  customerId?: string | null;
+}
+
+export const customersAPI = {
+  list: (organizationId: string, params?: ListParams) =>
+    externalApi.get<{ customers: Customer[] }>(
+      `/api/organizations/${organizationId}/customers`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined }
+    ),
+  create: (organizationId: string, data: { name: string; parentId?: string }) =>
+    externalApi.post<Customer>(
+      `/api/organizations/${organizationId}/customers`,
+      data
+    ),
+  get: (organizationId: string, customerId: string) =>
+    externalApi.get<Customer>(
+      `/api/organizations/${organizationId}/customers/${customerId}`
+    ),
+  update: (
+    organizationId: string,
+    customerId: string,
+    data: { name?: string; parentId?: string | null }
+  ) =>
+    externalApi.patch<Customer>(
+      `/api/organizations/${organizationId}/customers/${customerId}`,
+      data
+    ),
+  delete: (organizationId: string, customerId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/customers/${customerId}`
+    ),
 };
 
 // Invitation-specific API calls
@@ -294,12 +346,14 @@ export const invitationAPI = {
     email: string,
     organizationId: string,
     role: "ADMIN" | "MEMBER" = "MEMBER",
-    language?: string
+    language?: string,
+    customerIds?: string[]
   ) =>
     externalApi.post(`/api/organizations/${organizationId}/invitations`, {
       email,
       role,
       language,
+      ...(customerIds !== undefined && { customerIds }),
     }),
   accept: (token: string, data?: { password?: string; name?: string }) =>
     externalApi.post(`/api/invitations/accept`, { token, ...data }),
@@ -317,8 +371,11 @@ export const invitationAPI = {
         language,
       }
     ),
-  list: (organizationId: string) =>
-    externalApi.get(`/api/organizations/${organizationId}/invitations`),
+  list: (organizationId: string, params?: ListParams) =>
+    externalApi.get(
+      `/api/organizations/${organizationId}/invitations`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined }
+    ),
 };
 
 // Vehicles (with optional associated tracker device)
@@ -349,6 +406,8 @@ export interface Vehicle {
   inactive?: boolean;
   notes?: string | null;
   trackerDeviceId?: string | null;
+  customerId?: string | null;
+  customer?: { id: string; name: string } | null;
   trackerDevice?: VehicleTrackerDevice | null;
   createdAt: string;
   updatedAt: string;
@@ -379,6 +438,7 @@ export interface CreateVehiclePayload {
   inactive?: boolean;
   notes?: string;
   trackerDeviceId?: string;
+  customerId?: string;
   /** Create and link a new tracker device (takes precedence over trackerDeviceId) */
   newDevice?: CreateVehicleNewDevicePayload;
 }
@@ -395,11 +455,15 @@ export interface UpdateVehiclePayload {
   inactive?: boolean;
   notes?: string;
   trackerDeviceId?: string;
+  customerId?: string;
 }
 
 export const vehiclesAPI = {
-  list: (organizationId: string) =>
-    externalApi.get<Vehicle[]>(`/api/organizations/${organizationId}/vehicles`),
+  list: (organizationId: string, params?: ListParams) =>
+    externalApi.get<Vehicle[]>(
+      `/api/organizations/${organizationId}/vehicles`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined }
+    ),
   get: (organizationId: string, vehicleId: string) =>
     externalApi.get<Vehicle>(
       `/api/organizations/${organizationId}/vehicles/${vehicleId}`,
@@ -432,9 +496,10 @@ export interface PositionHistoryQuery {
 }
 
 export const trackerDevicesAPI = {
-  list: (organizationId: string) =>
+  list: (organizationId: string, params?: ListParams) =>
     externalApi.get(
-      `/api/organizations/${organizationId}/tracker-devices`
+      `/api/organizations/${organizationId}/tracker-devices`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined }
     ),
   get: (organizationId: string, deviceId: string) =>
     externalApi.get(

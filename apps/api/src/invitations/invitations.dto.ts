@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum, IsString, IsOptional, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsEnum, IsString, IsOptional, MinLength, IsArray } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum OrganizationRole {
   OWNER = 'OWNER',
@@ -135,6 +135,19 @@ export class InvitationResponseDto {
   expiresAt: Date;
 
   @ApiProperty({
+    description: 'Whether the invited user is restricted to specific customers',
+    example: false,
+  })
+  customerRestricted: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Customers the user will have access to (when customerRestricted)',
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+  })
+  customers?: { id: string; name: string }[];
+
+  @ApiProperty({
     description: 'Information about the user who sent the invitation',
     type: 'object',
     properties: {
@@ -154,7 +167,7 @@ export class InvitationResponseDto {
 export class InvitationsListResponseDto {
   @ApiProperty({
     description: 'List of invitations',
-    type: [InvitationResponseDto],
+    type: () => [InvitationResponseDto],
   })
   invitations: InvitationResponseDto[];
 }
@@ -190,6 +203,8 @@ export class InvitationCheckResponseDto {
     email: string;
     role: OrganizationRole;
     expiresAt: Date;
+    customerRestricted: boolean;
+    customers?: { id: string; name: string }[];
     organization: {
       id: string;
       name: string;

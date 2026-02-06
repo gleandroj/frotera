@@ -210,6 +210,15 @@ export class PositionHistoryQueryDto {
 
 // ─── Vehicles ────────────────────────────────────────────────────────────────
 
+/** Minimal customer info when returned nested in vehicle (avoids Swagger circular ref) */
+export class VehicleCustomerSummaryDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+}
+
 /** Minimal device info when returned nested in vehicle */
 export class VehicleTrackerDeviceDto {
   @ApiProperty()
@@ -283,8 +292,15 @@ export class VehicleResponseDto {
   @ApiPropertyOptional()
   trackerDeviceId?: string | null;
 
+  @ApiPropertyOptional()
+  customerId?: string | null;
+
+  /** Minimal customer info when included (list/get) */
+  @ApiPropertyOptional({ type: () => VehicleCustomerSummaryDto, nullable: true })
+  customer?: VehicleCustomerSummaryDto | null;
+
   /** Associated tracker device when included (list/get) */
-  @ApiPropertyOptional({ type: VehicleTrackerDeviceDto, nullable: true })
+  @ApiPropertyOptional({ type: () => VehicleTrackerDeviceDto, nullable: true })
   trackerDevice?: VehicleTrackerDeviceDto | null;
 
   @ApiProperty()
@@ -396,9 +412,14 @@ export class CreateVehicleDto {
   @IsString()
   trackerDeviceId?: string;
 
+  @ApiPropertyOptional({ description: "Customer ID to associate" })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
   @ApiPropertyOptional({
     description: "Create and link a new tracker device (IMEI + model). Takes precedence over trackerDeviceId.",
-    type: CreateVehicleNewDeviceDto,
+    type: () => CreateVehicleNewDeviceDto,
   })
   @IsOptional()
   @ValidateNested()
@@ -461,4 +482,9 @@ export class UpdateVehicleDto {
   @IsOptional()
   @IsString()
   trackerDeviceId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 }

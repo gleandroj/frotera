@@ -24,7 +24,9 @@ import {
 import {
   vehiclesAPI,
   trackerDevicesAPI,
+  customersAPI,
   type Vehicle,
+  type Customer,
   type CreateVehiclePayload,
   type UpdateVehiclePayload,
 } from "@/lib/frontend/api-client";
@@ -71,6 +73,7 @@ export interface VehicleFormValues {
   vehicleType: string;
   inactive: boolean;
   notes: string;
+  customerId: string;
   trackerDeviceId: string;
   deviceOption: DeviceOption;
   newImei: string;
@@ -96,6 +99,7 @@ function getInitialValues(vehicle: Vehicle | null, isEdit: boolean): VehicleForm
     vehicleType: emptyStr(vehicle?.vehicleType),
     inactive: vehicle?.inactive ?? false,
     notes: emptyStr(vehicle?.notes),
+    customerId: emptyStr(vehicle?.customerId),
     trackerDeviceId: emptyStr(vehicle?.trackerDeviceId),
     deviceOption: "none" as DeviceOption,
     newImei: "",
@@ -130,6 +134,7 @@ function buildVehicleFormSchema(t: (key: string) => string) {
       vehicleType: z.string().optional(),
       inactive: z.boolean().optional(),
       notes: z.string().optional(),
+      customerId: z.string().optional(),
       trackerDeviceId: z.string().optional(),
       deviceOption: z.enum(["none", "existing", "new"]).optional(),
       newImei: z.string().optional(),
@@ -165,6 +170,8 @@ export function VehicleFormDialog({
 
   const [devices, setDevices] = useState<TrackerDeviceOption[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
   const validationSchema = buildVehicleFormSchema(t);
   const initialValues = getInitialValues(vehicle, isEdit);
@@ -179,6 +186,19 @@ export function VehicleFormDialog({
       })
       .catch(() => setDevices([]))
       .finally(() => setLoadingDevices(false));
+  }, [open, organizationId]);
+
+  useEffect(() => {
+    if (!open || !organizationId) return;
+    setLoadingCustomers(true);
+    customersAPI
+      .list(organizationId)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCustomers([]))
+      .finally(() => setLoadingCustomers(false));
   }, [open, organizationId]);
 
   const handleSubmit = (
@@ -197,6 +217,7 @@ export function VehicleFormDialog({
       vehicleType: values.vehicleType.trim() || undefined,
       inactive: values.inactive,
       notes: values.notes.trim() || undefined,
+      customerId: values.customerId.trim() || undefined,
     };
 
     let payload: CreateVehiclePayload | UpdateVehiclePayload;
@@ -360,6 +381,33 @@ export function VehicleFormDialog({
                     placeholder={t("vehicles.notesPlaceholder")}
                     rows={3}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle-customer">{t("vehicles.customer")}</Label>
+                  <Select
+                    value={values.customerId || "none"}
+                    onValueChange={(v) =>
+                      setFieldValue("customerId", v === "none" ? "" : v)
+                    }
+                    disabled={loadingCustomers}
+                  >
+                    <SelectTrigger id="vehicle-customer">
+                      <SelectValue placeholder={t("customers.noParent")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("customers.noParent")}</SelectItem>
+                      {customers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <span
+                            style={{ paddingLeft: (c.depth ?? 0) * 12 }}
+                            className="inline-block"
+                          >
+                            {c.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

@@ -62,6 +62,17 @@ export function getVehicleColumns(
       ),
     },
     {
+      id: "customer",
+      accessorFn: (row) => row.customer?.name ?? "",
+      meta: { labelKey: "vehicles.customer" },
+      header: t("vehicles.customer"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.customer?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
       id: "device",
       accessorFn: (row) =>
         row.trackerDevice

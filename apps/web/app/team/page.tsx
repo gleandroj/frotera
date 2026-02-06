@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/i18n/useTranslation";
-import { invitationAPI, organizationAPI } from "@/lib/frontend/api-client";
+import { invitationAPI, organizationAPI, customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { TeamMembersTableSkeleton, SkeletonPageLayout } from "@/components/ui";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +50,7 @@ import {
   Clock,
   Mail,
   MoreHorizontal,
+  Pencil,
   RefreshCw,
   Shield,
   User,
@@ -57,6 +58,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -72,6 +74,8 @@ interface TeamMember {
   };
   role: string;
   joinedAt: string;
+  customerRestricted?: boolean;
+  customers?: { id: string; name: string }[];
 }
 
 interface Invitation {
@@ -90,6 +94,14 @@ interface Invitation {
 type InvitationFormValues = {
   email: string;
   role: "ADMIN" | "MEMBER";
+  fullAccess: boolean;
+  customerIds: string[];
+};
+
+type EditMemberFormValues = {
+  role: "ADMIN" | "MEMBER";
+  fullAccess: boolean;
+  customerIds: string[];
 };
 
 export default function TeamPage() {
@@ -105,7 +117,18 @@ export default function TeamPage() {
     role: z.enum(["ADMIN", "MEMBER"], {
       required_error: t('team.inviteDialog.validation.roleRequired'),
       invalid_type_error: t('team.inviteDialog.validation.roleInvalid')
-    })
+    }),
+    fullAccess: z.boolean().optional(),
+    customerIds: z.array(z.string()).optional(),
+  });
+
+  const EditMemberFormSchema = z.object({
+    role: z.enum(["ADMIN", "MEMBER"], {
+      required_error: t('team.inviteDialog.validation.roleRequired'),
+      invalid_type_error: t('team.inviteDialog.validation.roleInvalid')
+    }),
+    fullAccess: z.boolean().optional(),
+    customerIds: z.array(z.string()).optional(),
   });
   const { currentOrganization, user } = useAuth();
   const searchParams = useSearchParams();
@@ -122,6 +145,12 @@ export default function TeamPage() {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
+  const [inviteCustomers, setInviteCustomers] = useState<Customer[]>([]);
+  const [loadingInviteCustomers, setLoadingInviteCustomers] = useState(false);
+  const [editMemberDialogOpen, setEditMemberDialogOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
+  const [editMemberCustomers, setEditMemberCustomers] = useState<Customer[]>([]);
+  const [loadingEditMemberCustomers, setLoadingEditMemberCustomers] = useState(false);
 
   const loadTeamMembers = async () => {
     if (!currentOrganization) return;
@@ -167,7 +196,7 @@ export default function TeamPage() {
     if (!currentOrganization) return;
 
     try {
-      await organizationAPI.updateMemberRole(currentOrganization.id, memberId, newRole);
+      await organizationAPI.updateMember(currentOrganization.id, memberId, { role: newRole });
       await loadTeamMembers();
       toast.success(t('team.toastMessages.memberRoleUpdated'), {
         description: t('team.toastMessages.memberRoleUpdatedDescription'),
@@ -229,7 +258,8 @@ export default function TeamPage() {
         values.email,
         currentOrganization.id,
         values.role,
-        currentLanguage
+        currentLanguage,
+        values.fullAccess ? undefined : values.customerIds
       );
 
       resetForm();
@@ -372,6 +402,56 @@ export default function TeamPage() {
   }, [currentOrganization, activeTab]);
 
   useEffect(() => {
+    if (!inviteDialogOpen || !currentOrganization?.id) return;
+    setLoadingInviteCustomers(true);
+    customersAPI
+      .list(currentOrganization.id)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setInviteCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setInviteCustomers([]))
+      .finally(() => setLoadingInviteCustomers(false));
+  }, [inviteDialogOpen, currentOrganization?.id]);
+
+  useEffect(() => {
+    if (!editMemberDialogOpen || !currentOrganization?.id) return;
+    setLoadingEditMemberCustomers(true);
+    customersAPI
+      .list(currentOrganization.id)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setEditMemberCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setEditMemberCustomers([]))
+      .finally(() => setLoadingEditMemberCustomers(false));
+  }, [editMemberDialogOpen, currentOrganization?.id]);
+
+  const updateMember = async (values: EditMemberFormValues) => {
+    if (!currentOrganization || !memberToEdit) return;
+
+    try {
+      await organizationAPI.updateMember(currentOrganization.id, memberToEdit.id, {
+        role: values.role,
+        customerRestricted: !values.fullAccess,
+        customerIds: values.fullAccess ? undefined : values.customerIds,
+      });
+      await loadTeamMembers();
+      setEditMemberDialogOpen(false);
+      setMemberToEdit(null);
+      toast.success(t('team.toastMessages.memberUpdated'), {
+        description: t('team.toastMessages.memberUpdatedDescription'),
+      });
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || err.message || t('team.errorMessages.failedToUpdateMember');
+      toast.error(t('team.toastMessages.error'), {
+        description: errorMessage,
+      });
+    }
+  };
+
+  useEffect(() => {
     // Update URL when tab changes
     router.replace(`/team?tab=${activeTab}`, { scroll: false });
   }, [activeTab, router]);
@@ -503,6 +583,8 @@ export default function TeamPage() {
                 initialValues={{
                   email: "",
                   role: "MEMBER" as "ADMIN" | "MEMBER",
+                  fullAccess: true,
+                  customerIds: [] as string[],
                 }}
                 validationSchema={toFormikValidationSchema(InvitationFormSchema)}
                 onSubmit={sendInvitation}
@@ -550,6 +632,61 @@ export default function TeamPage() {
                         className="text-sm text-red-500 mt-1"
                       />
                     </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="invite-fullAccess"
+                        checked={values.fullAccess}
+                        onCheckedChange={(v) => {
+                          setFieldValue("fullAccess", v === true);
+                          if (v === true) setFieldValue("customerIds", []);
+                        }}
+                      />
+                      <Label htmlFor="invite-fullAccess" className="font-normal cursor-pointer">
+                        {t('team.inviteDialog.fullAccess')}
+                      </Label>
+                    </div>
+
+                    {!values.fullAccess && (
+                      <div className="space-y-2">
+                        <Label>{t('team.inviteDialog.customerAccess')}</Label>
+                        <p className="text-xs text-muted-foreground">
+                          {t('team.inviteDialog.customerAccessHint')}
+                        </p>
+                        <div className="max-h-48 overflow-y-auto rounded-md border p-2 space-y-1">
+                          {loadingInviteCustomers ? (
+                            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+                          ) : inviteCustomers.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('customers.noCustomers')}</p>
+                          ) : (
+                            inviteCustomers.map((c) => (
+                              <div
+                                key={c.id}
+                                className="flex items-center space-x-2 py-1"
+                                style={{ paddingLeft: (c.depth ?? 0) * 12 }}
+                              >
+                                <Checkbox
+                                  id={`invite-customer-${c.id}`}
+                                  checked={values.customerIds.includes(c.id)}
+                                  onCheckedChange={(v) => {
+                                    const next = v === true
+                                      ? [...values.customerIds, c.id]
+                                      : values.customerIds.filter((id) => id !== c.id);
+                                    setFieldValue("customerIds", next);
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={`invite-customer-${c.id}`}
+                                  className="font-normal cursor-pointer text-sm"
+                                >
+                                  {c.name}
+                                </Label>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <Button
                       type="submit"
@@ -605,6 +742,112 @@ export default function TeamPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editMemberDialogOpen} onOpenChange={(open) => {
+        setEditMemberDialogOpen(open);
+        if (!open) setMemberToEdit(null);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('team.editDialog.title')}</DialogTitle>
+            <DialogDescription>
+              {memberToEdit
+                ? t('team.editDialog.description', { name: memberToEdit.user.name || memberToEdit.user.email })
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {memberToEdit && (
+            <Formik<EditMemberFormValues>
+              key={memberToEdit.id}
+              initialValues={{
+                role: (memberToEdit.role === "OWNER" ? "ADMIN" : memberToEdit.role) as "ADMIN" | "MEMBER",
+                fullAccess: !memberToEdit.customerRestricted,
+                customerIds: memberToEdit.customers?.map((c) => c.id) ?? [],
+              }}
+              validationSchema={toFormikValidationSchema(EditMemberFormSchema)}
+              onSubmit={updateMember}
+            >
+              {({ values, setFieldValue, isSubmitting, errors, touched }) => (
+                <Form className="space-y-4 px-1" noValidate>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-role">{t('team.inviteDialog.roleLabel')}</Label>
+                    <Select
+                      value={values.role}
+                      onValueChange={(value: "ADMIN" | "MEMBER") => setFieldValue("role", value)}
+                    >
+                      <SelectTrigger className={errors.role && touched.role ? "border-red-500" : ""}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MEMBER">{t('team.inviteDialog.memberOption')}</SelectItem>
+                        <SelectItem value="ADMIN">{t('team.inviteDialog.adminOption')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ErrorMessage name="role" component="div" className="text-sm text-red-500 mt-1" />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit-fullAccess"
+                      checked={values.fullAccess}
+                      onCheckedChange={(v) => {
+                        setFieldValue("fullAccess", v === true);
+                        if (v === true) setFieldValue("customerIds", []);
+                      }}
+                    />
+                    <Label htmlFor="edit-fullAccess" className="font-normal cursor-pointer">
+                      {t('team.inviteDialog.fullAccess')}
+                    </Label>
+                  </div>
+                  {!values.fullAccess && (
+                    <div className="space-y-2">
+                      <Label>{t('team.inviteDialog.customerAccess')}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t('team.inviteDialog.customerAccessHint')}
+                      </p>
+                      <div className="max-h-48 overflow-y-auto rounded-md border p-2 space-y-1">
+                        {loadingEditMemberCustomers ? (
+                          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+                        ) : editMemberCustomers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">{t('customers.noCustomers')}</p>
+                        ) : (
+                          editMemberCustomers.map((c) => (
+                            <div
+                              key={c.id}
+                              className="flex items-center space-x-2 py-1"
+                              style={{ paddingLeft: (c.depth ?? 0) * 12 }}
+                            >
+                              <Checkbox
+                                id={`edit-customer-${c.id}`}
+                                checked={values.customerIds.includes(c.id)}
+                                onCheckedChange={(v) => {
+                                  const next =
+                                    v === true
+                                      ? [...values.customerIds, c.id]
+                                      : values.customerIds.filter((id) => id !== c.id);
+                                  setFieldValue("customerIds", next);
+                                }}
+                              />
+                              <Label
+                                htmlFor={`edit-customer-${c.id}`}
+                                className="font-normal cursor-pointer text-sm"
+                              >
+                                {c.name}
+                              </Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? t('team.editDialog.saving') : t('team.editDialog.saveButton')}
+                  </Button>
+                </Form>
+              )}
+            </Formik>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} >
         <TabsList className="inline-flex gap-2 w-auto align-middle">
@@ -680,6 +923,13 @@ export default function TeamPage() {
                           <p className="text-xs text-muted-foreground">
                             {t('team.joined')} {formatDate(member.joinedAt)}
                           </p>
+                          {(member.customerRestricted === false || (member.customerRestricted === true && member.customers)) && (
+                            <p className="text-xs text-muted-foreground">
+                              {member.customerRestricted
+                                ? t('team.accessLimitedTo', { count: member.customers?.length ?? 0 })
+                                : t('team.accessFull')}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -691,6 +941,15 @@ export default function TeamPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setMemberToEdit(member);
+                                setEditMemberDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              {t('team.actions.editMember')}
+                            </DropdownMenuItem>
                             {member.role !== "ADMIN" && (
                               <DropdownMenuItem
                                 onClick={() =>

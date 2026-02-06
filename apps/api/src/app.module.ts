@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AdminModule } from "./admin/admin.module";
 import { AuthModule } from "./auth/auth.module";
+import { CustomersModule } from "./customers/customers.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { EmailModule } from "./email/email.module";
 import { HealthModule } from "./health/health.module";
@@ -28,6 +29,7 @@ import { TrackersModule } from "./trackers/trackers.module";
     InvitationsModule,
     MembersModule,
     OrganizationsModule,
+    CustomersModule,
     EmailModule,
     HealthModule,
     DashboardModule,

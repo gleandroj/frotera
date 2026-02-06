@@ -49,7 +49,7 @@ export class UpdateProfileResponseDto {
   message: string;
 
   @ApiProperty({
-    type: UserProfileDto,
+    type: () => UserProfileDto,
     description: 'Updated user profile',
   })
   user: UserProfileDto;

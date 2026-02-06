@@ -29,9 +29,10 @@ export class InvitationsService {
 
   async createInvitation(
     userId: string,
-    data: CreateInvitationDto & { organizationId: string }
+    data: CreateInvitationDto & { organizationId: string; customerIds?: string[] }
   ) {
-    const { email, organizationId, role, language } = data;
+    const { email, organizationId, role, language, customerIds } = data;
+    const customerRestricted = "customerIds" in data && Array.isArray(data.customerIds);
 
     // Check if user is admin/owner of the organization
     const organizationMember = await this.prisma.organizationMember.findFirst({
@@ -50,6 +51,18 @@ export class InvitationsService {
       throw new ForbiddenException({
         errorCode: ApiCode.AUTH_FORBIDDEN,
       });
+    }
+
+    if (customerRestricted && (customerIds?.length ?? 0) > 0) {
+      const customersInOrg = await this.prisma.customer.findMany({
+        where: { id: { in: customerIds! }, organizationId },
+        select: { id: true },
+      });
+      const validIds = new Set(customersInOrg.map((c) => c.id));
+      const invalid = customerIds!.filter((id: string) => !validIds.has(id));
+      if (invalid.length > 0) {
+        throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+      }
     }
 
     // Check if user is already a member
@@ -94,7 +107,12 @@ export class InvitationsService {
         token,
         expiresAt,
         inviterId: userId,
+        customerRestricted,
+        customers: customerRestricted && customerIds?.length
+          ? { create: customerIds.map((customerId: string) => ({ customerId })) }
+          : undefined,
       },
+      include: { customers: { include: { customer: true } } },
     });
 
     // Send invitation email
@@ -123,6 +141,8 @@ export class InvitationsService {
         email: invitation.email,
         role: invitation.role as OrganizationRole,
         expiresAt: invitation.expiresAt,
+        customerRestricted: invitation.customerRestricted,
+        customers: invitation.customers?.map((ic) => ({ id: ic.customer.id, name: ic.customer.name })) ?? [],
       },
     };
   }
@@ -159,6 +179,7 @@ export class InvitationsService {
             name: true,
           },
         },
+        customers: { include: { customer: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -171,6 +192,8 @@ export class InvitationsService {
         status: invitation.status as InvitationStatus,
         createdAt: invitation.createdAt,
         expiresAt: invitation.expiresAt,
+        customerRestricted: invitation.customerRestricted,
+        customers: invitation.customers?.map((ic) => ({ id: ic.customer.id, name: ic.customer.name })) ?? [],
         inviter: invitation.inviter,
       })),
     };
@@ -318,6 +341,7 @@ export class InvitationsService {
             name: true,
           },
         },
+        customers: { include: { customer: true } },
       },
     });
 
@@ -350,6 +374,8 @@ export class InvitationsService {
         email: invitation.email,
         role: invitation.role as OrganizationRole,
         expiresAt: invitation.expiresAt,
+        customerRestricted: invitation.customerRestricted,
+        customers: invitation.customers?.map((ic) => ({ id: ic.customer.id, name: ic.customer.name })) ?? [],
         organization: invitation.organization,
         inviter: invitation.inviter,
       },
@@ -366,7 +392,7 @@ export class InvitationsService {
     // Find the invitation
     const invitation = await this.prisma.invitation.findUnique({
       where: { token },
-      include: { organization: true },
+      include: { organization: true, customers: true },
     });
 
     if (!invitation) {
@@ -400,8 +426,8 @@ export class InvitationsService {
         );
       }
 
-      // Create new user using auth service
-      await this.authService.signup({
+      // Create new user without creating an organization (they join the inviting org)
+      await this.authService.signupFromInvitation({
         email: invitation.email,
         password,
         name: name || invitation.email.split("@")[0],
@@ -435,6 +461,15 @@ export class InvitationsService {
         userId: user.id,
         organizationId: invitation.organizationId,
         role: invitation.role,
+        customerRestricted: invitation.customerRestricted,
+        customers:
+          invitation.customerRestricted && invitation.customers?.length
+            ? {
+                create: invitation.customers.map((ic) => ({
+                  customerId: ic.customerId,
+                })),
+              }
+            : undefined,
       },
     });
 

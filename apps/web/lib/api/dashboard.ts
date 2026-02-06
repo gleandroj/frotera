@@ -31,15 +31,17 @@ export interface PlanLimitsOverview {
 export async function getDashboardStats(
   organizationId: string
 ): Promise<DashboardResponse> {
-  return apiClient.get<DashboardResponse>(
-    `/organizations/${organizationId}/dashboard`
+  const res = await apiClient.get<DashboardResponse>(
+    `/api/organizations/${organizationId}/dashboard`
   );
+  return res.data;
 }
 
 export async function getPlanLimitsOverview(
   organizationId: string
 ): Promise<{ message: string; data: PlanLimitsOverview }> {
-  return apiClient.get<{ message: string; data: PlanLimitsOverview }>(
-    `/organizations/${organizationId}/dashboard/plan-limits`
+  const res = await apiClient.get<{ message: string; data: PlanLimitsOverview }>(
+    `/api/organizations/${organizationId}/dashboard/plan-limits`
   );
+  return res.data;
 }

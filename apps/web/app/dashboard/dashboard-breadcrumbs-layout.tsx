@@ -16,6 +16,9 @@ function getBreadcrumbsForPathname(pathname: string | null): BreadcrumbItem[] {
       { label: "vehicles.viewVehicle" },
     ];
   }
+  if (pathname === "/dashboard/customers") {
+    return [{ label: "navigation.items.customers" }];
+  }
   return [];
 }
 

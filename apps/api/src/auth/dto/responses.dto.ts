@@ -54,7 +54,7 @@ export class LoginResponseDto {
   emailVerified: Date | null;
 
   @ApiProperty({
-    type: TokenResponseDto,
+    type: () => TokenResponseDto,
     description: "Authentication tokens",
   })
   tokens: TokenResponseDto;
@@ -158,12 +158,16 @@ export class ProfileResponseDto {
   @ApiProperty({
     example: "2024-03-20T12:00:00Z",
     description: "When the user was created",
+    type: String,
+    format: "date-time",
   })
   createdAt: Date;
 
   @ApiProperty({
     example: "2024-03-20T12:00:00Z",
     description: "When the user was last updated",
+    type: String,
+    format: "date-time",
   })
   updatedAt: Date;
 }

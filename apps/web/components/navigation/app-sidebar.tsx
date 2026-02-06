@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/hooks/use-auth";
 import type { LucideIcon } from "lucide-react";
 import {
+  Building,
   Building2,
   Car,
   Home,
@@ -61,6 +62,12 @@ export function AppSidebar() {
           href: "/dashboard/vehicles",
           icon: Car,
           current: pathname.startsWith("/dashboard/vehicles"),
+        },
+        {
+          name: t('navigation.items.customers'),
+          href: "/dashboard/customers",
+          icon: Building,
+          current: pathname.startsWith("/dashboard/customers"),
         },
       ],
     },

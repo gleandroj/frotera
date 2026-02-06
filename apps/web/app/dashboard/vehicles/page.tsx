@@ -12,7 +12,7 @@ import { DeleteVehicleDialog } from "./delete-vehicle-dialog";
 
 export default function VehiclesPage() {
   const { t } = useTranslation();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,9 @@ export default function VehiclesPage() {
     setLoading(true);
     setError(null);
     vehiclesAPI
-      .list(currentOrganization.id)
+      .list(currentOrganization.id, {
+        customerId: selectedCustomerId ?? undefined,
+      })
       .then((res) => {
         if (Array.isArray(res.data)) setVehicles(res.data);
       })
@@ -33,7 +35,7 @@ export default function VehiclesPage() {
         setError(err?.response?.data?.message ?? t("common.error"));
       })
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, t]);
+  }, [currentOrganization?.id, selectedCustomerId, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) {

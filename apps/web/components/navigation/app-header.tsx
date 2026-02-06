@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,9 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { CreateOrganizationDialog } from "@/components/organizations";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import {
+  Building,
   Building2,
   ChevronDown,
   LogOut,
@@ -37,7 +39,6 @@ import {
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 
 const getInitials = (name: string): string => {
@@ -61,12 +62,44 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
   const {
     organizations,
     currentOrganization,
+    selectedCustomerId,
+    setSelectedCustomerId,
     refreshAndSwitchOrganization,
     logout,
   } = useAuth();
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [createOrgDialogOpen, setCreateOrgDialogOpen] = useState(false);
-  const { t } = useTranslation()
+  const [headerCustomers, setHeaderCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const { t } = useTranslation();
+
+  const loadHeaderCustomers = useCallback(() => {
+    if (!currentOrganization?.id) {
+      setHeaderCustomers([]);
+      return;
+    }
+    setLoadingCustomers(true);
+    customersAPI
+      .list(currentOrganization.id)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setHeaderCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setHeaderCustomers([]))
+      .finally(() => setLoadingCustomers(false));
+  }, [currentOrganization?.id]);
+
+  useEffect(() => {
+    loadHeaderCustomers();
+  }, [loadHeaderCustomers]);
+
+  const selectedCustomer = selectedCustomerId
+    ? headerCustomers.find((c) => c.id === selectedCustomerId)
+    : null;
+  const customerLabel = selectedCustomer
+    ? selectedCustomer.name
+    : t("navigation.header.allCustomers");
 
   const handleLogout = async () => {
     await logout();
@@ -191,6 +224,71 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
               <Plus className="w-4 h-4 mr-2" />
               {t('navigation.header.createOrganization')}
             </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      {/* Customer filter (only when org is selected) */}
+      {currentOrganization && (
+        <DropdownMenu open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 max-w-48"
+              disabled={loadingCustomers}
+            >
+              <Building className="w-4 h-4 shrink-0" />
+              <span className="truncate">{customerLabel}</span>
+              <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
+            <DropdownMenuLabel>{t("navigation.header.filterByCustomer")}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectedCustomerId(null);
+                setCustomerDropdownOpen(false);
+              }}
+              className="cursor-pointer"
+            >
+              <span className={!selectedCustomerId ? "font-medium" : ""}>
+                {t("navigation.header.allCustomers")}
+              </span>
+              {!selectedCustomerId && (
+                <span className="ml-2 w-2 h-2 bg-green-500 rounded-full inline-block" />
+              )}
+            </DropdownMenuItem>
+            {headerCustomers.map((c) => {
+              const depth = c.depth ?? 0;
+              const isRoot = depth === 0;
+              const indentPx = 12 + depth * 20;
+              return (
+                <DropdownMenuItem
+                  key={c.id}
+                  onClick={() => {
+                    setSelectedCustomerId(c.id);
+                    setCustomerDropdownOpen(false);
+                  }}
+                  className={`cursor-pointer ${isRoot ? "bg-muted/30" : ""}`}
+                  style={{ paddingLeft: indentPx }}
+                >
+                  <div className="flex items-center gap-1 min-w-0 w-full">
+                    {depth > 0 && (
+                      <span className="shrink-0 text-muted-foreground/60 select-none" aria-hidden>
+                        └
+                      </span>
+                    )}
+                    <span className={selectedCustomerId === c.id ? "font-medium truncate" : "truncate"}>
+                      {c.name}
+                    </span>
+                    {selectedCustomerId === c.id && (
+                      <span className="ml-auto shrink-0 w-2 h-2 bg-green-500 rounded-full inline-block" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

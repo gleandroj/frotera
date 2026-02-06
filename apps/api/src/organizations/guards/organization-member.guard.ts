@@ -5,11 +5,15 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { CustomersService } from "@/customers/customers.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class OrganizationMemberGuard implements CanActivate {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private customersService: CustomersService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -33,8 +37,12 @@ export class OrganizationMemberGuard implements CanActivate {
       throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
     }
 
-    // Attach the membership to the request for use in controllers
     request.organizationMember = membership;
+    request.allowedCustomerIds =
+      await this.customersService.getAllowedCustomerIds(
+        membership,
+        organizationId,
+      );
 
     return true;
   }

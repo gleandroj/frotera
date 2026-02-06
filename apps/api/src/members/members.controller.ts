@@ -5,8 +5,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   DeleteMemberResponseDto,
   MembersListResponseDto,
+  UpdateMemberDto,
   UpdateMemberResponseDto,
-  UpdateMemberRoleDto,
 } from './members.dto';
 import { MembersService } from './members.service';
 
@@ -35,22 +35,22 @@ export class MembersController {
   }
 
   @Patch(':memberId')
-  @ApiOperation({ summary: 'Update member role' })
+  @ApiOperation({ summary: 'Update member role and customer access' })
   @ApiResponse({ status: 200, type: UpdateMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Member not found' })
-  async updateMemberRole(
+  async updateMember(
     @Request() req: RequestWithUser,
     @Param('organizationId') organizationId: string,
     @Param('memberId') memberId: string,
-    @Body() body: UpdateMemberRoleDto,
+    @Body() body: UpdateMemberDto,
   ): Promise<UpdateMemberResponseDto> {
-    return this.membersService.updateMemberRole(
+    return this.membersService.updateMember(
       req.user.userId,
       organizationId,
       memberId,
-      body.role,
+      body,
     );
   }
 

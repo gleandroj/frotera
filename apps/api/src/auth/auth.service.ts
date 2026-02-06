@@ -104,12 +104,12 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto) {
-    const { 
-      email, 
-      password, 
-      name, 
-      phoneNumber, 
-      language, 
+    const {
+      email,
+      password,
+      name,
+      phoneNumber,
+      language,
       organizationName
     } = signupDto;
 
@@ -139,7 +139,7 @@ export class AuthService {
     // Always create organization - use provided name or fallback to user's name or email
     let organization = null;
     const orgName = organizationName?.trim() || name?.trim() || email.split('@')[0];
-    
+
     try {
       const orgResult = await this.organizationsService.createOrganization(
         user.id,
@@ -170,6 +170,38 @@ export class AuthService {
       },
       organization: organization || undefined,
     };
+  }
+
+  /**
+   * Creates a user account without creating an organization or sending verification email.
+   * Used when a user accepts an organization invitation and does not have an account yet.
+   * The invitation flow will add them to the inviting organization and mark email as verified.
+   */
+  async signupFromInvitation(data: {
+    email: string;
+    password: string;
+    name?: string;
+  }): Promise<void> {
+    const { email, password, name } = data;
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException(ApiCode.USER_ALREADY_EXISTS);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await this.prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name: name || null,
+        language: "pt",
+      },
+    });
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto) {

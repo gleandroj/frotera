@@ -70,7 +70,7 @@ export class OrganizationResponseDto {
 export class OrganizationsListResponseDto {
   @ApiProperty({
     description: "List of organizations",
-    type: [OrganizationResponseDto],
+    type: () => [OrganizationResponseDto],
   })
   organizations: OrganizationResponseDto[];
 }
@@ -104,7 +104,7 @@ export class CreateOrganizationResponseDto {
 
   @ApiProperty({
     description: "Created organization details",
-    type: OrganizationResponseDto,
+    type: () => OrganizationResponseDto,
   })
   organization: OrganizationResponseDto;
 }
@@ -120,7 +120,7 @@ export class UpdateOrganizationResponseDto {
 
   @ApiProperty({
     description: "Updated organization details",
-    type: OrganizationResponseDto,
+    type: () => OrganizationResponseDto,
   })
   organization: OrganizationResponseDto;
 }

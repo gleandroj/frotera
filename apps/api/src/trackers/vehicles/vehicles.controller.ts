@@ -6,10 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  Request,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { CustomersService } from "@/customers/customers.service";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
 import {
   CreateVehicleDto,
@@ -18,12 +22,19 @@ import {
 } from "../dto/index";
 import { VehiclesService } from "./vehicles.service";
 
+interface RequestWithAllowedCustomers extends ExpressRequest {
+  allowedCustomerIds: string[] | null;
+}
+
 @ApiTags("vehicles")
 @Controller("organizations/:organizationId/vehicles")
 @UseGuards(JwtAuthGuard, OrganizationMemberGuard)
 @ApiBearerAuth()
 export class VehiclesController {
-  constructor(private readonly vehiclesService: VehiclesService) {}
+  constructor(
+    private readonly vehiclesService: VehiclesService,
+    private readonly customersService: CustomersService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: "Create a vehicle" })
@@ -33,18 +44,41 @@ export class VehiclesController {
   async create(
     @Param("organizationId") organizationId: string,
     @Body() body: CreateVehicleDto,
+    @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
-    return this.vehiclesService.create(organizationId, body);
+    return this.vehiclesService.create(
+      organizationId,
+      body,
+      req.allowedCustomerIds,
+    );
   }
 
   @Get()
   @ApiOperation({ summary: "List vehicles for the organization" })
-  @ApiResponse({ status: 200, type: [VehicleResponseDto] })
+  @ApiResponse({ status: 200, type: () => [VehicleResponseDto] })
   @ApiResponse({ status: 403, description: "Forbidden" })
   async list(
     @Param("organizationId") organizationId: string,
+    @Query("customerId") filterCustomerId: string | undefined,
+    @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto[]> {
-    return this.vehiclesService.listByOrganization(organizationId);
+    let filterIds: string[] | null | undefined;
+    if (filterCustomerId) {
+      const descendantIds = await this.customersService.getDescendantCustomerIds(
+        [filterCustomerId],
+        organizationId,
+      );
+      const filterSet = [filterCustomerId, ...descendantIds];
+      filterIds =
+        req.allowedCustomerIds === null
+          ? filterSet
+          : filterSet.filter((id) => req.allowedCustomerIds!.includes(id));
+    }
+    return this.vehiclesService.listByOrganization(
+      organizationId,
+      req.allowedCustomerIds,
+      filterIds,
+    );
   }
 
   @Get(":vehicleId")
@@ -55,10 +89,12 @@ export class VehiclesController {
   async get(
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
+    @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
     return this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,
+      req.allowedCustomerIds,
     );
   }
 
@@ -71,12 +107,18 @@ export class VehiclesController {
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
     @Body() body: UpdateVehicleDto,
+    @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,
+      req.allowedCustomerIds,
     );
-    return this.vehiclesService.update(vehicleId, body);
+    return this.vehiclesService.update(
+      vehicleId,
+      body,
+      req.allowedCustomerIds,
+    );
   }
 
   @Delete(":vehicleId")
@@ -87,11 +129,13 @@ export class VehiclesController {
   async delete(
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
+    @Request() req: RequestWithAllowedCustomers,
   ): Promise<void> {
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,
+      req.allowedCustomerIds,
     );
-    return this.vehiclesService.delete(vehicleId);
+    await this.vehiclesService.delete(vehicleId, req.allowedCustomerIds);
   }
 }

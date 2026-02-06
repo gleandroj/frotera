@@ -29,6 +29,8 @@ export interface User {
   isSuperAdmin: boolean
 }
 
+const CURRENT_CUSTOMER_ID_KEY = "currentCustomerId"
+
 interface AuthContextType {
   user: User | null
   isLoading: boolean
@@ -37,6 +39,9 @@ interface AuthContextType {
   organizations: Organization[]
   currentOrganization: Organization | null
   organizationsLoading: boolean
+  /** Global filter: when set, list APIs should send this customerId query param */
+  selectedCustomerId: string | null
+  setSelectedCustomerId: (customerId: string | null) => void
   refreshOrganizations: () => Promise<Organization[]>
   login: (email: string, password: string, twoFactorCode?: string) => Promise<{ data: any }>
   logout: (redirect?: boolean) => Promise<void>
@@ -55,7 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
   const [organizationsLoading, setOrganizationsLoading] = useState(true)
+  const [selectedCustomerId, setSelectedCustomerIdState] = useState<string | null>(null)
   const router = useRouter()
+
+  const setSelectedCustomerId = (customerId: string | null) => {
+    setSelectedCustomerIdState(customerId)
+    if (customerId === null) {
+      localStorage.removeItem(CURRENT_CUSTOMER_ID_KEY)
+    } else {
+      localStorage.setItem(CURRENT_CUSTOMER_ID_KEY, customerId)
+    }
+  }
 
   // Token management
   const setTokens = (accessToken: string, refreshToken: string) => {
@@ -67,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("accessToken")
     localStorage.removeItem("refreshToken")
     localStorage.removeItem("currentOrganizationId")
+    localStorage.removeItem(CURRENT_CUSTOMER_ID_KEY)
   }
 
   const refreshOrganizations = async (): Promise<Organization[]> => {
@@ -127,10 +143,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(`Organization with ID ${orgId} not found`)
       }
 
-      // Update all state atomically
+      // Update all state atomically; clear customer filter when switching org
       setOrganizations(organizations)
       setCurrentOrganization(targetOrg)
+      setSelectedCustomerIdState(null)
       localStorage.setItem("currentOrganizationId", orgId)
+      localStorage.removeItem(CURRENT_CUSTOMER_ID_KEY)
 
       return organizations
     } catch (err: any) {
@@ -220,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setOrganizations([])
       setCurrentOrganization(null)
+      setSelectedCustomerIdState(null)
 
       // Redirect to login page
       if (redirect) {
@@ -232,6 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setOrganizations([])
       setCurrentOrganization(null)
+      setSelectedCustomerIdState(null)
       if (redirect) {
         router.push("/login")
       }
@@ -254,7 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await checkAuth()
   }
 
-  // Restore current organization from localStorage
+  // Restore current organization and customer filter from localStorage
   useEffect(() => {
     const savedOrgId = localStorage.getItem("currentOrganizationId")
     if (savedOrgId && organizations.length > 0) {
@@ -264,6 +284,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [organizations])
+
+  useEffect(() => {
+    const saved = localStorage.getItem(CURRENT_CUSTOMER_ID_KEY)
+    setSelectedCustomerIdState(saved || null)
+  }, [])
 
   // Check authentication status on mount
   useEffect(() => {
@@ -286,6 +311,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         organizations,
         currentOrganization,
         organizationsLoading,
+        selectedCustomerId,
+        setSelectedCustomerId,
         refreshOrganizations,
         login,
         logout,

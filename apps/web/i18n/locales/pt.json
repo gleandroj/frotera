@@ -94,6 +94,7 @@
     "plateRequired": "Informe a placa do veículo.",
     "device": "Rastreador",
     "noDevice": "Sem rastreador",
+    "customer": "Cliente",
     "backToVehicles": "← Voltar aos veículos",
     "viewVehicle": "Visualizar veículo",
     "vehicle": "Veículo",
@@ -144,6 +145,21 @@
     "toastCreated": "Veículo criado com sucesso.",
     "toastUpdated": "Veículo atualizado com sucesso.",
     "toastError": "Falha ao salvar veículo. Tente novamente."
+  },
+  "customers": {
+    "listDescription": "Clientes em hierarquia. Associe veículos a clientes e restrinja o acesso dos usuários por cliente.",
+    "noCustomers": "Nenhum cliente cadastrado.",
+    "createCustomer": "Novo cliente",
+    "editCustomer": "Editar cliente",
+    "parent": "Cliente pai",
+    "noParent": "Nenhum (raiz)",
+    "namePlaceholder": "Nome do cliente",
+    "created": "Cliente criado com sucesso.",
+    "updated": "Cliente atualizado com sucesso.",
+    "confirmDelete": {
+      "title": "Excluir cliente",
+      "description": "Tem certeza que deseja excluir este cliente? Não é possível excluir se houver subclientes ou veículos vinculados."
+    }
   },
   "auth": {
     "title": "Bem-vindo de volta",
@@ -653,6 +669,7 @@
       "dashboard": "Painel",
       "devices": "Dispositivos",
       "vehicles": "Veículos",
+      "customers": "Clientes",
       "setupInitial": "Configuração Inicial",
       "teamMembers": "Membros da Equipe",
       "contacts": "Contatos",
@@ -687,7 +704,9 @@
       "myAccount": "Minha Conta",
       "profileSettings": "Configurações do Perfil",
       "organizations": "Organizações",
-      "signOut": "Sair"
+      "signOut": "Sair",
+      "allCustomers": "Todos os clientes",
+      "filterByCustomer": "Filtrar por cliente"
     }
   },
   "profile": {
@@ -777,6 +796,9 @@
       "roleLabel": "Função",
       "memberOption": "Membro",
       "adminOption": "Administrador",
+      "fullAccess": "Acesso completo à organização",
+      "customerAccess": "Acesso por cliente",
+      "customerAccessHint": "Se nenhum cliente for selecionado, o usuário não terá acesso a dados de veículos/clientes.",
       "sendButton": "Enviar Convite",
       "sending": "Enviando...",
       "validation": {
@@ -788,11 +810,20 @@
       }
     },
     "actions": {
+      "editMember": "Editar Membro",
       "promoteToAdmin": "Promover a Administrador",
       "demoteToMember": "Rebaixar a Membro",
       "removeMember": "Remover Membro",
       "resend": "Reenviar",
       "revoke": "Revogar"
+    },
+    "accessFull": "Acesso completo",
+    "accessLimitedTo": "Acesso limitado a {{count}} cliente(s)",
+    "editDialog": {
+      "title": "Editar Membro",
+      "description": "Alterar função e acesso aos clientes de {{name}}",
+      "saveButton": "Salvar alterações",
+      "saving": "Salvando..."
     },
     "confirmDialogs": {
       "revokeInvitation": {
@@ -822,6 +853,8 @@
       "error": "Erro",
       "memberRoleUpdated": "Função do membro atualizada",
       "memberRoleUpdatedDescription": "A função do membro foi atualizada com sucesso",
+      "memberUpdated": "Membro atualizado",
+      "memberUpdatedDescription": "As alterações do membro foram salvas com sucesso",
       "memberRemoved": "Membro removido",
       "memberRemovedDescription": "O membro foi removido da equipe",
       "invitationSent": "Convite enviado",
@@ -835,6 +868,7 @@
       "failedToLoadMembers": "Falha ao carregar membros da equipe",
       "failedToLoadInvitations": "Falha ao carregar convites",
       "failedToUpdateMemberRole": "Falha ao atualizar função do membro",
+      "failedToUpdateMember": "Falha ao atualizar membro",
       "failedToRemoveMember": "Falha ao remover membro",
       "failedToSendInvitation": "Falha ao enviar convite",
       "failedToResendInvitation": "Falha ao reenviar convite",
