@@ -12,7 +12,6 @@
     "start:prod": "node dist/main",
     "start:tcp": "node dist/tcp-main",
     "dev:tcp": "nest start --watch --entryFile tcp-main",
-    "test:tracker-tcp": "node scripts/test-tracker-tcp.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "test": "jest",
     "test:watch": "jest --watch",
