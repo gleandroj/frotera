@@ -11,7 +11,7 @@ import { OrganizationsService } from "./organizations.service";
   imports: [
     PrismaModule,
     forwardRef(() => AuthModule),
-    CustomersModule,
+    forwardRef(() => CustomersModule),
   ],
   controllers: [OrganizationsController],
   providers: [OrganizationsService, OrganizationMemberGuard, SuperAdminGuard],
