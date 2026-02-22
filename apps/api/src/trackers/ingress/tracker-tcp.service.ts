@@ -6,7 +6,6 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as net from "net";
-import { TrackerModel } from "@prisma/client";
 import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
 import { TrackerRedisWriterService } from "./tracker-redis-writer.service";
@@ -18,14 +17,12 @@ import {
   isGT06Location,
   isGT06Heartbeat,
   getImeiFromGT06Login,
-  getPositionFromGT06Location,
+  getGT06ProtocolName,
+  parseGT06LocationToPosition,
   buildGT06LoginAck,
   buildGT06HeartbeatAck,
   buildGT06LocationAck,
 } from "../protocols/gt06.parser";
-import { tryParseNT20Packet, isNT20Packet } from "../protocols/nt20.parser";
-
-type ProtocolKind = "GT06" | "NT20";
 
 interface ParsedPacket {
   protocolNumber: number;
@@ -38,7 +35,7 @@ interface SocketContext {
   buffer: Buffer;
   deviceId: string | null;
   imei: string | null;
-  protocol: ProtocolKind | null;
+  protocol: "GT06" | null;
 }
 
 @Injectable()
@@ -118,16 +115,17 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     this.socketContexts.set(socket, ctx);
 
     socket.on("data", (data: Buffer) => {
+      const hexPreview =
+        data.length <= 64 ? data.toString("hex") : `${data.subarray(0, 32).toString("hex")}...`;
+      const hint =
+        data.length >= 2 && data[0] === 0x78 && data[1] === 0x78
+          ? " (GT06?)"
+          : data.length >= 2 && data[0] === 0x79 && data[1] === 0x79
+            ? " (GT06 adv?)"
+            : "";
       this.logger.debug(
-        `[${remote}] Received ${data.length} bytes (buffer now ${ctx.buffer.length + data.length})`,
+        `[${remote}] Received ${data.length} bytes${hint} | hex: ${hexPreview}`,
       );
-      if (data.length <= 64) {
-        this.logger.debug(`[${remote}] Raw hex: ${data.toString("hex")}`);
-      } else {
-        this.logger.debug(
-          `[${remote}] Raw hex (first 64): ${data.subarray(0, 64).toString("hex")}...`,
-        );
-      }
       ctx.buffer = Buffer.concat([ctx.buffer, data]);
       this.processBuffer(socket, ctx);
     });
@@ -152,44 +150,31 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       let parsed: ParsedPacket | null = null;
       let fullLength = 0;
 
-      if (ctx.protocol === "GT06" || ctx.protocol === null) {
-        if (isGT06Packet(ctx.buffer)) {
-          fullLength = getGT06PacketLength(ctx.buffer) ?? 0;
-          if (fullLength > 0 && ctx.buffer.length >= fullLength) {
-            parsed = tryParseGT06Packet(ctx.buffer);
-            if (parsed) {
-              if (ctx.protocol === null) ctx.protocol = "GT06";
-              fullLength = parsed.fullLength;
-            }
+      if (isGT06Packet(ctx.buffer)) {
+        fullLength = getGT06PacketLength(ctx.buffer) ?? 0;
+        if (fullLength > 0 && ctx.buffer.length >= fullLength) {
+          parsed = tryParseGT06Packet(ctx.buffer);
+          if (parsed) {
+            if (ctx.protocol === null) ctx.protocol = "GT06";
+            fullLength = parsed.fullLength;
           }
         }
       }
 
-      if (!parsed && ctx.protocol === null && isNT20Packet(ctx.buffer)) {
-        const nt20 = tryParseNT20Packet(ctx.buffer);
-        if (nt20) {
-          parsed = nt20;
-          ctx.protocol = "NT20";
-          fullLength = nt20.fullLength;
-        }
-      }
-
       if (!parsed) {
+        const preview = ctx.buffer.subarray(0, Math.min(8, ctx.buffer.length)).toString("hex");
         this.logger.debug(
-          `No packet parsed, skipping 1 byte (buffer len ${ctx.buffer.length})`,
+          `No packet parsed (invalid or unknown format), skipping 1 byte | buffer=${ctx.buffer.length} bytes, start: ${preview}...`,
         );
         ctx.buffer = ctx.buffer.subarray(1);
         continue;
       }
 
       this.logger.debug(
-        `Parsed ${ctx.protocol} packet: protocolNumber=${parsed.protocolNumber}, serial=${parsed.serialNumber}, length=${fullLength}`,
+        `[GT06] Packet: ${getGT06ProtocolName(parsed!.protocolNumber)} | serial=${parsed!.serialNumber} | length=${fullLength} bytes`,
       );
       ctx.buffer = ctx.buffer.subarray(fullLength);
-
-      if (ctx.protocol === "GT06" && parsed) {
-        this.handleGT06Packet(socket, ctx, parsed);
-      }
+      this.handleGT06Packet(socket, ctx, parsed!);
     }
   }
 
@@ -200,54 +185,51 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     if (isGT06Login(parsed.protocolNumber)) {
       const imei = getImeiFromGT06Login(parsed.content);
-      this.logger.debug(`GT06 login: imei=${imei ?? "invalid"}, serial=${parsed.serialNumber}`);
-      if (!imei) {
-        socket.write(buildGT06LoginAck(parsed.serialNumber));
-        return;
-      }
-      const device = await this.trackerDevices.findByImei(imei);
-      const autoRegisterOrgId = this.config.get<string>(
-        "TRACKER_AUTO_REGISTER_ORGANIZATION_ID",
+      this.logger.log(
+        `[GT06] Login | IMEI=${imei ?? "invalid"} | serial=${parsed.serialNumber}`,
       );
-      if (!device && autoRegisterOrgId) {
-        const { deviceId } = await this.trackerDevices.createDeviceAndVehicle(
-          autoRegisterOrgId,
-          imei,
-          TrackerModel.X12_GT06,
-        );
-        ctx.deviceId = deviceId;
-        ctx.imei = imei;
-        this.markConnected(deviceId);
-        this.logger.log(`Auto-registered device IMEI ${imei} -> deviceId ${deviceId}`);
-      } else if (device) {
+      socket.write(buildGT06LoginAck(parsed.serialNumber));
+      if (!imei) return;
+
+      const device = await this.trackerDevices.findByImei(imei);
+      if (device) {
         ctx.deviceId = device.id;
         ctx.imei = device.imei;
         this.markConnected(device.id);
-        this.logger.debug(`GT06 login OK: deviceId=${device.id}, imei=${imei}`);
+        this.logger.log(
+          `[GT06] Login | IMEI=${imei} | deviceId=${device.id} | OK (pre-registered)`,
+        );
       } else {
-        this.logger.debug(`GT06 login: unknown IMEI ${imei}, no auto-register`);
+        this.logger.log(
+          `[GT06] Login | IMEI=${imei} | rejected (device must be pre-registered)`,
+        );
       }
-      socket.write(buildGT06LoginAck(parsed.serialNumber));
       return;
     }
 
     if (isGT06Heartbeat(parsed.protocolNumber)) {
-      this.logger.debug(
-        `GT06 heartbeat: deviceId=${ctx.deviceId ?? "none"}, serial=${parsed.serialNumber}`,
+      this.logger.log(
+        `[GT06] Heartbeat | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber}`,
       );
-      socket.write(buildGT06HeartbeatAck(parsed.serialNumber));
+      socket.write(buildGT06HeartbeatAck(parsed.serialNumber, parsed.protocolNumber));
       return;
     }
 
     if (isGT06Location(parsed.protocolNumber)) {
-      const position = getPositionFromGT06Location(parsed.content);
-      this.logger.debug(
-        `GT06 location: deviceId=${ctx.deviceId ?? "none"}, serial=${parsed.serialNumber}, position=${position ? `${position.latitude},${position.longitude}` : "parse failed"}`,
+      socket.write(buildGT06LocationAck(parsed.serialNumber, parsed.protocolNumber));
+      const position = parseGT06LocationToPosition(
+        parsed.protocolNumber,
+        parsed.content,
+      );
+      const posStr = position
+        ? `lat=${position.latitude.toFixed(5)} lng=${position.longitude.toFixed(5)} @ ${position.recordedAt}`
+        : "parse failed";
+      this.logger.log(
+        `[GT06] Location | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber} | ${posStr}`,
       );
       if (position && ctx.deviceId && ctx.imei) {
         await this.redisWriter.pushPosition(ctx.deviceId, ctx.imei, position);
       }
-      socket.write(buildGT06LocationAck(parsed.serialNumber));
     }
   }
 }
