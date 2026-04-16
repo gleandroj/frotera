@@ -46,9 +46,9 @@ export class MembersService {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
-    // Get organization members
+    // Get organization members (exclude system super admin users)
     let members = await this.prisma.organizationMember.findMany({
-      where: { organizationId },
+      where: { organizationId, user: { isSuperAdmin: false } },
       include: {
         user: {
           select: {
