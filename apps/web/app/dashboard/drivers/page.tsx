@@ -68,15 +68,21 @@ export default function DriversPage() {
         </Button>
       </div>
 
+      {loading && (
+        <p className="text-muted-foreground">{t("common.loading")}</p>
+      )}
       {error && <p className="text-destructive text-sm">{error}</p>}
-
-      <DataTable
-        columns={columns}
-        data={drivers}
-        loading={loading}
-        filterColumn="name"
-        filterPlaceholder={t("drivers.filterByName")}
-      />
+      {!loading && !error && drivers.length === 0 && (
+        <p className="text-muted-foreground">{t("drivers.noDrivers")}</p>
+      )}
+      {!loading && !error && drivers.length > 0 && (
+        <DataTable
+          columns={columns}
+          data={drivers}
+          filterColumnId="name"
+          filterPlaceholder={t("drivers.filterByName")}
+        />
+      )}
 
       <DriverFormDialog
         open={createOpen || !!editDriver}
