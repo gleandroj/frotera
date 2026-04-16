@@ -80,7 +80,7 @@ export default function CustomersPage() {
             {t("customers.listDescription")}
           </p>
         </div>
-        {currentOrganization?.role !== "MEMBER" && (
+        {(currentOrganization?.role?.permissions?.some((p: any) => p.module === "COMPANIES" && p.actions.includes("CREATE")) ?? false) && (
           <Button onClick={() => setCreateOpen(true)}>
             {t("customers.createCustomer")}
           </Button>

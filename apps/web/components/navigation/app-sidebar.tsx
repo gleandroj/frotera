@@ -47,7 +47,9 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
 
-  const isMember = currentOrganization?.role === "MEMBER";
+  const isMember = currentOrganization
+    ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
+    : false;
   const isSuperAdmin = user?.isSuperAdmin === true;
   const settingsItems: NavigationItem[] = [
     ...(!isMember && isSuperAdmin

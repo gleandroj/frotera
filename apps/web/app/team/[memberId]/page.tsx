@@ -19,6 +19,8 @@ import {
   type Customer,
 } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { rolesAPI, type Role } from "@/lib/api/roles";
 import { ErrorMessage, Form, Formik } from "formik";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
@@ -31,7 +33,7 @@ import { toFormikValidationSchema } from "zod-formik-adapter";
 interface TeamMember {
   id: string;
   user: { id: string; name: string | null; email: string };
-  role: string;
+  role: { id: string; name: string; color?: string | null; permissions: Array<{ id: string; module: string; actions: string[]; scope: string }> };
   joinedAt: string;
   customerRestricted?: boolean;
   customers?: { id: string; name: string }[];
@@ -61,7 +63,7 @@ function getDescendantIds(
 }
 
 type EditMemberFormValues = {
-  role: "ADMIN" | "MEMBER";
+  roleId: string;
   fullAccess: boolean;
   customerIds: string[];
   name: string;
@@ -77,8 +79,10 @@ export default function EditMemberPage() {
   const memberId = typeof params.memberId === "string" ? params.memberId : null;
 
   const { currentOrganization, user } = useAuth();
+  const { can } = usePermissions();
   const [member, setMember] = useState<TeamMember | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loadingMember, setLoadingMember] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
@@ -88,10 +92,7 @@ export default function EditMemberPage() {
     () =>
       z
         .object({
-          role: z.enum(["ADMIN", "MEMBER"], {
-            required_error: t("team.inviteDialog.validation.roleRequired"),
-            invalid_type_error: t("team.inviteDialog.validation.roleInvalid"),
-          }),
+          roleId: z.string().min(1, t("team.inviteDialog.validation.roleRequired")),
           fullAccess: z.boolean().optional(),
           customerIds: z.array(z.string()).optional(),
           name: z.string().optional(),
@@ -149,6 +150,13 @@ export default function EditMemberPage() {
     loadCustomers();
   }, [loadCustomers]);
 
+  useEffect(() => {
+    if (!currentOrganization?.id) return;
+    rolesAPI.getRoles(currentOrganization.id)
+      .then((res) => setRoles(res.data?.roles ?? []))
+      .catch(() => setRoles([]));
+  }, [currentOrganization?.id]);
+
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers;
     const q = customerSearch.trim().toLowerCase();
@@ -158,14 +166,14 @@ export default function EditMemberPage() {
   const currentUserMembership = members.find((m) => m.user.id === user?.id);
   const currentUserRestricted = currentUserMembership?.customerRestricted === true;
   const isEditingSelf = member?.user.id === user?.id;
-  const canEditOwnAccess = currentOrganization?.role === "OWNER";
+  const canEditOwnAccess = can(Module.USERS, Action.EDIT);
   const disableRoleAndAccess = isEditingSelf && !canEditOwnAccess;
 
   const updateMember = async (values: EditMemberFormValues) => {
     if (!currentOrganization || !member) return;
     try {
       await organizationAPI.updateMember(currentOrganization.id, member.id, {
-        role: values.role,
+        roleId: values.roleId,
         customerRestricted: !values.fullAccess,
         customerIds: values.fullAccess ? undefined : values.customerIds,
         name: values.name || undefined,
@@ -265,9 +273,7 @@ export default function EditMemberPage() {
       <Formik<EditMemberFormValues>
         key={member.id}
         initialValues={{
-          role: (member.role === "OWNER"
-            ? "ADMIN"
-            : member.role) as "ADMIN" | "MEMBER",
+          roleId: member.role.id,
           fullAccess: currentUserRestricted ? false : !member.customerRestricted,
           customerIds: member.customers?.map((c) => c.id) ?? [],
           name: member.user.name ?? "",
@@ -377,31 +383,28 @@ export default function EditMemberPage() {
                     {t("team.inviteDialog.roleLabel")}
                   </Label>
                   <Select
-                    value={values.role}
-                    onValueChange={(value: "ADMIN" | "MEMBER") =>
-                      setFieldValue("role", value)
+                    value={values.roleId}
+                    onValueChange={(value: string) =>
+                      setFieldValue("roleId", value)
                     }
                   >
                     <SelectTrigger
                       id="edit-role"
                       disabled={disableRoleAndAccess}
                       className={
-                        errors.role && touched.role ? "border-red-500" : ""
+                        errors.roleId && touched.roleId ? "border-red-500" : ""
                       }
                     >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="MEMBER">
-                        {t("team.inviteDialog.memberOption")}
-                      </SelectItem>
-                      <SelectItem value="ADMIN">
-                        {t("team.inviteDialog.adminOption")}
-                      </SelectItem>
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <ErrorMessage
-                    name="role"
+                    name="roleId"
                     component="div"
                     className="text-sm text-red-500 mt-1"
                   />

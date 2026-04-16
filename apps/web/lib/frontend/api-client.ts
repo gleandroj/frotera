@@ -288,7 +288,7 @@ export const organizationAPI = {
       email: string;
       password: string;
       name?: string;
-      role: "ADMIN" | "MEMBER";
+      roleId: string;
       customerRestricted?: boolean;
       customerIds?: string[];
     }
@@ -301,7 +301,7 @@ export const organizationAPI = {
     organizationId: string,
     memberId: string,
     data: {
-      role?: string;
+      roleId?: string;
       customerRestricted?: boolean;
       customerIds?: string[];
       name?: string;
@@ -316,7 +316,17 @@ export const organizationAPI = {
   removeMember: (organizationId: string, memberId: string) =>
     externalApi.delete(
       `/api/organizations/${organizationId}/members/${memberId}`
-    )
+    ),
+  getRoles: (organizationId: string) =>
+    externalApi.get(`/api/organizations/${organizationId}/roles`),
+  getRole: (organizationId: string, roleId: string) =>
+    externalApi.get(`/api/organizations/${organizationId}/roles/${roleId}`),
+  createRole: (organizationId: string, data: any) =>
+    externalApi.post(`/api/organizations/${organizationId}/roles`, data),
+  updateRole: (organizationId: string, roleId: string, data: any) =>
+    externalApi.patch(`/api/organizations/${organizationId}/roles/${roleId}`, data),
+  deleteRole: (organizationId: string, roleId: string) =>
+    externalApi.delete(`/api/organizations/${organizationId}/roles/${roleId}`),
 };
 
 // Customer type and API

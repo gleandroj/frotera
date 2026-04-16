@@ -3,32 +3,28 @@ import { NotificationType } from "@prisma/client";
 import { getNotificationTranslation } from "./translations";
 
 /**
- * Get organization owners and admins to send notifications to
+ * Get organization owners and admins to send notifications to.
+ * Uses RBAC: members whose role has USERS:EDIT permission (COMPANY_OWNER) or
+ * USERS:CREATE (COMPANY_ADMIN) are considered owners/admins.
  */
 export async function getOrganizationOwnersAndAdmins(
   prisma: PrismaService,
   organizationId: string
 ): Promise<Array<{ id: string; email: string; name: string | null; language: string | null }>> {
   const members = await prisma.organizationMember.findMany({
-    where: {
-      organizationId,
-      role: {
-        in: ["OWNER", "ADMIN"],
-      },
-    },
+    where: { organizationId },
     include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          language: true,
-        },
-      },
+      user: { select: { id: true, email: true, name: true, language: true } },
+      role: { include: { permissions: true } },
     },
   });
 
-  return members.map((member) => ({
+  const managersOrAdmins = members.filter((m) => {
+    const usersPerm = m.role.permissions.find((p) => p.module === 'USERS');
+    return usersPerm?.actions?.includes('CREATE' as any) ?? false;
+  });
+
+  return managersOrAdmins.map((member) => ({
     id: member.user.id,
     email: member.user.email,
     name: member.user.name,
@@ -37,46 +33,34 @@ export async function getOrganizationOwnersAndAdmins(
 }
 
 /**
- * Get organization's preferred language from owners/admins
- * Returns the first owner/admin's language, or "pt" as default
+ * Get organization's preferred language from owners/admins.
+ * Returns the first owner/admin's language, or "pt" as default.
  */
 export async function getOrganizationLanguage(
   prisma: PrismaService,
   organizationId: string
 ): Promise<string> {
-  const members = await prisma.organizationMember.findFirst({
-    where: {
-      organizationId,
-      role: {
-        in: ["OWNER", "ADMIN"],
-      },
-    },
+  const members = await prisma.organizationMember.findMany({
+    where: { organizationId },
     include: {
-      user: {
-        select: {
-          language: true,
-        },
-      },
+      user: { select: { language: true } },
+      role: { include: { permissions: true } },
     },
-    orderBy: {
-      role: "asc", // OWNER comes before ADMIN
-    },
+    take: 10,
   });
 
-  return members?.user?.language || "pt";
+  const manager = members.find((m) => {
+    const usersPerm = m.role.permissions.find((p) => p.module === 'USERS');
+    return usersPerm?.actions?.includes('EDIT' as any) ?? false;
+  });
+
+  return manager?.user?.language || "pt";
 }
 
-/**
- * Determine if email should be sent for a notification type
- */
 export function shouldSendEmail(type: NotificationType): boolean {
-  // TODO: Add logic for different notification types
   return true;
 }
 
-/**
- * Format notification message with context
- */
 export function formatNotificationMessage(
   type: NotificationType,
   metadata?: Record<string, any>,
@@ -84,7 +68,6 @@ export function formatNotificationMessage(
 ): { title: string; message: string } {
   const translations = getNotificationTranslation(language);
 
-  // TODO: Add specific handling for different notification types
   return {
     title: translations.default.title,
     message: translations.default.message,

@@ -24,6 +24,7 @@ model User {
 
   // Admin access
   isSuperAdmin Boolean @default(false)
+  isSystemUser Boolean @default(false)
 
   // Relations
   memberships OrganizationMember[]
@@ -59,6 +60,7 @@ model Organization {
   vehicles       Vehicle[]
   trackerDevices TrackerDevice[]
   customers      Customer[]
+  roles          Role[]
 
   @@map("organizations")
 }
@@ -160,7 +162,7 @@ model DevicePosition {
 
 model OrganizationMember {
   id                 String   @id @default(cuid())
-  role               Role     @default(MEMBER)
+  roleId             String
   userId             String
   organizationId     String
   customerRestricted Boolean  @default(false)
@@ -171,6 +173,7 @@ model OrganizationMember {
   // Relations
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
   customers    OrganizationMemberCustomer[]
 
   @@unique([userId, organizationId])
@@ -193,7 +196,7 @@ model Invitation {
   id                 String           @id @default(cuid())
   email              String
   token              String           @unique
-  role               Role             @default(MEMBER)
+  role               MemberRole       @default(MEMBER)
   status             InvitationStatus @default(PENDING)
   organizationId     String
   inviterId          String?
@@ -223,7 +226,7 @@ model InvitationCustomer {
   @@map("invitationCustomers")
 }
 
-enum Role {
+enum MemberRole {
   OWNER
   ADMIN
   MEMBER
@@ -234,6 +237,70 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   REVOKED
+}
+
+enum RoleModule {
+  VEHICLES
+  TRACKING
+  COMPANIES
+  USERS
+  REPORTS
+  DRIVERS
+  DOCUMENTS
+  FUEL
+  CHECKLIST
+  INCIDENTS
+  TELEMETRY
+  FINANCIAL
+
+  @@map("role_module")
+}
+
+enum RoleAction {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+
+  @@map("role_action")
+}
+
+enum RoleScope {
+  ALL
+  ASSIGNED
+
+  @@map("role_scope")
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String?
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  color          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  members      OrganizationMember[]
+
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model RolePermission {
+  id      String       @id @default(cuid())
+  roleId  String
+  module  RoleModule
+  actions RoleAction[]
+  scope   RoleScope    @default(ALL)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module])
+  @@map("role_permissions")
 }
 
 enum NotificationType {

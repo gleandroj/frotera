@@ -1,6 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { RoleResponseDto } from '../roles/roles.dto';
 
+/**
+ * OrganizationRole enum mantido apenas para compatibilidade com model Invitation e código legado.
+ * NÃO usar para OrganizationMember (que agora usa roleId FK).
+ */
 export enum OrganizationRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
@@ -22,9 +27,9 @@ export class CreateMemberDto {
   @IsString()
   name?: string;
 
-  @ApiProperty({ description: 'Role in the organization', enum: [OrganizationRole.ADMIN, OrganizationRole.MEMBER] })
-  @IsEnum(OrganizationRole)
-  role: OrganizationRole;
+  @ApiProperty({ description: 'Role ID to assign to the new member' })
+  @IsString()
+  roleId: string;
 
   @ApiPropertyOptional({ description: 'Whether the member is restricted to specific customers' })
   @IsOptional()
@@ -41,17 +46,11 @@ export class CreateMemberDto {
   customerIds?: string[];
 }
 
-export class UpdateMemberRoleDto {
-  @ApiProperty({ enum: OrganizationRole })
-  @IsEnum(OrganizationRole)
-  role: OrganizationRole;
-}
-
 export class UpdateMemberDto {
-  @ApiPropertyOptional({ enum: OrganizationRole })
+  @ApiPropertyOptional({ description: 'Role ID to assign' })
   @IsOptional()
-  @IsEnum(OrganizationRole)
-  role?: OrganizationRole;
+  @IsString()
+  roleId?: string;
 
   @ApiPropertyOptional({ description: 'Whether member is restricted to specific customers' })
   @IsOptional()
@@ -88,8 +87,8 @@ export class MemberResponseDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty({ enum: OrganizationRole })
-  role: OrganizationRole;
+  @ApiProperty({ type: () => RoleResponseDto })
+  role: RoleResponseDto;
 
   @ApiProperty()
   joinedAt: Date;

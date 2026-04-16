@@ -1,7 +1,6 @@
 import { ApiCode } from "@/common/api-codes.enum";
 import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { OrganizationRole } from "../members/members.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateOrganizationDto,
@@ -11,6 +10,25 @@ import {
   UpdateOrganizationDto,
   UpdateOrganizationResponseDto,
 } from "./organizations.dto";
+
+function formatRole(role: any) {
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    isSystem: role.isSystem,
+    color: role.color,
+    organizationId: role.organizationId,
+    permissions: role.permissions.map((p: any) => ({
+      id: p.id,
+      module: p.module,
+      actions: p.actions,
+      scope: p.scope,
+    })),
+    createdAt: role.createdAt,
+    updatedAt: role.updatedAt,
+  };
+}
 
 @Injectable()
 export class OrganizationsService {
@@ -27,42 +45,35 @@ export class OrganizationsService {
   ): Promise<CreateOrganizationResponseDto> {
     const { name, description } = data;
 
-    // Get default credit balance from environment variable (default: 0)
-    const defaultCreditBalance = parseFloat(
-      this.configService.get<string>("DEFAULT_CREDIT_BALANCE") || "0"
-    );
-
-    // Get user's language to determine currency
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { language: true },
     });
 
-    // Set currency based on user's language: BRL for Portuguese (pt), USD otherwise
     const currency = user?.language?.toLowerCase() === "pt" ? "BRL" : "USD";
 
-    // Create organization
+    // Get COMPANY_OWNER role (global system role)
+    const ownerRole = await this.prisma.role.findFirst({
+      where: { name: 'Dono da Empresa', isSystem: true, organizationId: null },
+      include: { permissions: true },
+    });
+    if (!ownerRole) {
+      throw new Error('System role COMPANY_OWNER not found. Run seed first.');
+    }
+
     const organization = await this.prisma.organization.create({
       data: {
         name,
         description,
         currency,
         memberships: {
-          create: {
-            userId,
-            role: OrganizationRole.OWNER,
-          },
+          create: { userId, roleId: ownerRole.id },
         },
       },
       include: {
         memberships: {
-          where: {
-            userId,
-          },
-          select: {
-            role: true,
-            createdAt: true,
-          },
+          where: { userId },
+          include: { role: { include: { permissions: true } } },
         },
       },
     });
@@ -77,28 +88,25 @@ export class OrganizationsService {
         description: organization.description,
         currency: organization.currency,
         createdAt: organization.createdAt,
-        role: membership.role as OrganizationRole,
+        role: formatRole(membership.role),
         joinedAt: membership.createdAt,
       },
     };
   }
 
-  async getUserOrganizations(
-    userId: string
-  ): Promise<OrganizationsListResponseDto> {
+  async getUserOrganizations(userId: string): Promise<OrganizationsListResponseDto> {
     const organizations = await this.prisma.organizationMember.findMany({
-      where: {
-        userId,
-      },
+      where: { userId },
       include: {
         organization: true,
+        role: { include: { permissions: true } },
       },
     });
 
     return {
       organizations: organizations.map((member) => ({
         ...member.organization,
-        role: member.role as OrganizationRole,
+        role: formatRole(member.role),
         joinedAt: member.createdAt,
       })),
     };
@@ -109,12 +117,10 @@ export class OrganizationsService {
     organizationId: string
   ): Promise<OrganizationResponseDto> {
     const membership = await this.prisma.organizationMember.findFirst({
-      where: {
-        userId,
-        organizationId,
-      },
+      where: { userId, organizationId },
       include: {
         organization: true,
+        role: { include: { permissions: true } },
       },
     });
 
@@ -124,7 +130,7 @@ export class OrganizationsService {
 
     return {
       ...membership.organization,
-      role: membership.role as OrganizationRole,
+      role: formatRole(membership.role),
       joinedAt: membership.createdAt,
     };
   }
@@ -134,46 +140,35 @@ export class OrganizationsService {
     organizationId: string,
     data: UpdateOrganizationDto
   ): Promise<UpdateOrganizationResponseDto> {
-    // Check if user has permission to update the organization
     const membership = await this.prisma.organizationMember.findFirst({
-      where: {
-        userId,
-        organizationId,
-        role: {
-          in: [OrganizationRole.OWNER, OrganizationRole.ADMIN],
-        },
-      },
+      where: { userId, organizationId },
+      include: { role: { include: { permissions: true } } },
     });
 
     if (!membership) {
       throw new ForbiddenException(ApiCode.ORGANIZATION_NOT_FOUND);
     }
 
-    // Update organization
+    const usersPerm = membership.role.permissions.find((p) => p.module === 'USERS');
+    const canEdit = usersPerm?.actions?.includes('EDIT' as any) ?? false;
+    if (!canEdit) {
+      throw new ForbiddenException(ApiCode.ORGANIZATION_NOT_FOUND);
+    }
+
     const updatedOrganization = await this.prisma.organization.update({
-      where: {
-        id: organizationId,
-      },
+      where: { id: organizationId },
       data: {
         ...(data.name && { name: data.name }),
-        ...(data.description !== undefined && {
-          description: data.description,
-        }),
+        ...(data.description !== undefined && { description: data.description }),
       },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        currency: true,
-        createdAt: true,
-      },
+      select: { id: true, name: true, description: true, currency: true, createdAt: true },
     });
 
     return {
       message: "Organization updated successfully",
       organization: {
         ...updatedOrganization,
-        role: membership.role as OrganizationRole,
+        role: formatRole(membership.role),
         joinedAt: membership.createdAt,
       },
     };

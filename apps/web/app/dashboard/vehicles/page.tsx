@@ -78,7 +78,7 @@ export default function VehiclesPage() {
             {t("vehicles.listDescription")}
           </p>
         </div>
-        {currentOrganization?.role !== "MEMBER" && (
+        {(currentOrganization?.role?.permissions?.some((p: any) => p.module === "VEHICLES" && p.actions.includes("CREATE")) ?? false) && (
           <Button onClick={() => setCreateOpen(true)}>
             {t("vehicles.createVehicle")}
           </Button>

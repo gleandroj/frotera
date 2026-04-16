@@ -964,5 +964,60 @@
         "upgrade": "Fazer Upgrade"
       }
     }
+  },
+  "roles": {
+    "title": "Funções",
+    "description": "Gerencie as funções e permissões da sua organização",
+    "systemRole": "Função do Sistema",
+    "customRole": "Função Personalizada",
+    "addRole": "Nova Função",
+    "editRole": "Editar Função",
+    "deleteRole": "Excluir Função",
+    "roleName": "Nome da Função",
+    "roleDescription": "Descrição",
+    "roleColor": "Cor",
+    "permissions": "Permissões",
+    "module": "Módulo",
+    "scope": "Escopo",
+    "scopeAll": "Todos os dados",
+    "scopeAssigned": "Dados atribuídos",
+    "modules": {
+      "VEHICLES": "Veículos",
+      "TRACKING": "Rastreamento",
+      "COMPANIES": "Empresas",
+      "USERS": "Usuários",
+      "REPORTS": "Relatórios",
+      "DRIVERS": "Motoristas",
+      "DOCUMENTS": "Documentos",
+      "FUEL": "Abastecimento",
+      "CHECKLIST": "Checklist",
+      "INCIDENTS": "Ocorrências",
+      "TELEMETRY": "Telemetria",
+      "FINANCIAL": "Financeiro"
+    },
+    "actions": {
+      "VIEW": "Visualizar",
+      "CREATE": "Criar",
+      "EDIT": "Editar",
+      "DELETE": "Excluir"
+    },
+    "confirmDelete": {
+      "title": "Excluir Função",
+      "description": "Esta ação não pode ser desfeita. A função será permanentemente excluída.",
+      "cannotDelete": "Esta função não pode ser excluída pois está em uso por um ou mais membros."
+    },
+    "errors": {
+      "nameRequired": "Nome é obrigatório",
+      "nameTaken": "Já existe uma função com este nome",
+      "systemRoleCannotModify": "Funções do sistema não podem ser modificadas",
+      "systemRoleCannotDelete": "Funções do sistema não podem ser excluídas",
+      "roleInUse": "Esta função está em uso e não pode ser excluída",
+      "roleNotFound": "Função não encontrada"
+    },
+    "toastMessages": {
+      "created": "Função criada com sucesso",
+      "updated": "Função atualizada com sucesso",
+      "deleted": "Função excluída com sucesso"
+    }
   }
 }

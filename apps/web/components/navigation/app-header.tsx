@@ -74,7 +74,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
   const [headerCustomers, setHeaderCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const { t } = useTranslation();
-  const canManageOrganizations = user?.isSuperAdmin === true && currentOrganization?.role !== "MEMBER";
+  const canManageOrganizations = user?.isSuperAdmin === true;
 
   const loadHeaderCustomers = useCallback(() => {
     if (!currentOrganization?.id) {
@@ -196,11 +196,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 <div className="flex items-center gap-2 ml-2">
                   <Badge
                     variant="secondary"
-                    className={`text-xs ${getRoleColor(org.role)}`}
+                    className={`text-xs ${getRoleColor(org.role?.name ?? '')}`}
                   >
                     <span className="flex items-center gap-1">
-                      {getRoleIcon(org.role)}
-                      <span>{org.role}</span>
+                      {getRoleIcon(org.role?.name ?? '')}
+                      <span>{org.role?.name ?? ''}</span>
                     </span>
                   </Badge>
                   {currentOrganization?.id === org.id ? (

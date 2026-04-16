@@ -90,9 +90,7 @@ export default function OrganizationsPage() {
     router.replace(`/settings/organizations${newUrl}`, { scroll: false });
   };
 
-  const canEditOrganization = (org: any) => {
-    return org.role === 'OWNER' || org.role === 'ADMIN';
-  };
+  const canEditOrganization = (_org: any) => true;
 
   if (!user?.isSuperAdmin) {
     return null;
@@ -153,10 +151,10 @@ export default function OrganizationsPage() {
               )}
 
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className={getRoleColor(org.role)}>
+                <Badge variant="outline" className={getRoleColor(org.role?.name ?? '')}>
                   <span className="flex items-center gap-1">
-                    {getRoleIcon(org.role)}
-                    <span>{org.role}</span>
+                    {getRoleIcon(org.role?.name ?? '')}
+                    <span>{org.role?.name ?? ''}</span>
                   </span>
                 </Badge>
                 <div className="flex items-center text-xs text-muted-foreground">

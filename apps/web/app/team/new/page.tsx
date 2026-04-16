@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "@/i18n/useTranslation";
 import { organizationAPI, customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { rolesAPI, type Role } from "@/lib/api/roles";
 import { ErrorMessage, Field, Form, Formik } from "formik";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
@@ -52,7 +53,7 @@ type CreateUserFormValues = {
   password: string;
   confirmPassword: string;
   name: string;
-  role: "ADMIN" | "MEMBER";
+  roleId: string;
   fullAccess: boolean;
   customerIds: string[];
 };
@@ -65,6 +66,8 @@ export default function NewUserPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerSearch, setCustomerSearch] = useState("");
   const [currentUserRestricted, setCurrentUserRestricted] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [defaultRoleId, setDefaultRoleId] = useState("");
 
   const CreateUserFormSchema = useMemo(
     () =>
@@ -86,10 +89,7 @@ export default function NewUserPage() {
             required_error: t("team.createUserDialog.validation.confirmPasswordRequired"),
           }),
           name: z.string().optional(),
-          role: z.enum(["ADMIN", "MEMBER"], {
-            required_error: t("team.createUserDialog.validation.roleRequired"),
-            invalid_type_error: t("team.createUserDialog.validation.roleInvalid"),
-          }),
+          roleId: z.string().min(1, t("team.createUserDialog.validation.roleRequired")),
           fullAccess: z.boolean().optional(),
           customerIds: z.array(z.string()).optional(),
         })
@@ -116,6 +116,17 @@ export default function NewUserPage() {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  useEffect(() => {
+    if (!currentOrganization?.id) return;
+    rolesAPI.getRoles(currentOrganization.id)
+      .then((res) => {
+        const list = res.data?.roles ?? [];
+        setRoles(list);
+        if (list.length > 0) setDefaultRoleId(list[0].id);
+      })
+      .catch(() => setRoles([]));
+  }, [currentOrganization?.id]);
 
   useEffect(() => {
     if (!currentOrganization?.id || !user?.id) return;
@@ -154,7 +165,7 @@ export default function NewUserPage() {
         email: values.email,
         password: values.password,
         name: values.name?.trim() || undefined,
-        role: values.role,
+        roleId: values.roleId,
         customerRestricted: !values.fullAccess,
         customerIds: values.fullAccess ? undefined : values.customerIds,
       });
@@ -215,12 +226,13 @@ export default function NewUserPage() {
       </div>
 
       <Formik
+        key={defaultRoleId}
         initialValues={{
           email: "",
           password: "",
           confirmPassword: "",
           name: "",
-          role: "MEMBER" as "ADMIN" | "MEMBER",
+          roleId: defaultRoleId,
           fullAccess: !currentUserRestricted,
           customerIds: [] as string[],
         }}
@@ -310,23 +322,22 @@ export default function NewUserPage() {
                 <div className="space-y-2">
                   <Label htmlFor="role">{t("team.createUserDialog.roleLabel")}</Label>
                   <Select
-                    value={values.role}
-                    onValueChange={(value: "ADMIN" | "MEMBER") => setFieldValue("role", value)}
+                    value={values.roleId}
+                    onValueChange={(value: string) => setFieldValue("roleId", value)}
                   >
                     <SelectTrigger
-                      className={errors.role && touched.role ? "border-red-500" : ""}
+                      className={errors.roleId && touched.roleId ? "border-red-500" : ""}
                     >
-                      <SelectValue />
+                      <SelectValue placeholder={t("team.createUserDialog.roleLabel")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="MEMBER">
-                        {t("team.createUserDialog.memberOption")}
-                      </SelectItem>
-                      <SelectItem value="ADMIN">{t("team.createUserDialog.adminOption")}</SelectItem>
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <ErrorMessage
-                    name="role"
+                    name="roleId"
                     component="div"
                     className="text-sm text-red-500 mt-1"
                   />

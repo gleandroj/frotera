@@ -15,6 +15,7 @@ import { UsersModule } from "./users/users.module";
 import { AppConfigModule } from "./config/config.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { TrackersModule } from "./trackers/trackers.module";
+import { RolesModule } from "./roles/roles.module";
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TrackersModule } from "./trackers/trackers.module";
     AppConfigModule,
     NotificationsModule,
     TrackersModule,
+    RolesModule,
   ],
 })
 export class AppModule {}

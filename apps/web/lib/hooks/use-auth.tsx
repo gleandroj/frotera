@@ -6,13 +6,27 @@ import { useRouter } from "next/navigation"
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
+export interface OrganizationRole {
+  id: string
+  name: string
+  description?: string | null
+  isSystem: boolean
+  color?: string | null
+  permissions: Array<{
+    id: string
+    module: string
+    actions: string[]
+    scope: string
+  }>
+}
+
 export interface Organization {
   id: string
   name: string
   slug: string
   description?: string
   currency: string
-  role: string
+  role: OrganizationRole
   createdAt: string
   stripeCustomerId?: string
 }

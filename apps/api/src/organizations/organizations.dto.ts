@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
-import { OrganizationRole } from "../members/members.dto";
 
 export class CreateOrganizationDto {
   @ApiProperty({
@@ -53,12 +52,15 @@ export class OrganizationResponseDto {
   })
   createdAt: Date;
 
-  @ApiProperty({
-    description: "Role of the current user in this organization",
-    enum: Object.values(OrganizationRole),
-    example: OrganizationRole.OWNER,
-  })
-  role: OrganizationRole;
+  @ApiProperty({ description: "Role of the current user in this organization" })
+  role: {
+    id: string;
+    name: string;
+    description?: string | null;
+    isSystem: boolean;
+    color?: string | null;
+    permissions: Array<{ id: string; module: string; actions: string[]; scope: string }>;
+  };
 
   @ApiProperty({
     description: "Date when the user joined the organization",
