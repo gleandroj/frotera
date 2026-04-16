@@ -125,7 +125,7 @@ export function DocumentFormDialog({
     vehiclesAPI
       .list(organizationId)
       .then((res) => {
-        setVehicles(res.data.vehicles);
+        setVehicles(res.data);
       })
       .catch(() => {
         toast.error(t('common.error'));

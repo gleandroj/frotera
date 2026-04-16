@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import type { DocumentStatus } from '@/lib/frontend/api-client';
-import { useTranslation } from '@/lib/hooks/use-translation';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const CONFIG: Record<DocumentStatus, { className: string }> = {
   VALID: {

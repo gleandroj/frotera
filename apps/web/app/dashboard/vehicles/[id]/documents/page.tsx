@@ -29,8 +29,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Plus, ExternalLink, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { DocumentFormDialog } from '../../documents/components/document-form-dialog';
-import { DocumentStatusBadge } from '../../documents/components/document-status-badge';
+import { DocumentFormDialog } from '../../../documents/components/document-form-dialog';
+import { DocumentStatusBadge } from '../../../documents/components/document-status-badge';
 import {
   AlertDialog,
   AlertDialogAction,
