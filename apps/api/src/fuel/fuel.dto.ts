@@ -1,0 +1,230 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
+
+export enum FuelTypeEnum {
+  GASOLINE = 'GASOLINE',
+  ETHANOL = 'ETHANOL',
+  DIESEL = 'DIESEL',
+  ELECTRIC = 'ELECTRIC',
+  GNV = 'GNV',
+}
+
+// ── Create ────────────────────────────────────────────────────────────────────
+export class CreateFuelLogDto {
+  @ApiProperty({ description: 'Vehicle ID' })
+  @IsString()
+  @IsNotEmpty()
+  vehicleId: string;
+
+  @ApiPropertyOptional({ description: 'Driver ID (optional)' })
+  @IsOptional()
+  @IsString()
+  driverId?: string;
+
+  @ApiProperty({ description: 'Date/time of fueling (ISO 8601)' })
+  @IsDateString()
+  date: string;
+
+  @ApiProperty({ description: 'Odometer reading in km at time of fueling' })
+  @IsNumber()
+  @IsPositive()
+  odometer: number;
+
+  @ApiProperty({ description: 'Liters fueled' })
+  @IsNumber()
+  @IsPositive()
+  liters: number;
+
+  @ApiProperty({ description: 'Price per liter' })
+  @IsNumber()
+  @IsPositive()
+  pricePerLiter: number;
+
+  @ApiProperty({ enum: FuelTypeEnum })
+  @IsEnum(FuelTypeEnum)
+  fuelType: FuelTypeEnum;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  station?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({ description: 'Receipt URL (placeholder for S3/R2)' })
+  @IsOptional()
+  @IsString()
+  receipt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+// ── Update ────────────────────────────────────────────────────────────────────
+export class UpdateFuelLogDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  driverId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  date?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  odometer?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  liters?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  pricePerLiter?: number;
+
+  @ApiPropertyOptional({ enum: FuelTypeEnum })
+  @IsOptional()
+  @IsEnum(FuelTypeEnum)
+  fuelType?: FuelTypeEnum;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  station?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  receipt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+// ── List query params ─────────────────────────────────────────────────────────
+export class ListFuelLogsQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vehicleId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  driverId?: string;
+
+  @ApiPropertyOptional({ description: 'Start date ISO 8601' })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'End date ISO 8601' })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+
+  @ApiPropertyOptional({ enum: FuelTypeEnum })
+  @IsOptional()
+  @IsEnum(FuelTypeEnum)
+  fuelType?: FuelTypeEnum;
+}
+
+// ── Stats query params ────────────────────────────────────────────────────────
+export class FuelStatsQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vehicleId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  driverId?: string;
+
+  @ApiPropertyOptional({ description: 'Start date ISO 8601' })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'End date ISO 8601' })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+}
+
+// ── Response ──────────────────────────────────────────────────────────────────
+export class FuelLogResponseDto {
+  @ApiProperty() id: string;
+  @ApiProperty() organizationId: string;
+  @ApiProperty() vehicleId: string;
+  @ApiPropertyOptional() driverId?: string | null;
+  @ApiProperty() createdById: string;
+  @ApiProperty() date: string;
+  @ApiProperty() odometer: number;
+  @ApiProperty() liters: number;
+  @ApiProperty() pricePerLiter: number;
+  @ApiProperty() totalCost: number;
+  @ApiProperty({ enum: FuelTypeEnum }) fuelType: FuelTypeEnum;
+  @ApiPropertyOptional() station?: string | null;
+  @ApiPropertyOptional() city?: string | null;
+  @ApiPropertyOptional() receipt?: string | null;
+  @ApiPropertyOptional() notes?: string | null;
+  @ApiPropertyOptional() consumption?: number | null; // km/l
+  @ApiProperty() createdAt: string;
+  @ApiProperty() updatedAt: string;
+
+  // Joined fields
+  @ApiPropertyOptional() vehicle?: { id: string; name: string | null; plate: string | null };
+}
+
+// ── Stats response ────────────────────────────────────────────────────────────
+export class FuelStatsResponseDto {
+  @ApiProperty({ description: 'Total cost in the period' })
+  totalCost: number;
+
+  @ApiProperty({ description: 'Total liters in the period' })
+  totalLiters: number;
+
+  @ApiProperty({ description: 'Number of fuel logs in the period' })
+  count: number;
+
+  @ApiPropertyOptional({ description: 'Average consumption (km/l) weighted by distance — null when insufficient data' })
+  avgConsumption: number | null;
+
+  @ApiPropertyOptional({ description: 'Average cost per km — null when insufficient data' })
+  avgCostPerKm: number | null;
+
+  @ApiProperty({ description: 'Total cost of fuel logs in the current calendar month' })
+  currentMonthCost: number;
+
+  @ApiProperty({ description: 'Number of fuel logs in the current calendar month' })
+  currentMonthCount: number;
+}

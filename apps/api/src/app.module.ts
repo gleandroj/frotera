@@ -18,6 +18,7 @@ import { TrackersModule } from "./trackers/trackers.module";
 import { RolesModule } from "./roles/roles.module";
 import { DriversModule } from "./drivers/drivers.module";
 import { DocumentsModule } from "./documents/documents.module";
+import { FuelModule } from "./fuel/fuel.module";
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { DocumentsModule } from "./documents/documents.module";
     RolesModule,
     DriversModule,
     DocumentsModule,
+    FuelModule,
   ],
 })
 export class AppModule {}
