@@ -63,6 +63,7 @@ model Organization {
   roles          Role[]
   drivers        Driver[]
   documents      VehicleDocument[]
+  fuelLogs       FuelLog[]
 
   @@map("organizations")
 }
@@ -116,6 +117,7 @@ model Vehicle {
   customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   driverAssignments DriverVehicleAssignment[]
   documents      VehicleDocument[]
+  fuelLogs       FuelLog[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -181,6 +183,7 @@ model OrganizationMember {
   role         Role         @relation(fields: [roleId], references: [id])
   customers    OrganizationMemberCustomer[]
   createdDocuments VehicleDocument[]
+  fuelLogs     FuelLog[]
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")
@@ -425,4 +428,51 @@ model VehicleDocument {
   @@index([vehicleId])
   @@index([expiryDate])
   @@map("vehicle_documents")
+}
+
+enum FuelType {
+  GASOLINE
+  ETHANOL
+  DIESEL
+  ELECTRIC
+  GNV
+
+  @@map("fuel_type")
+}
+
+model FuelLog {
+  id             String    @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  driverId       String?   // FK para Driver (quando módulo Drivers existir)
+  createdById    String    // FK para OrganizationMember.id
+
+  date           DateTime
+  odometer       Float     // km no momento do abastecimento
+  liters         Float
+  pricePerLiter  Float
+  totalCost      Float     // CALCULADO: liters * pricePerLiter — NUNCA aceitar do cliente
+  fuelType       FuelType
+
+  station        String?   // nome do posto
+  city           String?
+  receipt        String?   // URL da foto do comprovante (placeholder S3/R2)
+  notes          String?
+
+  // Campo calculado no momento da escrita (km/l vs abastecimento anterior do mesmo veículo)
+  // null quando é o primeiro abastecimento do veículo ou odômetro anterior não disponível
+  consumption    Float?    // km/l
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdBy      OrganizationMember @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([vehicleId])
+  @@index([organizationId, date])
+  @@index([vehicleId, date])
+  @@map("fuel_logs")
 }
