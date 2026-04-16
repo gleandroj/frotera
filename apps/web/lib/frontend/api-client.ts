@@ -515,3 +515,115 @@ export const trackerDevicesAPI = {
       { params: query }
     ),
 };
+
+// ── DRIVERS ──────────────────────────────────────────────────────────────────
+
+export interface DriverVehicleAssignment {
+  id: string;
+  driverId: string;
+  vehicleId: string;
+  startDate: string;
+  endDate?: string | null;
+  isPrimary: boolean;
+  vehicle?: {
+    id: string;
+    name?: string | null;
+    plate?: string | null;
+  };
+}
+
+export interface Driver {
+  id: string;
+  organizationId: string;
+  customerId?: string | null;
+  name: string;
+  cpf?: string | null;
+  cnh?: string | null;
+  cnhCategory?: string | null;
+  cnhExpiry?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  photo?: string | null;
+  active: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: { id: string; name: string } | null;
+  vehicleAssignments?: DriverVehicleAssignment[];
+}
+
+export interface CreateDriverPayload {
+  name: string;
+  customerId?: string;
+  cpf?: string;
+  cnh?: string;
+  cnhCategory?: string;
+  cnhExpiry?: string;   // ISO 8601
+  phone?: string;
+  email?: string;
+  photo?: string;
+  notes?: string;
+}
+
+export interface UpdateDriverPayload {
+  name?: string;
+  customerId?: string | null;
+  cpf?: string | null;
+  cnh?: string | null;
+  cnhCategory?: string | null;
+  cnhExpiry?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  photo?: string | null;
+  active?: boolean;
+  notes?: string | null;
+}
+
+export const driversAPI = {
+  list: (organizationId: string, params?: { customerId?: string | null }) =>
+    externalApi.get<{ drivers: Driver[] }>(
+      `/api/organizations/${organizationId}/drivers`,
+      {
+        params: params?.customerId
+          ? { customerId: params.customerId }
+          : undefined,
+      }
+    ),
+
+  get: (organizationId: string, driverId: string) =>
+    externalApi.get<Driver>(
+      `/api/organizations/${organizationId}/drivers/${driverId}`
+    ),
+
+  create: (organizationId: string, payload: CreateDriverPayload) =>
+    externalApi.post<Driver>(
+      `/api/organizations/${organizationId}/drivers`,
+      payload
+    ),
+
+  update: (organizationId: string, driverId: string, payload: UpdateDriverPayload) =>
+    externalApi.patch<Driver>(
+      `/api/organizations/${organizationId}/drivers/${driverId}`,
+      payload
+    ),
+
+  delete: (organizationId: string, driverId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/drivers/${driverId}`
+    ),
+
+  assignVehicle: (
+    organizationId: string,
+    driverId: string,
+    payload: { vehicleId: string; isPrimary?: boolean }
+  ) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/drivers/${driverId}/assign-vehicle`,
+      payload
+    ),
+
+  unassignVehicle: (organizationId: string, driverId: string, vehicleId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/drivers/${driverId}/assign-vehicle/${vehicleId}`
+    ),
+};
