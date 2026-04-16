@@ -179,15 +179,14 @@ export class AuthService {
   }
 
   /**
-   * Creates a user account without creating an organization or sending verification email.
-   * Used when a user accepts an organization invitation and does not have an account yet.
-   * The invitation flow will add them to the inviting organization and mark email as verified.
+   * Creates a user with hashed password and marks email as verified (e.g. for admin-created users).
+   * Returns the created user.
    */
-  async signupFromInvitation(data: {
+  async createUserWithPassword(data: {
     email: string;
     password: string;
     name?: string;
-  }): Promise<void> {
+  }): Promise<{ id: string; email: string; name: string | null }> {
     const { email, password, name } = data;
 
     const existingUser = await this.prisma.user.findUnique({
@@ -200,14 +199,18 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email: email.toLowerCase(),
         password: hashedPassword,
         name: name || null,
         language: "pt",
+        emailVerified: new Date(),
       },
+      select: { id: true, email: true, name: true },
     });
+
+    return user;
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto) {

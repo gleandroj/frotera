@@ -2,7 +2,6 @@ import { apiClient } from "../frontend/api-client";
 
 export interface DashboardStats {
   teamMembers: number;
-  pendingInvitations: number;
 }
 
 export interface DashboardResponse {

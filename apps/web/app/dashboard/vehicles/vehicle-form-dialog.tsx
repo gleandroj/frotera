@@ -22,6 +22,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   vehiclesAPI,
   trackerDevicesAPI,
   customersAPI,
@@ -30,6 +43,8 @@ import {
   type CreateVehiclePayload,
   type UpdateVehiclePayload,
 } from "@/lib/frontend/api-client";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ErrorMessage, Field, Form, Formik, type FormikHelpers } from "formik";
 import { z } from "zod";
 import { toFormikValidationSchema } from "zod-formik-adapter";
@@ -190,6 +205,7 @@ export function VehicleFormDialog({
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
 
   const validationSchema = buildVehicleFormSchema(t, isEdit);
   const effectiveDefaultCustomerId =
@@ -318,8 +334,6 @@ export function VehicleFormDialog({
         >
           {({ values, setFieldValue, isSubmitting, errors, touched, status }) => {
             const customerRequired = !isEdit;
-            const customerSelectValue =
-              values.customerId || (customerRequired ? "" : "none");
             const customerPlaceholder = customerRequired
               ? t("vehicles.selectClient")
               : t("customers.noParent");
@@ -424,34 +438,105 @@ export function VehicleFormDialog({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicle-customer">{t("vehicles.customer")}</Label>
-                  <Select
-                    value={customerSelectValue}
-                    onValueChange={(v) =>
-                      setFieldValue("customerId", v === "none" ? "" : v)
-                    }
-                    disabled={loadingCustomers}
+                  <Popover
+                    open={customerComboboxOpen}
+                    onOpenChange={setCustomerComboboxOpen}
                   >
-                    <SelectTrigger id="vehicle-customer">
-                      <SelectValue placeholder={customerPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {!customerRequired && (
-                        <SelectItem value="none">
-                          {t("customers.noParent")}
-                        </SelectItem>
-                      )}
-                      {customers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          <span
-                            style={{ paddingLeft: (c.depth ?? 0) * 12 }}
-                            className="inline-block"
-                          >
-                            {c.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="vehicle-customer"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerComboboxOpen}
+                        disabled={loadingCustomers}
+                        className={cn(
+                          "w-full justify-between font-normal h-10",
+                          !values.customerId && "text-muted-foreground"
+                        )}
+                      >
+                        <span className="truncate">
+                          {values.customerId
+                            ? (() => {
+                                const c = customers.find(
+                                  (x) => x.id === values.customerId
+                                );
+                                return c ? (
+                                  <span
+                                    style={{
+                                      paddingLeft: (c.depth ?? 0) * 12,
+                                    }}
+                                    className="inline-block"
+                                  >
+                                    {c.name}
+                                  </span>
+                                ) : (
+                                  customerPlaceholder
+                                );
+                              })()
+                            : customerPlaceholder}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                    >
+                      <Command
+                        filter={(value, search) =>
+                          !search
+                            ? 1
+                            : (value ?? "")
+                                .toLowerCase()
+                                .includes(search.toLowerCase())
+                                ? 1
+                                : 0
+                        }
+                      >
+                        <CommandInput
+                          placeholder={t("vehicles.filterClient")}
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {t("common.noResults")}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {!customerRequired && (
+                              <CommandItem
+                                value={t("customers.noParent")}
+                                onSelect={() => {
+                                  setFieldValue("customerId", "");
+                                  setCustomerComboboxOpen(false);
+                                }}
+                              >
+                                {t("customers.noParent")}
+                              </CommandItem>
+                            )}
+                            {customers.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={c.name}
+                                onSelect={() => {
+                                  setFieldValue("customerId", c.id);
+                                  setCustomerComboboxOpen(false);
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    paddingLeft: (c.depth ?? 0) * 12,
+                                  }}
+                                  className="inline-block"
+                                >
+                                  {c.name}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   {customerRequired && errors.customerId && touched.customerId && (
                     <p className="text-destructive text-sm">
                       {errors.customerId}

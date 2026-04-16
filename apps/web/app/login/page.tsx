@@ -4,16 +4,15 @@ import { getPublicConfig } from "@/lib/api/config";
 import { getServerTranslation } from "@/lib/i18n-server";
 
 type PageProps = {
-  searchParams: Promise<{ redirect?: string; signup?: string }> | { redirect?: string; signup?: string };
+  searchParams: Promise<{ redirect?: string; signup?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: PageProps) {
-  const [config, { t }] = await Promise.all([
+  const [config, { t }, params] = await Promise.all([
     getPublicConfig(),
     getServerTranslation(),
+    searchParams,
   ]);
-
-  const params = await Promise.resolve(searchParams);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex">

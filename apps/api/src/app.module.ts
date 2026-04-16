@@ -7,7 +7,6 @@ import { CustomersModule } from "./customers/customers.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { EmailModule } from "./email/email.module";
 import { HealthModule } from "./health/health.module";
-import { InvitationsModule } from "./invitations/invitations.module";
 import { MembersModule } from "./members/members.module";
 import { OrganizationsModule } from "./organizations/organizations.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -28,7 +27,6 @@ import { TrackersModule } from "./trackers/trackers.module";
     AuthModule,
     UsersModule,
     PrismaModule,
-    InvitationsModule,
     MembersModule,
     OrganizationsModule,
     CustomersModule,

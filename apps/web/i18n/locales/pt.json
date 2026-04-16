@@ -55,7 +55,8 @@
     "done": "Concluído",
     "copied": "Copiado",
     "refresh": "Atualizar",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "noResults": "Nenhum resultado."
   },
   "dataTable": {
     "view": "Exibir",
@@ -97,6 +98,7 @@
     "customer": "Cliente",
     "customerRequired": "Selecione um cliente.",
     "selectClient": "Selecione o cliente",
+    "filterClient": "Buscar cliente...",
     "backToVehicles": "← Voltar aos veículos",
     "viewVehicle": "Visualizar veículo",
     "vehicle": "Veículo",
@@ -159,6 +161,7 @@
     "noParent": "Nenhum (raiz)",
     "parentRequired": "Selecione um cliente pai.",
     "selectParent": "Selecione o cliente pai",
+    "filterParent": "Buscar cliente pai...",
     "namePlaceholder": "Nome do cliente",
     "created": "Cliente criado com sucesso.",
     "updated": "Cliente atualizado com sucesso.",
@@ -659,7 +662,7 @@
     "chats": "Conversas",
     "contacts": "Contatos",
     "agents": "Agentes",
-    "team": "Equipe",
+    "team": "Usuários",
     "whatsappInstances": "Instâncias WhatsApp",
     "profile": "Perfil",
     "organizations": "Organizações",
@@ -668,7 +671,8 @@
     "accountSettings": "Configurações da Conta",
     "sections": {
       "overview": "Visão Geral",
-      "teamManagement": "Gerenciamento de Equipe",
+      "teamManagement": "Gerenciamento de Usuários",
+      "userManagement": "Gerenciamento de Usuários",
       "crmSales": "CRM & Vendas",
       "automation": "Automação",
       "channels": "Canais",
@@ -680,7 +684,7 @@
       "vehicles": "Veículos",
       "customers": "Clientes",
       "setupInitial": "Configuração Inicial",
-      "teamMembers": "Membros da Equipe",
+      "teamMembers": "Usuários",
       "contacts": "Contatos",
       "chats": "Conversas",
       "callHistory": "Histórico de Chamadas",
@@ -761,7 +765,7 @@
   "pageTitle": {
     "default": "RS Frotas - Gestão Inteligente de Frotas",
     "dashboard": "Painel",
-    "team": "Equipe",
+    "team": "Gerenciamento de Usuários",
     "login": "Entrar",
     "signup": "Cadastrar",
     "verifyEmail": "Verificar Email",
@@ -790,15 +794,18 @@
     "emptyFiltered": "Nenhuma notificação corresponde ao seu filtro."
   },
   "team": {
-    "title": "Membros da Equipe",
-    "description": "Gerencie os membros da sua equipe e suas permissões",
-    "showingMembersFor": "Membros de {{organizationName}}",
-    "selectOrganization": "Selecione uma organização para ver os membros da equipe.",
-    "members": "Membros",
+    "title": "Gerenciamento de Usuários",
+    "description": "Gerencie os usuários e suas permissões de acesso",
+    "showingMembersFor": "Usuários de {{organizationName}}",
+    "selectOrganization": "Selecione uma organização para gerenciar usuários.",
+    "memberNotFound": "Usuário não encontrado.",
+    "backToTeam": "Voltar aos usuários",
+    "members": "Usuários",
     "invitations": "Convites",
     "joined": "Entrou em",
     "noName": "Sem nome",
     "inviteMember": "Convidar Membro",
+    "addUser": "Adicionar Usuário",
     "inviteDialog": {
       "title": "Convidar Membro da Equipe",
       "description": "Convide alguém para se juntar à {{organizationName}}",
@@ -820,6 +827,51 @@
         "roleRequired": "Função é obrigatória",
         "roleInvalid": "Função inválida"
       }
+    },
+    "createUserDialog": {
+      "title": "Adicionar Usuário",
+      "newUserPageTitle": "Novo Usuário",
+      "newUserPageDescription": "Preencha os dados e defina o acesso aos clientes.",
+      "description": "Crie um usuário em {{organizationName}} com email, senha e acesso.",
+      "emailLabel": "Endereço de Email",
+      "emailPlaceholder": "usuario@empresa.com",
+      "passwordLabel": "Senha",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "confirmPasswordLabel": "Confirmar senha",
+      "confirmPasswordPlaceholder": "Repita a senha",
+      "nameLabel": "Nome (opcional)",
+      "namePlaceholder": "Nome de exibição",
+      "roleLabel": "Função",
+      "memberOption": "Membro",
+      "adminOption": "Administrador",
+      "fullAccess": "Acesso completo à organização",
+      "customerAccess": "Acesso aos clientes",
+      "customerAccessHint": "Se nenhum cliente for selecionado, o usuário não terá acesso a dados de veículos/clientes.",
+      "customerSearchPlaceholder": "Buscar cliente por nome...",
+      "selectAllCustomers": "Selecionar todos (filtrados)",
+      "deselectAllCustomers": "Desmarcar todos (filtrados)",
+      "createButton": "Criar Usuário",
+      "creating": "Criando...",
+      "cancelButton": "Cancelar",
+      "validation": {
+        "emailRequired": "Email é obrigatório",
+        "emailInvalid": "Email inválido",
+        "emailTooLong": "Email muito longo (máximo 254 caracteres)",
+        "passwordRequired": "Senha é obrigatória",
+        "passwordMinLength": "Senha deve ter no mínimo 8 caracteres",
+        "confirmPasswordRequired": "Confirmação de senha é obrigatória",
+        "confirmPasswordMatch": "As senhas não coincidem",
+        "roleRequired": "Função é obrigatória",
+        "roleInvalid": "Função inválida"
+      }
+    },
+    "table": {
+      "name": "Nome",
+      "email": "Email",
+      "role": "Função",
+      "access": "Acesso",
+      "joinedAt": "Entrada",
+      "actions": "Ações"
     },
     "actions": {
       "editMember": "Editar Membro",
@@ -844,8 +896,8 @@
         "description": "Tem certeza de que deseja revogar este convite? Esta ação não pode ser desfeita."
       },
       "removeMember": {
-        "title": "Remover Membro",
-        "description": "Tem certeza de que deseja remover este membro da equipe? Eles perderão acesso à organização."
+        "title": "Remover Usuário",
+        "description": "Tem certeza de que deseja remover este usuário? Ele perderá acesso à organização."
       },
       "cancel": "Cancelar",
       "revoke": "Revogar",
@@ -857,8 +909,9 @@
       "expires": "Expira em"
     },
     "emptyStates": {
-      "noMembers": "Nenhum membro na equipe ainda",
+      "noMembers": "Nenhum usuário ainda",
       "inviteFirstMember": "Convidar Primeiro Membro",
+      "addFirstUser": "Adicionar Primeiro Usuário",
       "noInvitations": "Nenhum convite pendente",
       "sendFirstInvitation": "Enviar Primeiro Convite"
     },
@@ -875,10 +928,12 @@
       "invitationResent": "Convite reenviado",
       "invitationResentDescription": "O email de convite foi reenviado",
       "invitationRevoked": "Convite revogado",
-      "invitationRevokedDescription": "O convite foi revogado com sucesso"
+      "invitationRevokedDescription": "O convite foi revogado com sucesso",
+      "userCreated": "Usuário criado",
+      "userCreatedDescription": "O usuário foi criado e já pode fazer login."
     },
     "errorMessages": {
-      "failedToLoadMembers": "Falha ao carregar membros da equipe",
+      "failedToLoadMembers": "Falha ao carregar usuários",
       "failedToLoadInvitations": "Falha ao carregar convites",
       "failedToUpdateMemberRole": "Falha ao atualizar função do membro",
       "failedToUpdateMember": "Falha ao atualizar membro",
@@ -886,6 +941,7 @@
       "failedToSendInvitation": "Falha ao enviar convite",
       "failedToResendInvitation": "Falha ao reenviar convite",
       "failedToRevokeInvitation": "Falha ao revogar convite",
+      "failedToCreateUser": "Falha ao criar usuário",
       "invitationAlreadySent": "Convite já enviado",
       "invitationAlreadySentDescription": "Um convite já foi enviado para este email",
       "userAlreadyExists": "Usuário já existe",

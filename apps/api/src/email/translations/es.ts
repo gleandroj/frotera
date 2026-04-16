@@ -8,6 +8,14 @@ export const emailTranslations = {
     alternativeText: 'Si el botón de arriba no funciona, también puede copiar y pegar este enlace en su navegador:',
     regards: 'Saludos cordiales,\nEl equipo de {{appName}}'
   },
+  accountCreated: {
+    subject: 'Su cuenta ha sido creada en {{appName}}',
+    greeting: 'Hola {{name}},',
+    body: 'Su cuenta ha sido creada por un administrador. Ya puede acceder al sistema utilizando la dirección de correo electrónico y la contraseña definidas.',
+    buttonText: 'Acceder al Sistema',
+    footer: 'Si no esperaba esta creación de cuenta, póngase en contacto con el administrador de la organización.',
+    regards: 'Saludos cordiales,\nEl equipo de {{appName}}'
+  },
   passwordReset: {
     subject: 'Restablecer su contraseña para {{appName}}',
     greeting: 'Hola {{name}},',

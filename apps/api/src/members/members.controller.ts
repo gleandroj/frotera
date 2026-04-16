@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
+  CreateMemberDto,
+  CreateMemberResponseDto,
   DeleteMemberResponseDto,
   MembersListResponseDto,
   UpdateMemberDto,
@@ -30,8 +32,22 @@ export class MembersController {
   async getMembers(
     @Request() req: RequestWithUser,
     @Param('organizationId') organizationId: string,
+    @Query('customerId') customerId?: string,
   ): Promise<MembersListResponseDto> {
-    return this.membersService.getMembers(req.user.userId, organizationId);
+    return this.membersService.getMembers(req.user.userId, organizationId, customerId ?? undefined);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new member (user) in the organization' })
+  @ApiResponse({ status: 201, type: CreateMemberResponseDto })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async createMember(
+    @Request() req: RequestWithUser,
+    @Param('organizationId') organizationId: string,
+    @Body() body: CreateMemberDto,
+  ): Promise<CreateMemberResponseDto> {
+    return this.membersService.createMember(req.user.userId, organizationId, body);
   }
 
   @Patch(':memberId')

@@ -18,32 +18,18 @@ export class DashboardService {
       `[getDashboardStats] Getting stats for organization: ${organizationId}`
     );
 
-    // Get all stats in parallel for better performance
-    const [currentMembers, pendingInvitations] = await Promise.all([
-      // Count current team members
-      this.prisma.organizationMember.count({
-        where: { organizationId },
-      }),
-
-      // Count pending invitations
-      this.prisma.invitation.count({
-        where: {
-          organizationId,
-          status: 'PENDING'
-        },
-      }),
-    ]);
+    const teamMembers = await this.prisma.organizationMember.count({
+      where: { organizationId },
+    });
 
     this.logger.log(
       `[getDashboardStats] Stats for ${organizationId}: ${JSON.stringify({
-        teamMembers: currentMembers,
-        pendingInvitations,
+        teamMembers,
       })}`
     );
 
     return {
-      teamMembers: currentMembers,
-      pendingInvitations,
+      teamMembers,
     };
   }
 }

@@ -60,6 +60,29 @@ export class CustomersService {
     return [...new Set([...assignedIds, ...descendantIds])];
   }
 
+  /**
+   * Returns the given customer ID and all its ancestor IDs (walking parentId up).
+   * Used to check "member has access to this customer" (member's assigned set may include an ancestor).
+   */
+  async getCustomerIdAndAncestorIds(
+    customerId: string,
+    organizationId: string,
+  ): Promise<string[]> {
+    const result: string[] = [];
+    let currentId: string | null = customerId;
+    while (currentId) {
+      const row: { id: string; parentId: string | null } | null =
+        await this.prisma.customer.findFirst({
+          where: { id: currentId, organizationId },
+          select: { id: true, parentId: true },
+        });
+      if (!row) break;
+      result.push(row.id);
+      currentId = row.parentId;
+    }
+    return result;
+  }
+
   /** Get all descendant IDs for given customer IDs in the same org (recursive). */
   async getDescendantCustomerIds(
     customerIds: string[],
@@ -167,17 +190,15 @@ export class CustomersService {
     dto: CreateCustomerDto,
     allowedCustomerIds: string[] | null,
   ): Promise<CustomerResponseDto> {
-    if (!dto.parentId || (typeof dto.parentId === "string" && dto.parentId.trim() === "")) {
-      throw new BadRequestException(ApiCode.CUSTOMER_PARENT_REQUIRED);
-    }
-    if (dto.parentId) {
+    const parentId = dto.parentId?.trim() || null;
+    if (parentId) {
       const parent = await this.prisma.customer.findFirst({
-        where: { id: dto.parentId, organizationId },
+        where: { id: parentId, organizationId },
       });
       if (!parent) {
         throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
       }
-      if (allowedCustomerIds !== null && !allowedCustomerIds.includes(dto.parentId)) {
+      if (allowedCustomerIds !== null && !allowedCustomerIds.includes(parentId)) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
     }
@@ -185,7 +206,7 @@ export class CustomersService {
       data: {
         organizationId,
         name: dto.name,
-        parentId: dto.parentId ?? null,
+        parentId,
       },
     });
     return this.toResponse(customer);

@@ -1,7 +1,7 @@
 import { ApiCode } from "@/common/api-codes.enum";
 import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { OrganizationRole } from "../invitations/invitations.dto";
+import { OrganizationRole } from "../members/members.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateOrganizationDto,

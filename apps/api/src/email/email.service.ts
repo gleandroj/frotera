@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { render } from "@react-email/render";
 import * as nodemailer from "nodemailer";
-import { InvitationEmail } from "./templates/InvitationEmail";
+import { AccountCreatedEmail } from "./templates/AccountCreatedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
 import { VerificationEmail } from "./templates/VerificationEmail";
 import { getEmailTranslations, interpolateTemplate } from "./translations";
@@ -76,37 +76,30 @@ export class EmailService implements OnModuleInit {
     });
   }
 
-  async sendInvitationEmail({
+  async sendAccountCreatedEmail({
     to,
-    organizationName,
-    inviterName,
-    inviterEmail,
-    acceptUrl,
+    name,
+    loginUrl,
     language,
   }: {
     to: string;
-    organizationName: string;
-    inviterName: string;
-    inviterEmail: string;
-    acceptUrl: string;
+    name?: string | null;
+    loginUrl: string;
     language?: string;
   }) {
     const appName = this.configService.get("APP_NAME", "RS Frotas");
     const translations = getEmailTranslations(language);
 
     const html = await render(
-      InvitationEmail({
-        organizationName,
-        inviterName,
-        inviterEmail,
-        acceptUrl,
+      AccountCreatedEmail({
+        name: name ?? "",
+        loginUrl,
         appName,
         language,
       })
     );
 
-    const subject = interpolateTemplate(translations.invitation.subject, {
-      organizationName,
+    const subject = interpolateTemplate(translations.accountCreated.subject, {
       appName,
     });
 

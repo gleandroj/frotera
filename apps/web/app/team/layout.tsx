@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: t("pageTitle.team"),
-    description: "Manage your team members and their access to your organization.",
+    description: "Manage users and their access to your organization.",
   };
 }
 

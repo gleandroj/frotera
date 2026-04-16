@@ -278,8 +278,25 @@ export const organizationAPI = {
     organizationId: string,
     data: { name?: string; description?: string }
   ) => externalApi.patch(`/api/organizations/${organizationId}`, data),
-  getMembers: (organizationId: string) =>
-    externalApi.get(`/api/organizations/${organizationId}/members`),
+  getMembers: (organizationId: string, params?: { customerId?: string | null }) =>
+    externalApi.get(`/api/organizations/${organizationId}/members`, {
+      params: params?.customerId != null ? { customerId: params.customerId } : undefined,
+    }),
+  createMember: (
+    organizationId: string,
+    data: {
+      email: string;
+      password: string;
+      name?: string;
+      role: "ADMIN" | "MEMBER";
+      customerRestricted?: boolean;
+      customerIds?: string[];
+    }
+  ) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/members`,
+      data
+    ),
   updateMember: (
     organizationId: string,
     memberId: string,
@@ -337,44 +354,6 @@ export const customersAPI = {
   delete: (organizationId: string, customerId: string) =>
     externalApi.delete(
       `/api/organizations/${organizationId}/customers/${customerId}`
-    ),
-};
-
-// Invitation-specific API calls
-export const invitationAPI = {
-  send: (
-    email: string,
-    organizationId: string,
-    role: "ADMIN" | "MEMBER" = "MEMBER",
-    language?: string,
-    customerIds?: string[]
-  ) =>
-    externalApi.post(`/api/organizations/${organizationId}/invitations`, {
-      email,
-      role,
-      language,
-      ...(customerIds !== undefined && { customerIds }),
-    }),
-  accept: (token: string, data?: { password?: string; name?: string }) =>
-    externalApi.post(`/api/invitations/accept`, { token, ...data }),
-  check: (token: string) =>
-    externalApi.post(`/api/invitations/check`, { token }),
-  revoke: (organizationId: string, invitationId: string) =>
-    externalApi.delete(
-      `/api/organizations/${organizationId}/invitations/${invitationId}`
-    ),
-  resend: (organizationId: string, invitationId: string, language?: string) =>
-    externalApi.post(
-      `/api/organizations/${organizationId}/invitations/resend`,
-      {
-        invitationId,
-        language,
-      }
-    ),
-  list: (organizationId: string, params?: ListParams) =>
-    externalApi.get(
-      `/api/organizations/${organizationId}/invitations`,
-      { params: params?.customerId ? { customerId: params.customerId } : undefined }
     ),
 };
 

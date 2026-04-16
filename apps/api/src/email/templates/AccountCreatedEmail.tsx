@@ -1,68 +1,52 @@
 import {
   Button,
   Heading,
-  Link,
   Text,
 } from '@react-email/components';
 import * as React from 'react';
 import { BaseEmail } from './BaseEmail';
 import { getEmailTranslations, interpolateTemplate } from '../translations';
 
-interface InvitationEmailProps {
-  organizationName: string;
-  inviterName: string;
-  inviterEmail: string;
-  acceptUrl: string;
+interface AccountCreatedEmailProps {
+  name?: string;
+  loginUrl: string;
   appName: string;
   language?: string;
 }
 
-export const InvitationEmail = ({
-  organizationName,
-  inviterName,
-  inviterEmail,
-  acceptUrl,
+export const AccountCreatedEmail = ({
+  name,
+  loginUrl,
   appName,
   language,
-}: InvitationEmailProps) => {
+}: AccountCreatedEmailProps) => {
   const translations = getEmailTranslations(language);
-  const t = translations.invitation;
+  const t = translations.accountCreated;
+  const displayName = name?.trim() || (language === 'pt' ? 'usuário' : language === 'es' ? 'usuario' : language === 'de' ? 'Benutzer' : 'there');
 
   return (
-    <BaseEmail previewText={interpolateTemplate(t.subject, { organizationName, appName })}>
+    <BaseEmail previewText={interpolateTemplate(t.subject, { appName })}>
       <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-        {interpolateTemplate(t.subject, { organizationName, appName })}
+        {interpolateTemplate(t.subject, { appName })}
       </Heading>
 
       <Text className="text-black text-[14px] leading-[24px]">
-        {t.greeting}
+        {interpolateTemplate(t.greeting, { name: displayName })}
       </Text>
 
       <Text className="text-black text-[14px] leading-[24px] mt-4">
-        {interpolateTemplate(t.body, { inviterName, inviterEmail, organizationName, appName })}
-      </Text>
-
-      <Text className="text-black text-[14px] leading-[24px] mt-4">
-        {t.instruction}
+        {t.body}
       </Text>
 
       <Button
         className="bg-[#5469d4] rounded text-white text-[12px] px-5 py-3 font-semibold no-underline text-center mt-4 mb-4"
-        href={acceptUrl}
+        href={loginUrl}
       >
         {t.buttonText}
       </Button>
 
       <Text className="text-black text-[14px] leading-[24px] mt-4">
         {t.footer}
-      </Text>
-
-      <Text className="text-[#666666] text-[12px] leading-[24px] mt-8">
-        {t.alternativeText}
-        <br />
-        <Link href={acceptUrl} className="text-[#5469d4] underline">
-          {acceptUrl}
-        </Link>
       </Text>
 
       <Text className="text-black text-[14px] leading-[24px] mt-8">

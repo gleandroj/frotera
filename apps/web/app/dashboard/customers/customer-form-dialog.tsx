@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
   Dialog,
@@ -13,15 +13,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useFormik } from "formik";
 import { toast } from "sonner";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CustomerFormDialogProps {
   open: boolean;
@@ -55,9 +63,10 @@ export function CustomerFormDialog({
     if (defaultParentId && parentOptions.some((c) => c.id === defaultParentId)) {
       return defaultParentId;
     }
-    if (parentOptions.length === 1) return parentOptions[0].id;
     return "";
   };
+
+  const [parentComboboxOpen, setParentComboboxOpen] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -66,10 +75,6 @@ export function CustomerFormDialog({
     },
     enableReinitialize: true,
     onSubmit: async (values) => {
-      if (!isEdit && !values.parentId?.trim()) {
-        formik.setFieldError("parentId", t("customers.parentRequired"));
-        return;
-      }
       try {
         if (isEdit) {
           await customersAPI.update(organizationId, customer.id, {
@@ -104,12 +109,9 @@ export function CustomerFormDialog({
     });
   }, [open, customer?.id, defaultParentId]);
 
-  const parentRequired = !isEdit;
-  const parentSelectValue =
-    formik.values.parentId || (parentRequired ? "" : "none");
-  const parentSelectPlaceholder = parentRequired
-    ? t("customers.selectParent")
-    : t("customers.noParent");
+  const selectedParent = parentOptions.find(
+    (c) => c.id === formik.values.parentId
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,41 +136,93 @@ export function CustomerFormDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="parentId">{t("customers.parent")}</Label>
-            <Select
-              value={
-                formik.values.parentId ||
-                (parentRequired ? "" : "none")
-              }
-              onValueChange={(v) =>
-                formik.setFieldValue("parentId", v === "none" ? "" : v)
-              }
+            <Popover
+              open={parentComboboxOpen}
+              onOpenChange={setParentComboboxOpen}
             >
-              <SelectTrigger>
-                <SelectValue placeholder={parentSelectPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {!parentRequired && (
-                  <SelectItem value="none">{t("customers.noParent")}</SelectItem>
-                )}
-                {parentOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span
-                      style={{
-                        paddingLeft: (c.depth ?? 0) * 12,
-                      }}
-                      className="inline-block"
-                    >
-                      {c.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {parentRequired && formik.errors.parentId && (
-              <p className="text-sm text-destructive">
-                {formik.errors.parentId}
-              </p>
-            )}
+              <PopoverTrigger asChild>
+                <Button
+                  id="parentId"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={parentComboboxOpen}
+                  className={cn(
+                    "w-full justify-between font-normal h-10",
+                    !formik.values.parentId && "text-muted-foreground"
+                  )}
+                >
+                  <span className="truncate">
+                    {formik.values.parentId && selectedParent ? (
+                      <span
+                        style={{
+                          paddingLeft: (selectedParent.depth ?? 0) * 12,
+                        }}
+                        className="inline-block"
+                      >
+                        {selectedParent.name}
+                      </span>
+                    ) : (
+                      t("customers.noParent")
+                    )}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0"
+                align="start"
+              >
+                <Command
+                  filter={(value, search) =>
+                    !search
+                      ? 1
+                      : (value ?? "")
+                          .toLowerCase()
+                          .includes(search.toLowerCase())
+                        ? 1
+                        : 0
+                  }
+                >
+                  <CommandInput
+                    placeholder={t("customers.filterParent")}
+                    className="h-9"
+                  />
+                  <CommandList>
+                    <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value={t("customers.noParent")}
+                        onSelect={() => {
+                          formik.setFieldValue("parentId", "");
+                          setParentComboboxOpen(false);
+                        }}
+                      >
+                        {t("customers.noParent")}
+                      </CommandItem>
+                      {parentOptions.map((c) => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.name}
+                          onSelect={() => {
+                            formik.setFieldValue("parentId", c.id);
+                            setParentComboboxOpen(false);
+                          }}
+                        >
+                          <span
+                            style={{
+                              paddingLeft: (c.depth ?? 0) * 12,
+                            }}
+                            className="inline-block"
+                          >
+                            {c.name}
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <DialogFooter>
             <Button

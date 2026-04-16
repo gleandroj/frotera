@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
-import { OrganizationRole } from "../invitations/invitations.dto";
+import { OrganizationRole } from "../members/members.dto";
 
 export class CreateOrganizationDto {
   @ApiProperty({

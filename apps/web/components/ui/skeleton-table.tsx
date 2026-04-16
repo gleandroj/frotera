@@ -92,13 +92,13 @@ export function WhatsAppInstancesTableSkeleton() {
   );
 }
 
-// Specific skeleton for team members table
+// Specific skeleton for team members / users table
 export function TeamMembersTableSkeleton() {
   return (
     <SkeletonTable
       rows={4}
-      columns={3}
-      headers={["Member", "Role", "Joined"]}
+      columns={5}
+      headers={["Nome", "Email", "Função", "Acesso", "Entrada"]}
       showActions={true}
     />
   );

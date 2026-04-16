@@ -4,20 +4,13 @@ import { getPublicConfig } from "@/lib/api/config";
 import { getServerTranslation } from "@/lib/i18n-server";
 import { redirect } from "next/navigation";
 
-type PageProps = {
-  searchParams: Promise<{ token?: string }> | { token?: string };
-};
-
-export default async function SignupPage({ searchParams }: PageProps) {
+export default async function SignupPage() {
   const [config, { t }] = await Promise.all([
     getPublicConfig(),
     getServerTranslation(),
   ]);
 
-  const params = await Promise.resolve(searchParams);
-  const invitationToken = params?.token ?? null;
-
-  if (!config.signupEnabled && !invitationToken) {
+  if (!config.signupEnabled) {
     redirect("/login?signup=disabled");
   }
 
