@@ -1,0 +1,391 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import { CustomersService } from '@/customers/customers.service';
+import type { OrganizationMember } from '@prisma/client';
+import {
+  AssignVehicleDto,
+  CreateDriverDto,
+  DriverResponseDto,
+  DriverVehicleAssignmentResponseDto,
+  UpdateDriverDto,
+} from './drivers.dto';
+import { ApiCode } from '@/common/api-codes.enum';
+
+@Injectable()
+export class DriversService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly customersService: CustomersService,
+  ) {}
+
+  // ── LIST ──────────────────────────────────────────────────────────────────
+
+  async list(
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+    filterCustomerId?: string,
+  ): Promise<DriverResponseDto[]> {
+    const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
+      member,
+      organizationId,
+    );
+
+    // Se membro tem acesso restrito e não há clientes atribuídos, retorna vazio
+    if (allowedCustomerIds !== null && allowedCustomerIds.length === 0) {
+      return [];
+    }
+
+    // Se filtro por empresa foi passado, validar acesso
+    if (filterCustomerId && allowedCustomerIds !== null) {
+      if (!allowedCustomerIds.includes(filterCustomerId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
+
+    const where: any = {
+      organizationId,
+      // Incluir ativos e inativos na listagem (o frontend pode filtrar)
+    };
+
+    if (filterCustomerId) {
+      where.customerId = filterCustomerId;
+    } else if (allowedCustomerIds !== null) {
+      // Motoristas sem empresa (customerId null) + motoristas das empresas permitidas
+      where.OR = [
+        { customerId: null },
+        { customerId: { in: allowedCustomerIds } },
+      ];
+    }
+
+    const rows = await this.prisma.driver.findMany({
+      where,
+      orderBy: [{ name: 'asc' }],
+      include: {
+        customer: { select: { id: true, name: true } },
+        vehicleAssignments: {
+          where: { endDate: null }, // apenas vínculos ativos
+          include: { vehicle: { select: { id: true, name: true, plate: true } } },
+          orderBy: { startDate: 'desc' },
+        },
+      },
+    });
+
+    return rows.map(this.toResponse);
+  }
+
+  // ── CREATE ────────────────────────────────────────────────────────────────
+
+  async create(
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+    dto: CreateDriverDto,
+  ): Promise<DriverResponseDto> {
+    // Validar CPF único por organização
+    if (dto.cpf) {
+      const cpfNormalized = dto.cpf.trim();
+      const existing = await this.prisma.driver.findFirst({
+        where: { organizationId, cpf: cpfNormalized },
+      });
+      if (existing) {
+        throw new ConflictException(ApiCode.COMMON_ALREADY_EXISTS);
+      }
+    }
+
+    // Validar customerId se fornecido
+    if (dto.customerId) {
+      await this.validateCustomerAccess(dto.customerId, organizationId, member);
+    }
+
+    const driver = await this.prisma.driver.create({
+      data: {
+        organizationId,
+        customerId: dto.customerId || null,
+        name: dto.name.trim(),
+        cpf: dto.cpf?.trim() || null,
+        cnh: dto.cnh?.trim() || null,
+        cnhCategory: dto.cnhCategory?.trim() || null,
+        cnhExpiry: dto.cnhExpiry ? new Date(dto.cnhExpiry) : null,
+        phone: dto.phone?.trim() || null,
+        email: dto.email?.trim() || null,
+        photo: dto.photo?.trim() || null,
+        notes: dto.notes?.trim() || null,
+      },
+      include: {
+        customer: { select: { id: true, name: true } },
+        vehicleAssignments: {
+          where: { endDate: null },
+          include: { vehicle: { select: { id: true, name: true, plate: true } } },
+        },
+      },
+    });
+
+    return this.toResponse(driver);
+  }
+
+  // ── GET BY ID ─────────────────────────────────────────────────────────────
+
+  async getById(
+    driverId: string,
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+  ): Promise<DriverResponseDto> {
+    const driver = await this.prisma.driver.findFirst({
+      where: { id: driverId, organizationId },
+      include: {
+        customer: { select: { id: true, name: true } },
+        vehicleAssignments: {
+          include: { vehicle: { select: { id: true, name: true, plate: true } } },
+          orderBy: { startDate: 'desc' },
+        },
+      },
+    });
+
+    if (!driver) {
+      throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+    }
+
+    // Verificar acesso via empresa do motorista
+    if (driver.customerId) {
+      await this.validateCustomerReadAccess(driver.customerId, organizationId, member);
+    }
+
+    return this.toResponse(driver);
+  }
+
+  // ── UPDATE ────────────────────────────────────────────────────────────────
+
+  async update(
+    driverId: string,
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+    dto: UpdateDriverDto,
+  ): Promise<DriverResponseDto> {
+    const existing = await this.prisma.driver.findFirst({
+      where: { id: driverId, organizationId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+    }
+
+    // Verificar acesso à empresa atual
+    if (existing.customerId) {
+      await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
+    }
+
+    // Validar novo customerId se fornecido
+    if (dto.customerId !== undefined && dto.customerId !== null) {
+      await this.validateCustomerAccess(dto.customerId, organizationId, member);
+    }
+
+    // Validar CPF único se alterado
+    if (dto.cpf !== undefined && dto.cpf !== null && dto.cpf !== existing.cpf) {
+      const cpfNormalized = dto.cpf.trim();
+      const conflict = await this.prisma.driver.findFirst({
+        where: { organizationId, cpf: cpfNormalized, NOT: { id: driverId } },
+      });
+      if (conflict) {
+        throw new ConflictException(ApiCode.COMMON_ALREADY_EXISTS);
+      }
+    }
+
+    const driver = await this.prisma.driver.update({
+      where: { id: driverId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name.trim() }),
+        ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+        ...(dto.cpf !== undefined && { cpf: dto.cpf?.trim() || null }),
+        ...(dto.cnh !== undefined && { cnh: dto.cnh?.trim() || null }),
+        ...(dto.cnhCategory !== undefined && { cnhCategory: dto.cnhCategory }),
+        ...(dto.cnhExpiry !== undefined && {
+          cnhExpiry: dto.cnhExpiry ? new Date(dto.cnhExpiry) : null,
+        }),
+        ...(dto.phone !== undefined && { phone: dto.phone?.trim() || null }),
+        ...(dto.email !== undefined && { email: dto.email?.trim() || null }),
+        ...(dto.photo !== undefined && { photo: dto.photo?.trim() || null }),
+        ...(dto.active !== undefined && { active: dto.active }),
+        ...(dto.notes !== undefined && { notes: dto.notes?.trim() || null }),
+      },
+      include: {
+        customer: { select: { id: true, name: true } },
+        vehicleAssignments: {
+          include: { vehicle: { select: { id: true, name: true, plate: true } } },
+          orderBy: { startDate: 'desc' },
+        },
+      },
+    });
+
+    return this.toResponse(driver);
+  }
+
+  // ── DELETE (soft) ─────────────────────────────────────────────────────────
+
+  async delete(
+    driverId: string,
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+  ): Promise<void> {
+    const existing = await this.prisma.driver.findFirst({
+      where: { id: driverId, organizationId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+    }
+
+    if (existing.customerId) {
+      await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
+    }
+
+    // Soft delete: marcar como inativo e encerrar vínculos ativos
+    await this.prisma.$transaction([
+      this.prisma.driverVehicleAssignment.updateMany({
+        where: { driverId, endDate: null },
+        data: { endDate: new Date() },
+      }),
+      this.prisma.driver.update({
+        where: { id: driverId },
+        data: { active: false },
+      }),
+    ]);
+  }
+
+  // ── ASSIGN VEHICLE ────────────────────────────────────────────────────────
+
+  async assignVehicle(
+    driverId: string,
+    organizationId: string,
+    dto: AssignVehicleDto,
+  ): Promise<DriverVehicleAssignmentResponseDto> {
+    // Verificar que motorista e veículo pertencem à mesma organização
+    const [driver, vehicle] = await Promise.all([
+      this.prisma.driver.findFirst({ where: { id: driverId, organizationId, active: true } }),
+      this.prisma.vehicle.findFirst({ where: { id: dto.vehicleId, organizationId } }),
+    ]);
+
+    if (!driver) throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+    if (!vehicle) throw new NotFoundException(ApiCode.VEHICLE_NOT_FOUND);
+
+    // Verificar se já existe vínculo ativo com este veículo
+    const existingActive = await this.prisma.driverVehicleAssignment.findFirst({
+      where: { driverId, vehicleId: dto.vehicleId, endDate: null },
+    });
+    if (existingActive) {
+      throw new ConflictException(ApiCode.COMMON_ALREADY_EXISTS);
+    }
+
+    // Se isPrimary = true, encerrar outros vínculos primários ativos deste motorista
+    if (dto.isPrimary) {
+      await this.prisma.driverVehicleAssignment.updateMany({
+        where: { driverId, isPrimary: true, endDate: null },
+        data: { endDate: new Date() },
+      });
+    }
+
+    const assignment = await this.prisma.driverVehicleAssignment.create({
+      data: {
+        driverId,
+        vehicleId: dto.vehicleId,
+        isPrimary: dto.isPrimary ?? false,
+        startDate: new Date(),
+      },
+      include: { vehicle: { select: { id: true, name: true, plate: true } } },
+    });
+
+    return this.toAssignmentResponse(assignment);
+  }
+
+  // ── UNASSIGN VEHICLE ──────────────────────────────────────────────────────
+
+  async unassignVehicle(
+    driverId: string,
+    vehicleId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const driver = await this.prisma.driver.findFirst({
+      where: { id: driverId, organizationId },
+    });
+    if (!driver) throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+
+    const assignment = await this.prisma.driverVehicleAssignment.findFirst({
+      where: { driverId, vehicleId, endDate: null },
+    });
+    if (!assignment) throw new NotFoundException(ApiCode.DRIVER_ASSIGNMENT_NOT_FOUND);
+
+    await this.prisma.driverVehicleAssignment.update({
+      where: { id: assignment.id },
+      data: { endDate: new Date() },
+    });
+  }
+
+  // ── HELPERS PRIVADOS ──────────────────────────────────────────────────────
+
+  private async validateCustomerAccess(
+    customerId: string,
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+  ): Promise<void> {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, organizationId },
+    });
+    if (!customer) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+
+    const allowedIds = await this.customersService.getAllowedCustomerIds(member, organizationId);
+    if (allowedIds !== null && !allowedIds.includes(customerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  private async validateCustomerReadAccess(
+    customerId: string,
+    organizationId: string,
+    member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
+  ): Promise<void> {
+    const allowedIds = await this.customersService.getAllowedCustomerIds(member, organizationId);
+    if (allowedIds !== null && !allowedIds.includes(customerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  private toResponse(driver: any): DriverResponseDto {
+    return {
+      id: driver.id,
+      organizationId: driver.organizationId,
+      customerId: driver.customerId,
+      name: driver.name,
+      cpf: driver.cpf,
+      cnh: driver.cnh,
+      cnhCategory: driver.cnhCategory,
+      cnhExpiry: driver.cnhExpiry?.toISOString() ?? null,
+      phone: driver.phone,
+      email: driver.email,
+      photo: driver.photo,
+      active: driver.active,
+      notes: driver.notes,
+      createdAt: driver.createdAt.toISOString(),
+      updatedAt: driver.updatedAt.toISOString(),
+      customer: driver.customer ?? null,
+      vehicleAssignments: driver.vehicleAssignments?.map(
+        this.toAssignmentResponse.bind(this),
+      ),
+    };
+  }
+
+  private toAssignmentResponse(assignment: any): DriverVehicleAssignmentResponseDto {
+    return {
+      id: assignment.id,
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      startDate: assignment.startDate.toISOString(),
+      endDate: assignment.endDate?.toISOString() ?? null,
+      isPrimary: assignment.isPrimary,
+      vehicle: assignment.vehicle ?? undefined,
+    };
+  }
+}
