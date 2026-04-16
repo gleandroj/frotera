@@ -18,6 +18,7 @@ import {
   Building,
   Building2,
   Car,
+  FileText,
   Home,
   User,
   UserRound,
@@ -92,6 +93,12 @@ export function AppSidebar() {
           href: "/dashboard/drivers",
           icon: UserRound,
           current: pathname.startsWith("/dashboard/drivers"),
+        },
+        {
+          name: t('navigation.items.documents'),
+          href: "/dashboard/documents",
+          icon: FileText,
+          current: pathname.startsWith("/dashboard/documents"),
         },
         {
           name: t('navigation.items.customers'),
