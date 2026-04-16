@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CustomersService } from '@/customers/customers.service';
+import { FuelPriceApiService } from './fuel-price-api.service';
 import { ApiCode } from '@/common/api-codes.enum';
 import {
   CreateFuelLogDto,
@@ -16,6 +17,7 @@ export class FuelService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly customersService: CustomersService,
+    private readonly fuelPriceApiService: FuelPriceApiService,
   ) {}
 
   /**
@@ -23,12 +25,12 @@ export class FuelService {
    */
   async list(
     organizationId: string,
-    memberId: string,
+    userId: string,
     query: ListFuelLogsQueryDto,
   ): Promise<FuelLogResponseDto[]> {
     // Get member and allowed customer IDs
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: memberId, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -95,12 +97,12 @@ export class FuelService {
    */
   async create(
     organizationId: string,
-    createdById: string,
+    userId: string,
     dto: CreateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
     // Verify member exists
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: createdById, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -147,12 +149,30 @@ export class FuelService {
         ? parseFloat((kmDriven / dto.liters).toFixed(2))
         : null;
 
+    // Get organization to find state
+    const organization = await this.prisma.organization.findFirst({
+      where: { id: organizationId },
+      select: { id: true }, // TODO: add 'state' field when available
+    });
+
+    // Get market price reference
+    let marketPriceRef: number | null = null;
+    if (organization) {
+      // For now, use 'SP' as default state. This should be configurable in Organization model.
+      const orgState = 'SP'; // TODO: use organization.state when available
+      const snapshot = await this.fuelPriceApiService.getLatestPrice(
+        orgState,
+        dto.fuelType,
+      );
+      marketPriceRef = snapshot?.avgPrice ?? null;
+    }
+
     const log = await this.prisma.fuelLog.create({
       data: {
         organizationId,
         vehicleId: dto.vehicleId,
-        driverId: dto.driverId,
-        createdById,
+        driverId: dto.driverId || null,
+        createdById: member.id,
         date: new Date(dto.date),
         odometer: dto.odometer,
         liters: dto.liters,
@@ -164,6 +184,7 @@ export class FuelService {
         receipt: dto.receipt,
         notes: dto.notes,
         consumption,
+        marketPriceRef,
       },
       include: {
         vehicle: {
@@ -181,10 +202,10 @@ export class FuelService {
   async getById(
     id: string,
     organizationId: string,
-    memberId: string,
+    userId: string,
   ): Promise<FuelLogResponseDto> {
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: memberId, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -226,11 +247,11 @@ export class FuelService {
   async update(
     id: string,
     organizationId: string,
-    memberId: string,
+    userId: string,
     dto: UpdateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: memberId, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -321,10 +342,10 @@ export class FuelService {
   async delete(
     id: string,
     organizationId: string,
-    memberId: string,
+    userId: string,
   ): Promise<void> {
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: memberId, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -364,12 +385,12 @@ export class FuelService {
    */
   async getStats(
     organizationId: string,
-    memberId: string,
+    userId: string,
     query: FuelStatsQueryDto,
   ): Promise<FuelStatsResponseDto> {
     // Get member and allowed customer IDs
     const member = await this.prisma.organizationMember.findFirst({
-      where: { id: memberId, organizationId },
+      where: { userId, organizationId },
     });
     if (!member) {
       throw new ForbiddenException('Not a member of this organization');
@@ -484,6 +505,37 @@ export class FuelService {
     };
   }
 
+  /**
+   * Get market price for a given state and fuel type
+   */
+  async getMarketPrices(
+    state: string,
+    fuelType: string,
+  ): Promise<{ avgPrice: number | null; refDate: string | null }> {
+    if (!state || !fuelType) {
+      return { avgPrice: null, refDate: null };
+    }
+
+    try {
+      const snapshot = await this.fuelPriceApiService.getLatestPrice(
+        state,
+        fuelType as any,
+      );
+
+      if (!snapshot) {
+        return { avgPrice: null, refDate: null };
+      }
+
+      return {
+        avgPrice: snapshot.avgPrice,
+        refDate: snapshot.refDate.toISOString().split('T')[0],
+      };
+    } catch (error) {
+      // Return null values if there's an error
+      return { avgPrice: null, refDate: null };
+    }
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ────────────────────────────────────────────────────────────────────────────
@@ -510,6 +562,7 @@ export class FuelService {
       receipt: log.receipt ?? undefined,
       notes: log.notes ?? undefined,
       consumption: log.consumption ?? null,
+      marketPriceRef: log.marketPriceRef ?? null,
       createdAt: log.createdAt.toISOString(),
       updatedAt: log.updatedAt.toISOString(),
       vehicle: log.vehicle,

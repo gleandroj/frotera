@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/hooks/use-auth";
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Building,
   Building2,
   Car,
@@ -105,7 +106,13 @@ export function AppSidebar() {
           name: t('navigation.items.fuel'),
           href: "/dashboard/fuel",
           icon: Fuel,
-          current: pathname.startsWith("/dashboard/fuel"),
+          current: pathname.startsWith("/dashboard/fuel") && !pathname.startsWith("/dashboard/fuel/reports"),
+        },
+        {
+          name: t('navigation.items.fuelReports'),
+          href: "/dashboard/fuel/reports",
+          icon: BarChart3,
+          current: pathname.startsWith("/dashboard/fuel/reports"),
         },
         {
           name: t('navigation.items.customers'),

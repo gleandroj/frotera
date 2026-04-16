@@ -702,7 +702,8 @@
       "profile": "Perfil",
       "notifications": "Notificações",
       "documents": "Documentos",
-      "fuel": "Abastecimento"
+      "fuel": "Abastecimento",
+      "fuelReports": "Relatórios"
     },
     "footer": {
       "copyright": "© {{year}} RS Frotas",
@@ -1193,6 +1194,101 @@
     "confirmDelete": {
       "title": "Excluir abastecimento",
       "description": "Tem certeza que deseja excluir este registro de abastecimento? Esta ação não pode ser desfeita."
+    }
+  },
+  "fuelReports": {
+    "title": "Relatórios de Combustível",
+    "description": "Análise completa de consumo, custos e preços da frota.",
+    "nav": "Relatórios",
+
+    "consumption": {
+      "title": "Consumo por Veículo",
+      "description": "Eficiência (km/l) por veículo no período.",
+      "avgConsumption": "Consumo Médio",
+      "best": "Melhor",
+      "worst": "Pior",
+      "totalKm": "Km Rodados",
+      "trend": "Tendência",
+      "trends": {
+        "improving": "Melhorando",
+        "worsening": "Piorando",
+        "stable": "Estável",
+        "insufficient_data": "Dados insuficientes"
+      },
+      "noData": "Nenhum dado de consumo disponível para o período."
+    },
+
+    "costs": {
+      "title": "Análise de Custos",
+      "description": "Custos de abastecimento agrupados por período.",
+      "totalCost": "Custo Total",
+      "costPerKm": "Custo/km",
+      "avgPrice": "Preço Médio Pago",
+      "groupBy": {
+        "day": "Por Dia",
+        "month": "Por Mês",
+        "year": "Por Ano"
+      },
+      "noData": "Nenhum custo registrado no período."
+    },
+
+    "benchmark": {
+      "title": "Preço Pago vs Mercado",
+      "description": "Compare o preço pago nos abastecimentos com a média de mercado do estado.",
+      "paid": "Preço Pago",
+      "market": "Média Mercado",
+      "difference": "Diferença",
+      "totalOverpaid": "Total pago acima do mercado",
+      "totalSaved": "Total economizado vs mercado",
+      "overpaidPct": "% acima do mercado",
+      "noMarketData": "Dados de mercado não disponíveis para o período.",
+      "noData": "Nenhum registro com preço de referência de mercado."
+    },
+
+    "efficiency": {
+      "title": "Alertas de Eficiência",
+      "description": "Veículos com queda de consumo acima do limiar configurado.",
+      "currentAvg": "Consumo Atual",
+      "historicalAvg": "Consumo Histórico",
+      "dropPct": "Queda",
+      "extraCost": "Custo Extra Estimado",
+      "alert": "Alerta",
+      "ok": "Normal",
+      "threshold": "Limiar de alerta",
+      "noAlerts": "Nenhum veículo com queda de consumo detectada.",
+      "noData": "Dados insuficientes para análise de eficiência."
+    },
+
+    "summary": {
+      "title": "Resumo do Período",
+      "description": "KPIs de combustível para o período selecionado.",
+      "period": {
+        "day": "Dia",
+        "month": "Mês",
+        "year": "Ano"
+      },
+      "totalCost": "Custo Total",
+      "totalLiters": "Total Litros",
+      "logsCount": "Abastecimentos",
+      "avgConsumption": "Consumo Médio",
+      "avgPricePaid": "Preço Médio Pago",
+      "avgMarketPrice": "Preço Médio Mercado",
+      "costPerKm": "Custo/km",
+      "vsLastPeriod": "vs período anterior",
+      "noData": "Nenhum dado para o período selecionado."
+    },
+
+    "hub": {
+      "consumption": "Consumo por Veículo",
+      "consumptionDesc": "Eficiência km/l e tendência por veículo",
+      "costs": "Análise de Custos",
+      "costsDesc": "Gastos por período e tipo de combustível",
+      "benchmark": "Preço vs Mercado",
+      "benchmarkDesc": "Compare o que pagou com a média do estado",
+      "efficiency": "Alertas de Eficiência",
+      "efficiencyDesc": "Veículos com queda de consumo acima do limiar",
+      "summary": "Resumo do Período",
+      "summaryDesc": "KPIs de dia, mês ou ano com comparativo"
     }
   }
 }

@@ -463,6 +463,9 @@ model FuelLog {
   // null quando é o primeiro abastecimento do veículo ou odômetro anterior não disponível
   consumption    Float?    // km/l
 
+  // Preço médio de mercado (estado da org) no momento do registro — snapshot
+  marketPriceRef Float?
+
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -475,4 +478,20 @@ model FuelLog {
   @@index([organizationId, date])
   @@index([vehicleId, date])
   @@map("fuel_logs")
+}
+
+model FuelPriceSnapshot {
+  id        String   @id @default(cuid())
+  state     String
+  fuelType  FuelType
+  avgPrice  Float
+  minPrice  Float?
+  maxPrice  Float?
+  source    String   @default("combustivelapi")
+  refDate   DateTime
+  fetchedAt DateTime @default(now())
+
+  @@index([state, fuelType, refDate])
+  @@index([fuelType, refDate])
+  @@map("fuel_price_snapshots")
 }

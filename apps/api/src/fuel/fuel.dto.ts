@@ -198,6 +198,7 @@ export class FuelLogResponseDto {
   @ApiPropertyOptional() receipt?: string | null;
   @ApiPropertyOptional() notes?: string | null;
   @ApiPropertyOptional() consumption?: number | null; // km/l
+  @ApiPropertyOptional() marketPriceRef?: number | null; // market price reference at time of fueling
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
 

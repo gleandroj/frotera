@@ -817,3 +817,92 @@ export const fuelAPI = {
       { params },
     ),
 };
+
+// ── FUEL REPORTS ─────────────────────────────────────────────────────────────
+
+export interface VehicleConsumption {
+  vehicleId: string;
+  vehicleName: string | null;
+  vehiclePlate: string | null;
+  avgConsumption: number | null;
+  bestConsumption: number | null;
+  worstConsumption: number | null;
+  totalKm: number | null;
+  totalLiters: number;
+  logsCount: number;
+  trend: 'improving' | 'worsening' | 'stable' | 'insufficient_data';
+  timeSeries: Array<{ date: string; consumption: number | null }>;
+}
+
+export interface CostsPeriod {
+  period: string;
+  totalCost: number;
+  totalLiters: number;
+  logsCount: number;
+  avgPricePerLiter: number | null;
+  costPerKm: number | null;
+  byFuelType: Record<string, { cost: number; liters: number }>;
+}
+
+export interface BenchmarkSummary {
+  totalPaid: number;
+  totalAtMarketPrice: number | null;
+  totalOverpaid: number | null;
+  overpaidPct: number | null;
+  timeSeries: Array<{
+    date: string;
+    avgPricePaid: number;
+    marketAvgPrice: number | null;
+    difference: number | null;
+  }>;
+}
+
+export interface VehicleEfficiency {
+  vehicleId: string;
+  vehicleName: string | null;
+  vehiclePlate: string | null;
+  currentAvgConsumption: number | null;
+  historicalAvgConsumption: number | null;
+  consumptionDropPct: number | null;
+  isAlert: boolean;
+  estimatedExtraCost: number | null;
+  lastFuelDate: string | null;
+}
+
+export interface PeriodSummary {
+  period: string;
+  totalCost: number;
+  totalLiters: number;
+  logsCount: number;
+  avgConsumption: number | null;
+  avgPricePaid: number | null;
+  avgMarketPrice: number | null;
+  costPerKm: number | null;
+  vsLastPeriod: {
+    costChangePct: number | null;
+    consumptionChangePct: number | null;
+    litersChangePct: number | null;
+  };
+}
+
+export const fuelReportsAPI = {
+  consumption: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string }) =>
+    externalApi.get<VehicleConsumption[]>(`/api/organizations/${orgId}/fuel/reports/consumption`, { params }),
+
+  costs: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string; groupBy?: string }) =>
+    externalApi.get<CostsPeriod[]>(`/api/organizations/${orgId}/fuel/reports/costs`, { params }),
+
+  benchmark: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string; state?: string }) =>
+    externalApi.get<BenchmarkSummary>(`/api/organizations/${orgId}/fuel/reports/benchmark`, { params }),
+
+  efficiency: (orgId: string, params?: { thresholdPct?: number }) =>
+    externalApi.get<VehicleEfficiency[]>(`/api/organizations/${orgId}/fuel/reports/efficiency`, { params }),
+
+  summary: (orgId: string, params: { period: 'day' | 'month' | 'year'; date: string; vehicleId?: string }) =>
+    externalApi.get<PeriodSummary>(`/api/organizations/${orgId}/fuel/reports/summary`, { params }),
+
+  marketPrices: (orgId: string, params: { state: string; fuelType: string }) =>
+    externalApi.get<{ avgPrice: number | null; refDate: string | null }>(
+      `/api/organizations/${orgId}/fuel/market-prices`, { params }
+    ),
+};

@@ -37,6 +37,19 @@ export class FuelController {
   constructor(private readonly fuelService: FuelService) {}
 
   /**
+   * GET /api/organizations/:orgId/fuel/market-prices — MUST come before /stats and /:id
+   */
+  @Get('market-prices')
+  @ApiOkResponse({ schema: { example: { avgPrice: 6.69, refDate: '2026-04-16' } } })
+  async getMarketPrices(
+    @Param('organizationId') organizationId: string,
+    @Query('state') state: string,
+    @Query('fuelType') fuelType: string,
+  ): Promise<{ avgPrice: number | null; refDate: string | null }> {
+    return this.fuelService.getMarketPrices(state, fuelType);
+  }
+
+  /**
    * GET /api/organizations/:orgId/fuel/stats — MUST come before /:id
    */
   @Get('stats')
@@ -46,8 +59,8 @@ export class FuelController {
     @Param('organizationId') organizationId: string,
     @Query() query: FuelStatsQueryDto,
   ): Promise<FuelStatsResponseDto> {
-    const memberId = req.user.organizationMemberId;
-    return this.fuelService.getStats(organizationId, memberId, query);
+    const userId = req.user.userId;
+    return this.fuelService.getStats(organizationId, userId, query);
   }
 
   /**
@@ -60,8 +73,8 @@ export class FuelController {
     @Param('organizationId') organizationId: string,
     @Query() query: ListFuelLogsQueryDto,
   ): Promise<FuelLogResponseDto[]> {
-    const memberId = req.user.organizationMemberId;
-    return this.fuelService.list(organizationId, memberId, query);
+    const userId = req.user.userId;
+    return this.fuelService.list(organizationId, userId, query);
   }
 
   /**
@@ -74,8 +87,8 @@ export class FuelController {
     @Param('organizationId') organizationId: string,
     @Body() body: CreateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
-    const memberId = req.user.organizationMemberId;
-    return this.fuelService.create(organizationId, memberId, body);
+    const userId = req.user.userId;
+    return this.fuelService.create(organizationId, userId, body);
   }
 
   /**
@@ -88,8 +101,8 @@ export class FuelController {
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<FuelLogResponseDto> {
-    const memberId = req.user.organizationMemberId;
-    return this.fuelService.getById(id, organizationId, memberId);
+    const userId = req.user.userId;
+    return this.fuelService.getById(id, organizationId, userId);
   }
 
   /**
@@ -103,8 +116,8 @@ export class FuelController {
     @Param('id') id: string,
     @Body() body: UpdateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
-    const memberId = req.user.organizationMemberId;
-    return this.fuelService.update(id, organizationId, memberId, body);
+    const userId = req.user.userId;
+    return this.fuelService.update(id, organizationId, userId, body);
   }
 
   /**
@@ -118,8 +131,8 @@ export class FuelController {
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<{ message: string }> {
-    const memberId = req.user.organizationMemberId;
-    await this.fuelService.delete(id, organizationId, memberId);
+    const userId = req.user.userId;
+    await this.fuelService.delete(id, organizationId, userId);
     return { message: 'Fuel log deleted successfully' };
   }
 }
