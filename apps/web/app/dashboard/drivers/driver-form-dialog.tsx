@@ -277,14 +277,14 @@ export function DriverFormDialog({
                   <div className="space-y-2">
                     <Label htmlFor="driver-cnhCategory">{t("drivers.cnhCategory")}</Label>
                     <Select
-                      value={values.cnhCategory}
-                      onValueChange={(v) => setFieldValue("cnhCategory", v)}
+                      value={values.cnhCategory || "__none__"}
+                      onValueChange={(v) => setFieldValue("cnhCategory", v === "__none__" ? "" : v)}
                     >
                       <SelectTrigger id="driver-cnhCategory">
                         <SelectValue placeholder={t("drivers.selectCnhCategory")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t("drivers.noCnhCategory")}</SelectItem>
+                        <SelectItem value="__none__">{t("drivers.noCnhCategory")}</SelectItem>
                         {CNH_CATEGORIES.map((cat) => (
                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
