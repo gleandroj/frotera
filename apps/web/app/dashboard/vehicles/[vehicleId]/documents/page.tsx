@@ -44,7 +44,7 @@ export default function VehicleDocumentsPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const params = useParams();
-  const vehicleId = params.id as string;
+  const vehicleId = params.vehicleId as string;
   const { currentOrganization } = useAuth();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [documents, setDocuments] = useState<VehicleDocument[]>([]);
