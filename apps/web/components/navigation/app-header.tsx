@@ -163,6 +163,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
       {/* Organization Switcher */}
       {currentOrganization && (
+        organizations.length > 1 ? (
         <DropdownMenu open={orgDropdownOpen} onOpenChange={setOrgDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button
@@ -232,6 +233,16 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        ) : (
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 max-w-48 pointer-events-none cursor-default"
+            tabIndex={-1}
+          >
+            <Building2 className="w-4 h-4" />
+            <span className="truncate">{currentOrganization.name}</span>
+          </Button>
+        )
       )}
 
       {/* Customer filter (only when org is selected) */}
