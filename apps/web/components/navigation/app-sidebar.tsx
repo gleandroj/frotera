@@ -19,6 +19,7 @@ import {
   Building2,
   Car,
   FileText,
+  Fuel,
   Home,
   User,
   UserRound,
@@ -99,6 +100,12 @@ export function AppSidebar() {
           href: "/dashboard/documents",
           icon: FileText,
           current: pathname.startsWith("/dashboard/documents"),
+        },
+        {
+          name: t('navigation.items.fuel'),
+          href: "/dashboard/fuel",
+          icon: Fuel,
+          current: pathname.startsWith("/dashboard/fuel"),
         },
         {
           name: t('navigation.items.customers'),

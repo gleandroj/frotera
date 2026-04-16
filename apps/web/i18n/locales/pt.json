@@ -701,7 +701,8 @@
       "integrationLogs": "Logs de Integração",
       "profile": "Perfil",
       "notifications": "Notificações",
-      "documents": "Documentos"
+      "documents": "Documentos",
+      "fuel": "Abastecimento"
     },
     "footer": {
       "copyright": "© {{year}} RS Frotas",
@@ -1123,5 +1124,75 @@
     "toastUpdated": "Documento atualizado com sucesso.",
     "toastDeleted": "Documento excluído com sucesso.",
     "toastError": "Falha ao salvar documento. Tente novamente."
+  },
+  "fuel": {
+    "title": "Abastecimentos",
+    "listDescription": "Registros de abastecimento da frota. Controle custos e consumo por veículo.",
+    "noLogs": "Nenhum abastecimento registrado.",
+    "newLog": "Novo Abastecimento",
+    "editLog": "Editar Abastecimento",
+    "deleteLog": "Excluir Abastecimento",
+    "logDetail": "Detalhe do Abastecimento",
+    "backToList": "← Voltar aos abastecimentos",
+    "filterByVehicle": "Filtrar por veículo...",
+    "noResults": "Nenhum resultado.",
+    "openActionsMenu": "Abrir menu de ações",
+    "fields": {
+      "vehicle": "Veículo",
+      "driver": "Motorista",
+      "date": "Data",
+      "odometer": "Hodômetro (km)",
+      "liters": "Litros",
+      "pricePerLiter": "Preço por litro",
+      "totalCost": "Custo total",
+      "fuelType": "Tipo de combustível",
+      "station": "Posto",
+      "city": "Cidade",
+      "receipt": "Comprovante (URL)",
+      "notes": "Observações",
+      "consumption": "Consumo (km/l)",
+      "costPerKm": "Custo/km"
+    },
+    "fuelTypes": {
+      "GASOLINE": "Gasolina",
+      "ETHANOL": "Etanol",
+      "DIESEL": "Diesel",
+      "ELECTRIC": "Elétrico",
+      "GNV": "GNV"
+    },
+    "stats": {
+      "totalCostMonth": "Custo Total (Mês)",
+      "totalLiters": "Litros Abastecidos",
+      "avgConsumption": "Consumo Médio (km/l)",
+      "avgCostPerKm": "Custo Médio por km",
+      "logsMonth": "Abastecimentos (Mês)",
+      "noData": "Sem dados suficientes"
+    },
+    "form": {
+      "selectVehicle": "Selecione o veículo",
+      "filterVehicle": "Buscar veículo...",
+      "vehicleRequired": "Selecione um veículo.",
+      "dateRequired": "Informe a data do abastecimento.",
+      "odometerRequired": "Informe a leitura do hodômetro.",
+      "odometerPositive": "Hodômetro deve ser maior que zero.",
+      "litersRequired": "Informe a quantidade em litros.",
+      "litersPositive": "Litros deve ser maior que zero.",
+      "priceRequired": "Informe o preço por litro.",
+      "pricePositive": "Preço deve ser maior que zero.",
+      "fuelTypeRequired": "Selecione o tipo de combustível.",
+      "selectFuelType": "Selecione o combustível",
+      "stationPlaceholder": "Nome do posto",
+      "cityPlaceholder": "Cidade",
+      "receiptPlaceholder": "https://...",
+      "notesPlaceholder": "Observações..."
+    },
+    "toastCreated": "Abastecimento registrado com sucesso.",
+    "toastUpdated": "Abastecimento atualizado com sucesso.",
+    "toastDeleted": "Abastecimento excluído com sucesso.",
+    "toastError": "Falha ao salvar abastecimento. Tente novamente.",
+    "confirmDelete": {
+      "title": "Excluir abastecimento",
+      "description": "Tem certeza que deseja excluir este registro de abastecimento? Esta ação não pode ser desfeita."
+    }
   }
 }

@@ -708,3 +708,112 @@ export const driversAPI = {
       `/api/organizations/${organizationId}/drivers/${driverId}/assign-vehicle/${vehicleId}`
     ),
 };
+
+// ── FUEL ──────────────────────────────────────────────────────────────────────
+
+export type FuelType = 'GASOLINE' | 'ETHANOL' | 'DIESEL' | 'ELECTRIC' | 'GNV';
+
+export interface FuelLog {
+  id: string;
+  organizationId: string;
+  vehicleId: string;
+  driverId?: string | null;
+  createdById: string;
+  date: string;
+  odometer: number;
+  liters: number;
+  pricePerLiter: number;
+  totalCost: number;
+  fuelType: FuelType;
+  station?: string | null;
+  city?: string | null;
+  receipt?: string | null;
+  notes?: string | null;
+  consumption?: number | null;   // km/l
+  createdAt: string;
+  updatedAt: string;
+  vehicle?: { id: string; name: string | null; plate: string | null } | null;
+}
+
+export interface FuelStats {
+  totalCost: number;
+  totalLiters: number;
+  count: number;
+  avgConsumption: number | null;
+  avgCostPerKm: number | null;
+  currentMonthCost: number;
+  currentMonthCount: number;
+}
+
+export interface CreateFuelLogPayload {
+  vehicleId: string;
+  driverId?: string;
+  date: string;
+  odometer: number;
+  liters: number;
+  pricePerLiter: number;
+  fuelType: FuelType;
+  station?: string;
+  city?: string;
+  receipt?: string;
+  notes?: string;
+}
+
+export interface UpdateFuelLogPayload {
+  driverId?: string;
+  date?: string;
+  odometer?: number;
+  liters?: number;
+  pricePerLiter?: number;
+  fuelType?: FuelType;
+  station?: string;
+  city?: string;
+  receipt?: string;
+  notes?: string;
+}
+
+export interface FuelListParams {
+  vehicleId?: string;
+  driverId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  fuelType?: FuelType;
+}
+
+export interface FuelStatsParams {
+  vehicleId?: string;
+  driverId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export const fuelAPI = {
+  list: (organizationId: string, params?: FuelListParams) =>
+    externalApi.get<FuelLog[]>(
+      `/api/organizations/${organizationId}/fuel`,
+      { params },
+    ),
+  get: (organizationId: string, id: string) =>
+    externalApi.get<FuelLog>(
+      `/api/organizations/${organizationId}/fuel/${id}`,
+    ),
+  create: (organizationId: string, payload: CreateFuelLogPayload) =>
+    externalApi.post<FuelLog>(
+      `/api/organizations/${organizationId}/fuel`,
+      payload,
+    ),
+  update: (organizationId: string, id: string, payload: UpdateFuelLogPayload) =>
+    externalApi.patch<FuelLog>(
+      `/api/organizations/${organizationId}/fuel/${id}`,
+      payload,
+    ),
+  delete: (organizationId: string, id: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/fuel/${id}`,
+    ),
+  getStats: (organizationId: string, params?: FuelStatsParams) =>
+    externalApi.get<FuelStats>(
+      `/api/organizations/${organizationId}/fuel/stats`,
+      { params },
+    ),
+};
