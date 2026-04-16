@@ -52,6 +52,7 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
           phoneNumber: true,
           twoFactorEnabled: true,
           emailVerified: true,
+          isSuperAdmin: true,
         },
       });
 
@@ -73,6 +74,7 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
         phoneNumber: user.phoneNumber,
         twoFactorEnabled: user.twoFactorEnabled,
         twoFactorVerified: payload.twoFactorVerified || false,
+        isSuperAdmin: user.isSuperAdmin,
       };
 
       // Check 2FA requirement based on metadata
