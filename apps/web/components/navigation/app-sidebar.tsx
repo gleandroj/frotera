@@ -20,6 +20,7 @@ import {
   Car,
   Home,
   User,
+  UserRound,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -85,6 +86,12 @@ export function AppSidebar() {
           href: "/dashboard/vehicles",
           icon: Car,
           current: pathname.startsWith("/dashboard/vehicles"),
+        },
+        {
+          name: t('navigation.items.drivers'),
+          href: "/dashboard/drivers",
+          icon: UserRound,
+          current: pathname.startsWith("/dashboard/drivers"),
         },
         {
           name: t('navigation.items.customers'),
