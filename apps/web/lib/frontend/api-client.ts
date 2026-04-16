@@ -516,6 +516,87 @@ export const trackerDevicesAPI = {
     ),
 };
 
+// ── DOCUMENTS ────────────────────────────────────────────────────────────────
+
+export type DocumentType = 'CRLV' | 'INSURANCE' | 'LICENSE' | 'INSPECTION' | 'OTHER';
+export type DocumentStatus = 'VALID' | 'EXPIRING' | 'EXPIRED';
+
+export interface VehicleDocument {
+  id: string;
+  organizationId: string;
+  vehicleId: string;
+  createdById: string;
+  type: DocumentType;
+  title: string;
+  fileUrl?: string | null;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+  status: DocumentStatus;
+  daysUntilExpiry: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDocumentPayload {
+  vehicleId: string;
+  type: DocumentType;
+  title: string;
+  fileUrl?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  notes?: string;
+}
+
+export interface UpdateDocumentPayload {
+  type?: DocumentType;
+  title?: string;
+  fileUrl?: string;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  notes?: string;
+}
+
+export const documentsAPI = {
+  list: (organizationId: string, params?: {
+    vehicleId?: string;
+    type?: DocumentType;
+    expiryBefore?: string;
+  }) =>
+    externalApi.get<{ documents: VehicleDocument[] }>(
+      `/api/organizations/${organizationId}/documents`,
+      { params }
+    ),
+
+  listExpiring: (organizationId: string, days = 30) =>
+    externalApi.get<{ documents: VehicleDocument[] }>(
+      `/api/organizations/${organizationId}/documents/expiring`,
+      { params: { days } }
+    ),
+
+  getOne: (organizationId: string, id: string) =>
+    externalApi.get<VehicleDocument>(
+      `/api/organizations/${organizationId}/documents/${id}`
+    ),
+
+  create: (organizationId: string, payload: CreateDocumentPayload) =>
+    externalApi.post<VehicleDocument>(
+      `/api/organizations/${organizationId}/documents`,
+      payload
+    ),
+
+  update: (organizationId: string, id: string, payload: UpdateDocumentPayload) =>
+    externalApi.patch<VehicleDocument>(
+      `/api/organizations/${organizationId}/documents/${id}`,
+      payload
+    ),
+
+  remove: (organizationId: string, id: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/documents/${id}`
+    ),
+};
+
 // ── DRIVERS ──────────────────────────────────────────────────────────────────
 
 export interface DriverVehicleAssignment {
