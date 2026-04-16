@@ -700,7 +700,8 @@
       "organization": "Organização",
       "integrationLogs": "Logs de Integração",
       "profile": "Perfil",
-      "notifications": "Notificações"
+      "notifications": "Notificações",
+      "documents": "Documentos"
     },
     "footer": {
       "copyright": "© {{year}} RS Frotas",
@@ -1062,5 +1063,65 @@
     "toastUpdated": "Motorista atualizado com sucesso.",
     "toastDeleted": "Motorista inativado com sucesso.",
     "toastError": "Falha ao salvar motorista. Tente novamente."
+  },
+  "documents": {
+    "title": "Documentos",
+    "listDescription": "Documentos dos veículos da frota. Controle vencimentos de CRLV, seguros e licenças.",
+    "noDocuments": "Nenhum documento cadastrado.",
+    "filterByTitle": "Filtrar por título...",
+    "noResults": "Nenhum resultado.",
+    "createDocument": "Novo Documento",
+    "editDocument": "Editar Documento",
+    "deleteDocument": "Excluir Documento",
+    "openActionsMenu": "Abrir menu de ações",
+    "viewFile": "Ver arquivo",
+    "vehicleRequired": "Selecione o veículo.",
+    "titleRequired": "Informe o título do documento.",
+    "fileUrlInvalid": "Informe uma URL válida.",
+    "tabs": {
+      "all": "Todos",
+      "expiring": "A vencer",
+      "expired": "Vencidos"
+    },
+    "type": {
+      "CRLV": "CRLV",
+      "INSURANCE": "Seguro",
+      "LICENSE": "Licença",
+      "INSPECTION": "Inspeção",
+      "OTHER": "Outro"
+    },
+    "status": {
+      "valid": "Válido",
+      "expiring": "Vencendo",
+      "expired": "Vencido"
+    },
+    "fields": {
+      "vehicle": "Veículo",
+      "type": "Tipo",
+      "title": "Título",
+      "issueDate": "Data de Emissão",
+      "expiryDate": "Data de Vencimento",
+      "fileUrl": "URL do Arquivo",
+      "fileUrlPlaceholder": "https://...",
+      "notes": "Observações",
+      "notesPlaceholder": "Informações adicionais...",
+      "daysUntilExpiry": "Dias para vencer",
+      "status": "Status"
+    },
+    "selectVehicle": "Selecione o veículo",
+    "filterVehicle": "Buscar veículo...",
+    "daysUntilExpiry": "{{days}} dia(s)",
+    "expired": "Vencido",
+    "noExpiry": "Sem vencimento",
+    "backToVehicle": "← Voltar ao veículo",
+    "backToDocuments": "← Voltar aos documentos",
+    "confirmDelete": {
+      "title": "Excluir documento",
+      "description": "Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita."
+    },
+    "toastCreated": "Documento criado com sucesso.",
+    "toastUpdated": "Documento atualizado com sucesso.",
+    "toastDeleted": "Documento excluído com sucesso.",
+    "toastError": "Falha ao salvar documento. Tente novamente."
   }
 }
