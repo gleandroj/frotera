@@ -300,7 +300,14 @@ export const organizationAPI = {
   updateMember: (
     organizationId: string,
     memberId: string,
-    data: { role?: string; customerRestricted?: boolean; customerIds?: string[] }
+    data: {
+      role?: string;
+      customerRestricted?: boolean;
+      customerIds?: string[];
+      name?: string;
+      email?: string;
+      newPassword?: string;
+    }
   ) =>
     externalApi.patch(
       `/api/organizations/${organizationId}/members/${memberId}`,

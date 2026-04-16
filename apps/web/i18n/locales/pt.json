@@ -95,10 +95,10 @@
     "plateRequired": "Informe a placa do veículo.",
     "device": "Rastreador",
     "noDevice": "Sem rastreador",
-    "customer": "Cliente",
-    "customerRequired": "Selecione um cliente.",
-    "selectClient": "Selecione o cliente",
-    "filterClient": "Buscar cliente...",
+    "customer": "Empresa",
+    "customerRequired": "Selecione uma empresa.",
+    "selectClient": "Selecione a empresa",
+    "filterClient": "Buscar empresa...",
     "backToVehicles": "← Voltar aos veículos",
     "viewVehicle": "Visualizar veículo",
     "vehicle": "Veículo",
@@ -151,23 +151,23 @@
     "toastError": "Falha ao salvar veículo. Tente novamente."
   },
   "customers": {
-    "listDescription": "Clientes em hierarquia. Associe veículos a clientes e restrinja o acesso dos usuários por cliente.",
-    "noCustomers": "Nenhum cliente cadastrado.",
+    "listDescription": "Empresas em hierarquia. Associe veículos a empresas e restrinja o acesso dos usuários por empresa.",
+    "noCustomers": "Nenhuma empresa cadastrada.",
     "filterByName": "Filtrar por nome...",
     "noResults": "Nenhum resultado.",
-    "createCustomer": "Novo cliente",
-    "editCustomer": "Editar cliente",
-    "parent": "Cliente pai",
+    "createCustomer": "Nova empresa",
+    "editCustomer": "Editar empresa",
+    "parent": "Empresa matriz",
     "noParent": "Nenhum (raiz)",
-    "parentRequired": "Selecione um cliente pai.",
-    "selectParent": "Selecione o cliente pai",
-    "filterParent": "Buscar cliente pai...",
-    "namePlaceholder": "Nome do cliente",
-    "created": "Cliente criado com sucesso.",
-    "updated": "Cliente atualizado com sucesso.",
+    "parentRequired": "Selecione uma empresa matriz.",
+    "selectParent": "Selecione a empresa matriz",
+    "filterParent": "Buscar empresa matriz...",
+    "namePlaceholder": "Nome da empresa",
+    "created": "Empresa criada com sucesso.",
+    "updated": "Empresa atualizada com sucesso.",
     "confirmDelete": {
-      "title": "Excluir cliente",
-      "description": "Tem certeza que deseja excluir este cliente? Não é possível excluir se houver subclientes ou veículos vinculados."
+      "title": "Excluir empresa",
+      "description": "Tem certeza que deseja excluir esta empresa? Não é possível excluir se houver filiais ou veículos vinculados."
     }
   },
   "auth": {
@@ -682,7 +682,7 @@
       "dashboard": "Painel",
       "devices": "Dispositivos",
       "vehicles": "Veículos",
-      "customers": "Clientes",
+      "customers": "Empresas",
       "setupInitial": "Configuração Inicial",
       "teamMembers": "Usuários",
       "contacts": "Contatos",
@@ -718,8 +718,8 @@
       "profileSettings": "Configurações do Perfil",
       "organizations": "Organizações",
       "signOut": "Sair",
-      "allCustomers": "Todos os clientes",
-      "filterByCustomer": "Filtrar por cliente"
+      "allCustomers": "Todas as empresas",
+      "filterByCustomer": "Filtrar por empresa"
     }
   },
   "profile": {
@@ -815,9 +815,9 @@
       "memberOption": "Membro",
       "adminOption": "Administrador",
       "fullAccess": "Acesso completo à organização",
-      "fullAccessRestrictedHint": "Você tem acesso apenas a alguns clientes; não pode conceder acesso à organização inteira.",
-      "customerAccess": "Acesso por cliente",
-      "customerAccessHint": "Se nenhum cliente for selecionado, o usuário não terá acesso a dados de veículos/clientes.",
+      "fullAccessRestrictedHint": "Você tem acesso apenas a algumas empresas; não pode conceder acesso à organização inteira.",
+      "customerAccess": "Acesso por empresa",
+      "customerAccessHint": "Se nenhuma empresa for selecionada, o usuário não terá acesso a dados de veículos/empresas.",
       "sendButton": "Enviar Convite",
       "sending": "Enviando...",
       "validation": {
@@ -831,7 +831,7 @@
     "createUserDialog": {
       "title": "Adicionar Usuário",
       "newUserPageTitle": "Novo Usuário",
-      "newUserPageDescription": "Preencha os dados e defina o acesso aos clientes.",
+      "newUserPageDescription": "Preencha os dados e defina o acesso às empresas.",
       "description": "Crie um usuário em {{organizationName}} com email, senha e acesso.",
       "emailLabel": "Endereço de Email",
       "emailPlaceholder": "usuario@empresa.com",
@@ -845,9 +845,9 @@
       "memberOption": "Membro",
       "adminOption": "Administrador",
       "fullAccess": "Acesso completo à organização",
-      "customerAccess": "Acesso aos clientes",
-      "customerAccessHint": "Se nenhum cliente for selecionado, o usuário não terá acesso a dados de veículos/clientes.",
-      "customerSearchPlaceholder": "Buscar cliente por nome...",
+      "customerAccess": "Acesso às empresas",
+      "customerAccessHint": "Se nenhuma empresa for selecionada, o usuário não terá acesso a dados de veículos/empresas.",
+      "customerSearchPlaceholder": "Buscar empresa por nome...",
       "selectAllCustomers": "Selecionar todos (filtrados)",
       "deselectAllCustomers": "Desmarcar todos (filtrados)",
       "createButton": "Criar Usuário",
@@ -882,13 +882,13 @@
       "revoke": "Revogar"
     },
     "accessFull": "Acesso completo",
-    "accessLimitedTo": "Acesso limitado a {{count}} cliente(s)",
+    "accessLimitedTo": "Acesso limitado a {{count}} empresa(s)",
     "editDialog": {
       "title": "Editar Membro",
-      "description": "Alterar função e acesso aos clientes de {{name}}",
+      "description": "Alterar função e acesso às empresas de {{name}}",
       "saveButton": "Salvar alterações",
       "saving": "Salvando...",
-      "editingSelfHint": "Apenas o dono da organização pode alterar sua função e acesso aos clientes."
+      "editingSelfHint": "Apenas o dono da organização pode alterar sua função e acesso às empresas."
     },
     "confirmDialogs": {
       "revokeInvitation": {
@@ -951,11 +951,11 @@
       "invitationAlreadyAccepted": "Convite já aceito",
       "invitationAlreadyAcceptedDescription": "Este convite já foi aceito",
       "cannotGrantFullAccess": "Você não pode conceder acesso à organização inteira",
-      "cannotGrantFullAccessDescription": "Seu acesso é limitado a alguns clientes; só é possível atribuir acesso dentro do seu escopo.",
+      "cannotGrantFullAccessDescription": "Seu acesso é limitado a algumas empresas; só é possível atribuir acesso dentro do seu escopo.",
       "cannotChangeOwnRole": "Você não pode alterar sua própria função",
       "cannotChangeOwnRoleDescription": "Apenas o dono da organização pode alterar sua função.",
-      "cannotEditOwnAccess": "Você não pode editar seu próprio acesso aos clientes",
-      "cannotEditOwnAccessDescription": "Apenas o dono da organização pode alterar seu acesso aos clientes."
+      "cannotEditOwnAccess": "Você não pode editar seu próprio acesso às empresas",
+      "cannotEditOwnAccessDescription": "Apenas o dono da organização pode alterar seu acesso às empresas."
     }
   },
   "dashboard": {

@@ -64,6 +64,10 @@ type EditMemberFormValues = {
   role: "ADMIN" | "MEMBER";
   fullAccess: boolean;
   customerIds: string[];
+  name: string;
+  email: string;
+  newPassword: string;
+  confirmPassword: string;
 };
 
 export default function EditMemberPage() {
@@ -82,14 +86,27 @@ export default function EditMemberPage() {
 
   const EditMemberFormSchema = useMemo(
     () =>
-      z.object({
-        role: z.enum(["ADMIN", "MEMBER"], {
-          required_error: t("team.inviteDialog.validation.roleRequired"),
-          invalid_type_error: t("team.inviteDialog.validation.roleInvalid"),
-        }),
-        fullAccess: z.boolean().optional(),
-        customerIds: z.array(z.string()).optional(),
-      }),
+      z
+        .object({
+          role: z.enum(["ADMIN", "MEMBER"], {
+            required_error: t("team.inviteDialog.validation.roleRequired"),
+            invalid_type_error: t("team.inviteDialog.validation.roleInvalid"),
+          }),
+          fullAccess: z.boolean().optional(),
+          customerIds: z.array(z.string()).optional(),
+          name: z.string().optional(),
+          email: z.string().email().optional(),
+          newPassword: z.string().min(8).optional().or(z.literal("")),
+          confirmPassword: z.string().optional(),
+        })
+        .refine(
+          (data) =>
+            !data.newPassword || data.newPassword === data.confirmPassword,
+          {
+            message: "As senhas não coincidem",
+            path: ["confirmPassword"],
+          },
+        ),
     [t],
   );
 
@@ -151,6 +168,10 @@ export default function EditMemberPage() {
         role: values.role,
         customerRestricted: !values.fullAccess,
         customerIds: values.fullAccess ? undefined : values.customerIds,
+        name: values.name || undefined,
+        email:
+          values.email !== member.user.email ? values.email : undefined,
+        newPassword: values.newPassword || undefined,
       });
       toast.success(t("team.toastMessages.memberUpdated"), {
         description: t("team.toastMessages.memberUpdatedDescription"),
@@ -159,6 +180,9 @@ export default function EditMemberPage() {
     } catch (err: any) {
       const errorCode = err.response?.data?.errorCode;
       switch (errorCode) {
+        case "USER_ALREADY_EXISTS":
+          toast.error("Email já está em uso");
+          break;
         case "MEMBER_CANNOT_GRANT_FULL_ACCESS":
           toast.error(t("team.errorMessages.cannotGrantFullAccess"), {
             description: t("team.errorMessages.cannotGrantFullAccessDescription"),
@@ -246,12 +270,101 @@ export default function EditMemberPage() {
             : member.role) as "ADMIN" | "MEMBER",
           fullAccess: currentUserRestricted ? false : !member.customerRestricted,
           customerIds: member.customers?.map((c) => c.id) ?? [],
+          name: member.user.name ?? "",
+          email: member.user.email,
+          newPassword: "",
+          confirmPassword: "",
         }}
         validationSchema={toFormikValidationSchema(EditMemberFormSchema)}
         onSubmit={updateMember}
       >
-        {({ values, setFieldValue, isSubmitting, errors, touched }) => (
+        {({ values, setFieldValue, handleChange, handleBlur, isSubmitting, errors, touched }) => (
           <Form className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Informações do Usuário</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    name="name"
+                    type="text"
+                    value={values.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={errors.name && touched.name ? "border-red-500" : ""}
+                  />
+                  {errors.name && touched.name && (
+                    <p className="text-sm text-red-500">{errors.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    name="email"
+                    type="email"
+                    value={values.email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={errors.email && touched.email ? "border-red-500" : ""}
+                  />
+                  {errors.email && touched.email && (
+                    <p className="text-sm text-red-500">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-newPassword">Nova Senha</Label>
+                  <Input
+                    id="edit-newPassword"
+                    name="newPassword"
+                    type="password"
+                    value={values.newPassword}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={
+                      errors.newPassword && touched.newPassword
+                        ? "border-red-500"
+                        : ""
+                    }
+                  />
+                  {errors.newPassword && touched.newPassword && (
+                    <p className="text-sm text-red-500">{errors.newPassword}</p>
+                  )}
+                </div>
+
+                {values.newPassword.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-confirmPassword">
+                      Confirmar Nova Senha
+                    </Label>
+                    <Input
+                      id="edit-confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={values.confirmPassword}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={
+                        errors.confirmPassword && touched.confirmPassword
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    {errors.confirmPassword && touched.confirmPassword && (
+                      <p className="text-sm text-red-500">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="pt-6 space-y-4">
                 {disableRoleAndAccess && (

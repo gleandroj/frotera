@@ -66,6 +66,22 @@ export class UpdateMemberDto {
   @IsArray()
   @IsString({ each: true })
   customerIds?: string[];
+
+  @ApiPropertyOptional({ description: 'Display name', example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Email address', example: 'user@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'New password (min 8 characters)', minLength: 8 })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  newPassword?: string;
 }
 
 export class MemberResponseDto {

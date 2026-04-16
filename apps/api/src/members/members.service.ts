@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import * as bcrypt from "bcrypt";
 import { AuthService } from "../auth/auth.service";
 import { CustomersService } from "../customers/customers.service";
 import { EmailService } from "../email/email.service";
@@ -68,6 +69,7 @@ export class MembersService {
       { id: organizationMember.id, customerRestricted: organizationMember.customerRestricted },
       organizationId,
     );
+
     if (requestingUserAllowedIds !== null) {
       const allowedSet = new Set(requestingUserAllowedIds);
       members = members.filter((member) => {
@@ -344,6 +346,20 @@ export class MembersService {
       }
     }
 
+    // Validate new email uniqueness before entering the transaction
+    if (data.email !== undefined) {
+      const normalizedEmail = data.email.toLowerCase();
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+      if (existingUser && existingUser.id !== memberToUpdate.userId) {
+        throw new BadRequestException({
+          errorCode: ApiCode.USER_ALREADY_EXISTS,
+        });
+      }
+    }
+
     const updateData: {
       role?: OrganizationRole;
       customerRestricted?: boolean;
@@ -360,7 +376,30 @@ export class MembersService {
       );
     }
 
+    // Pre-hash password outside the transaction to keep it short
+    let hashedPassword: string | undefined;
+    if (data.newPassword !== undefined) {
+      hashedPassword = await bcrypt.hash(data.newPassword, 10);
+    }
+
     const updatedMember = await this.prisma.$transaction(async (tx) => {
+      // Update user profile fields if any were provided
+      const userUpdateData: {
+        name?: string;
+        email?: string;
+        password?: string;
+      } = {};
+      if (data.name !== undefined) userUpdateData.name = data.name;
+      if (data.email !== undefined) userUpdateData.email = data.email.toLowerCase();
+      if (hashedPassword !== undefined) userUpdateData.password = hashedPassword;
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await tx.user.update({
+          where: { id: memberToUpdate.userId },
+          data: userUpdateData,
+        });
+      }
+
       const member = await tx.organizationMember.update({
         where: { id: memberId },
         data: updateData,
