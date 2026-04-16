@@ -61,6 +61,7 @@ model Organization {
   trackerDevices TrackerDevice[]
   customers      Customer[]
   roles          Role[]
+  drivers        Driver[]
 
   @@map("organizations")
 }
@@ -79,6 +80,7 @@ model Customer {
   vehicles       Vehicle[]
   memberAccess   OrganizationMemberCustomer[]
   invitationAccess InvitationCustomer[]
+  drivers        Driver[]
 
   @@index([organizationId])
   @@index([parentId])
@@ -111,6 +113,7 @@ model Vehicle {
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   trackerDevice  TrackerDevice? @relation(fields: [trackerDeviceId], references: [id], onDelete: SetNull)
   customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  driverAssignments DriverVehicleAssignment[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -340,4 +343,48 @@ model AppSettings {
   updatedAt                     DateTime @updatedAt
 
   @@map("app_settings")
+}
+
+model Driver {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String?   // FK para Customer (Empresa/Filial) — opcional
+  name           String
+  cpf            String?   // CPF — unique por organização (ver @@unique abaixo)
+  cnh            String?   // Número da CNH
+  cnhCategory    String?   // A, B, C, D, E
+  cnhExpiry      DateTime? // Data de vencimento da CNH — para alertas futuros
+  phone          String?
+  email          String?
+  photo          String?   // URL da foto — upload real em fase futura (S3/R2)
+  active         Boolean   @default(true) // false = soft delete
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer           Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleAssignments DriverVehicleAssignment[]
+
+  @@unique([organizationId, cpf]) // CPF único por organização (null não viola unique)
+  @@index([organizationId])
+  @@index([customerId])
+  @@map("drivers")
+}
+
+model DriverVehicleAssignment {
+  id        String    @id @default(cuid())
+  driverId  String
+  vehicleId String
+  startDate DateTime  @default(now())
+  endDate   DateTime? // null = vínculo ativo
+  isPrimary Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@map("driver_vehicle_assignments")
 }
