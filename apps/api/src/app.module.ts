@@ -16,6 +16,7 @@ import { AppConfigModule } from "./config/config.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { TrackersModule } from "./trackers/trackers.module";
 import { RolesModule } from "./roles/roles.module";
+import { DriversModule } from "./drivers/drivers.module";
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { RolesModule } from "./roles/roles.module";
     NotificationsModule,
     TrackersModule,
     RolesModule,
+    DriversModule,
   ],
 })
 export class AppModule {}
