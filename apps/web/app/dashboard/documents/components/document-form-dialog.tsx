@@ -215,7 +215,7 @@ export function DocumentFormDialog({
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[520px]">
+      <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-[520px]">
         <SheetHeader className="border-b px-6 pb-4 pt-6">
           <SheetTitle>
             {isEdit ? t('documents.editDocument') : t('documents.createDocument')}
