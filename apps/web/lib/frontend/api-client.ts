@@ -909,7 +909,7 @@ export const fuelReportsAPI = {
 
 // ── CHECKLIST ────────────────────────────────────────────────────────────────
 
-export type ItemType = "YES_NO" | "TEXT" | "NUMBER" | "PHOTO" | "SELECT" | "SIGNATURE";
+export type ItemType = "YES_NO" | "TEXT" | "NUMBER" | "PHOTO" | "SELECT" | "SIGNATURE" | "FILE";
 export type EntryStatus = "PENDING" | "COMPLETED" | "INCOMPLETE";
 
 export interface ChecklistTemplateItem {

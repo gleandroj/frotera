@@ -823,7 +823,8 @@
       "NUMBER": "Número",
       "PHOTO": "Foto (URL)",
       "SELECT": "Seleção Múltipla",
-      "SIGNATURE": "Assinatura (URL)"
+      "SIGNATURE": "Assinatura (URL)",
+      "FILE": "Arquivo"
     },
     "dragToReorder": "Arraste para reordenar",
     "noTemplates": "Nenhum template cadastrado.",

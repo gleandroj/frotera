@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
@@ -29,6 +30,78 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+
+// ── SignaturePad ───────────────────────────────────────────────────────────────
+
+function SignaturePad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const drawing = React.useRef(false);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const src = "touches" in e ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  };
+
+  const start = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const { x, y } = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    drawing.current = true;
+  };
+
+  const move = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!drawing.current) return;
+    e.preventDefault();
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    const { x, y } = getPos(e, canvas);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stop = () => {
+    if (!drawing.current) return;
+    drawing.current = false;
+    onChange(canvasRef.current!.toDataURL());
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current!;
+    canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
+    onChange("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={150}
+        className="w-full rounded border bg-white touch-none cursor-crosshair"
+        onMouseDown={start}
+        onMouseMove={move}
+        onMouseUp={stop}
+        onMouseLeave={stop}
+        onTouchStart={start}
+        onTouchMove={move}
+        onTouchEnd={stop}
+      />
+      <Button type="button" variant="outline" size="sm" onClick={clear}>
+        Limpar assinatura
+      </Button>
+      {value && <p className="text-xs text-green-600">Assinatura capturada</p>}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FillChecklistPage({
   params,
@@ -115,7 +188,7 @@ export default function FillChecklistPage({
           return {
             itemId,
             value,
-            photoUrl: item?.type === "PHOTO" ? value : undefined,
+            photoUrl: item?.type === "PHOTO" || item?.type === "FILE" ? value : undefined,
           };
         }),
       };
@@ -286,12 +359,22 @@ export default function FillChecklistPage({
 
                 {/* PHOTO */}
                 {item.type === "PHOTO" && (
-                  <Input
-                    type="url"
-                    placeholder="URL da foto"
-                    value={answers[item.id] || ""}
-                    onChange={(e) => handleAnswerChange(item.id, e.target.value)}
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setAnswers((prev) => ({ ...prev, [item.id]: reader.result as string }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {answers[item.id] && (
+                      <img src={answers[item.id]} alt="preview" className="h-24 w-auto rounded border object-cover" />
+                    )}
+                  </div>
                 )}
 
                 {/* SELECT */}
@@ -315,12 +398,29 @@ export default function FillChecklistPage({
 
                 {/* SIGNATURE */}
                 {item.type === "SIGNATURE" && (
-                  <Input
-                    type="url"
-                    placeholder="URL da assinatura"
-                    value={answers[item.id] || ""}
-                    onChange={(e) => handleAnswerChange(item.id, e.target.value)}
+                  <SignaturePad
+                    value={answers[item.id] ?? ""}
+                    onChange={(v) => setAnswers((prev) => ({ ...prev, [item.id]: v }))}
                   />
+                )}
+
+                {/* FILE */}
+                {item.type === "FILE" && (
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setAnswers((prev) => ({ ...prev, [item.id]: reader.result as string }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {answers[item.id] && (
+                      <p className="text-xs text-muted-foreground">Arquivo selecionado</p>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

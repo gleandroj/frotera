@@ -63,6 +63,7 @@ const ITEM_TYPES: ItemType[] = [
   "PHOTO",
   "SELECT",
   "SIGNATURE",
+  "FILE",
 ];
 
 // ── SortableItem component ────────────────────────────────────────────────────
@@ -135,10 +136,7 @@ function SortableItem({ item, onUpdate, onRemove, t }: SortableItemProps) {
                 value={item.options.join(",")}
                 onChange={(e) =>
                   onUpdate(item.tempId, {
-                    options: e.target.value
-                      .split(",")
-                      .map((o) => o.trimStart())
-                      .filter(Boolean),
+                    options: e.target.value.split(",").map((o) => o.trimStart()),
                   })
                 }
                 placeholder={t("checklist.itemOptions")}
@@ -281,7 +279,7 @@ export default function EditChecklistTemplatePage({
         label: item.label,
         type: item.type,
         required: item.required,
-        options: item.options.length > 0 ? item.options : undefined,
+        options: item.options.filter(Boolean).length > 0 ? item.options.filter(Boolean) : undefined,
         order: index + 1,
       })),
     };
