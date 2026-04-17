@@ -54,16 +54,18 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships    OrganizationMember[]
-  invitations    Invitation[]
-  notifications  Notification[]
-  vehicles       Vehicle[]
-  trackerDevices TrackerDevice[]
-  customers      Customer[]
-  roles          Role[]
-  drivers        Driver[]
-  documents      VehicleDocument[]
-  fuelLogs       FuelLog[]
+  memberships         OrganizationMember[]
+  invitations         Invitation[]
+  notifications       Notification[]
+  vehicles            Vehicle[]
+  trackerDevices      TrackerDevice[]
+  customers           Customer[]
+  roles               Role[]
+  drivers             Driver[]
+  documents           VehicleDocument[]
+  fuelLogs            FuelLog[]
+  checklistTemplates  ChecklistTemplate[]
+  checklistEntries    ChecklistEntry[]
 
   @@map("organizations")
 }
@@ -116,8 +118,9 @@ model Vehicle {
   trackerDevice  TrackerDevice? @relation(fields: [trackerDeviceId], references: [id], onDelete: SetNull)
   customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   driverAssignments DriverVehicleAssignment[]
-  documents      VehicleDocument[]
-  fuelLogs       FuelLog[]
+  documents         VehicleDocument[]
+  fuelLogs          FuelLog[]
+  checklistEntries  ChecklistEntry[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -181,9 +184,10 @@ model OrganizationMember {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
-  customers    OrganizationMemberCustomer[]
-  createdDocuments VehicleDocument[]
-  fuelLogs     FuelLog[]
+  customers         OrganizationMemberCustomer[]
+  createdDocuments  VehicleDocument[]
+  fuelLogs          FuelLog[]
+  checklistEntries  ChecklistEntry[]
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")
@@ -494,4 +498,104 @@ model FuelPriceSnapshot {
   @@index([state, fuelType, refDate])
   @@index([fuelType, refDate])
   @@map("fuel_price_snapshots")
+}
+
+// ─── Checklist ────────────────────────────────────────────────────────────────
+
+enum ItemType {
+  YES_NO
+  TEXT
+  NUMBER
+  PHOTO
+  SELECT
+  SIGNATURE
+
+  @@map("item_type")
+}
+
+enum EntryStatus {
+  PENDING
+  COMPLETED
+  INCOMPLETE
+
+  @@map("entry_status")
+}
+
+model ChecklistTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        ChecklistTemplateItem[]
+  entries      ChecklistEntry[]
+
+  @@index([organizationId])
+  @@map("checklist_templates")
+}
+
+model ChecklistTemplateItem {
+  id         String   @id @default(cuid())
+  templateId String
+  order      Int
+  label      String
+  type       ItemType
+  required   Boolean  @default(true)
+  options    String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ChecklistTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  answers  ChecklistAnswer[]
+
+  @@index([templateId])
+  @@map("checklist_template_items")
+}
+
+model ChecklistEntry {
+  id             String      @id @default(cuid())
+  organizationId String
+  templateId     String
+  vehicleId      String
+  driverId       String?
+  memberId       String
+  status         EntryStatus @default(PENDING)
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template     ChecklistTemplate  @relation(fields: [templateId], references: [id])
+  vehicle      Vehicle            @relation(fields: [vehicleId], references: [id])
+  member       OrganizationMember @relation(fields: [memberId], references: [id])
+  answers      ChecklistAnswer[]
+
+  @@index([organizationId])
+  @@index([templateId])
+  @@index([vehicleId])
+  @@index([memberId])
+  @@index([status])
+  @@map("checklist_entries")
+}
+
+model ChecklistAnswer {
+  id        String   @id @default(cuid())
+  entryId   String
+  itemId    String
+  value     String?
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entry ChecklistEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  item  ChecklistTemplateItem @relation(fields: [itemId], references: [id])
+
+  @@unique([entryId, itemId])
+  @@index([entryId])
+  @@index([itemId])
+  @@map("checklist_answers")
 }
