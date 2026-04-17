@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -74,21 +75,21 @@ export function ReportFilters({
 
       <div className="flex-1 min-w-[200px]">
         <label className="text-sm font-medium">{t("common.from")}</label>
-        <input
-          type="date"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
-          value={dateFrom || ""}
-          onChange={(e) => onDateFromChange?.(e.target.value)}
+        <DatePicker
+          className="mt-1.5"
+          value={dateFrom || undefined}
+          onChange={(v) => onDateFromChange?.(v)}
+          placeholder={t("common.calendar.pickDate")}
         />
       </div>
 
       <div className="flex-1 min-w-[200px]">
         <label className="text-sm font-medium">{t("common.to")}</label>
-        <input
-          type="date"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
-          value={dateTo || ""}
-          onChange={(e) => onDateToChange?.(e.target.value)}
+        <DatePicker
+          className="mt-1.5"
+          value={dateTo || undefined}
+          onChange={(v) => onDateToChange?.(v)}
+          placeholder={t("common.calendar.pickDate")}
         />
       </div>
 

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { dateFnsLocaleFor } from "@/lib/date-fns-locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -18,14 +18,15 @@ interface Props {
 }
 
 export function PeriodSelector({ period, date, onPeriodChange, onDateChange }: Props) {
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const periods: Period[] = ["day", "month", "year"];
+  const locale = dateFnsLocaleFor(currentLanguage);
 
   const formatDate = (d: Date) => {
-    if (period === "day") return format(d, "dd/MM/yyyy", { locale: ptBR });
-    if (period === "month") return format(d, "MMMM yyyy", { locale: ptBR });
+    if (period === "day") return format(d, "P", { locale });
+    if (period === "month") return format(d, "MMMM yyyy", { locale });
     return format(d, "yyyy");
   };
 

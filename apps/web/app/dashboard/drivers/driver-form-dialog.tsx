@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
   Sheet,
@@ -44,7 +42,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
 import {
   driversAPI,
@@ -54,7 +52,7 @@ import {
   type CreateDriverPayload,
   type UpdateDriverPayload,
 } from "@/lib/frontend/api-client";
-import { CalendarIcon, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
@@ -481,54 +479,19 @@ export function DriverFormDialog({
                   <FormField
                     control={form.control}
                     name="cnhExpiry"
-                    render={({ field }) => {
-                      const [calendarOpen, setCalendarOpen] = useState(false);
-                      const selectedDate = field.value
-                        ? parseISO(field.value)
-                        : undefined;
-                      return (
-                        <FormItem>
-                          <FormLabel>{t("drivers.cnhExpiry")}</FormLabel>
-                          <Popover
-                            open={calendarOpen}
-                            onOpenChange={setCalendarOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal h-10",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {selectedDate
-                                    ? format(selectedDate, "dd/MM/yyyy", {
-                                        locale: ptBR,
-                                      })
-                                    : t("drivers.selectDate")}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={(d) => {
-                                  field.onChange(
-                                    d ? format(d, "yyyy-MM-dd") : ""
-                                  );
-                                  setCalendarOpen(false);
-                                }}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("drivers.cnhExpiry")}</FormLabel>
+                        <FormControl>
+                          <DatePicker
+                            value={field.value || undefined}
+                            onChange={field.onChange}
+                            placeholder={t("drivers.selectDate")}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>

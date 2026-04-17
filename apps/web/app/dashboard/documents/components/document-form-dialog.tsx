@@ -43,6 +43,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Separator } from '@/components/ui/separator';
+import { DatePicker } from '@/components/ui/date-picker';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -363,7 +364,11 @@ export function DocumentFormDialog({
                   <FormItem>
                     <FormLabel>{t('documents.fields.issueDate')}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <DatePicker
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder={t('documents.fields.issueDate')}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -378,7 +383,11 @@ export function DocumentFormDialog({
                   <FormItem>
                     <FormLabel>{t('documents.fields.expiryDate')}</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <DatePicker
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder={t('documents.fields.expiryDate')}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
