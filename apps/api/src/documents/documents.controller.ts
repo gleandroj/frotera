@@ -11,8 +11,14 @@ import {
   HttpCode,
   Request,
   ForbiddenException,
+  HttpStatus,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DocumentsService } from './documents.service';
 import {
@@ -31,6 +37,8 @@ export interface RequestWithUser extends Request {
     email: string;
   };
 }
+
+const MAX_DOCUMENT_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 @ApiTags('documents')
 @Controller('organizations/:organizationId/documents')
@@ -63,6 +71,47 @@ export class DocumentsController {
   ): Promise<DocumentsListResponseDto> {
     const days = query.days ?? 30;
     return this.documentsService.listExpiring(organizationId, days);
+  }
+
+  // POST /api/organizations/:orgId/documents/upload
+  @Post('upload')
+  @HttpCode(201)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_DOCUMENT_UPLOAD_BYTES } }),
+  )
+  async uploadAttachment(
+    @Request() req: RequestWithUser,
+    @Param('organizationId') organizationId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        fileIsRequired: true,
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_DOCUMENT_UPLOAD_BYTES }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<{ fileUrl: string }> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { userId: req.user.userId, organizationId },
+      select: { id: true },
+    });
+    if (!member) throw new ForbiddenException();
+    return this.documentsService.uploadAttachment(
+      organizationId,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
   }
 
   // POST /api/organizations/:orgId/documents

@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { S3Service } from '../utils/s3.service';
 import { ApiCode } from '../common/api-codes.enum';
 import {
   CreateDocumentDto,
@@ -12,9 +17,21 @@ import {
   UpdateDocumentDto,
 } from './documents.dto';
 
+const DOCUMENT_UPLOAD_MIME = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3: S3Service,
+  ) {}
 
   // ── Helpers ──────────────────────────────────────────
 
@@ -53,6 +70,27 @@ export class DocumentsService {
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
     };
+  }
+
+  async uploadAttachment(
+    organizationId: string,
+    buffer: Buffer,
+    originalName: string,
+    mimetype: string,
+  ): Promise<{ fileUrl: string }> {
+    if (!DOCUMENT_UPLOAD_MIME.has(mimetype)) {
+      throw new BadRequestException(
+        'Tipo de arquivo não permitido. Use PDF, imagem (JPEG, PNG, WebP) ou Word.',
+      );
+    }
+    const prefix = `organizations/${organizationId}/documents`;
+    const fileUrl = await this.s3.uploadFile(
+      buffer,
+      originalName,
+      mimetype,
+      prefix,
+    );
+    return { fileUrl };
   }
 
   /** Verifica que o vehicle pertence à org (lança NotFoundException se não). */
