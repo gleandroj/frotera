@@ -152,8 +152,13 @@ export function DateTimePicker({
   };
 
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch", className)}>
-      <div className="w-full min-w-[13rem] flex-1 sm:min-w-[15rem]">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4",
+        className,
+      )}
+    >
+      <div className="min-w-0 w-full flex-1">
         <DatePicker
           value={datePart}
           onChange={(d) => setParts(d, timePart)}
@@ -161,7 +166,7 @@ export function DateTimePicker({
           className="w-full"
         />
       </div>
-      <div className="flex w-full min-w-0 shrink-0 items-center gap-2 sm:w-[9.5rem]">
+      <div className="flex w-full min-w-0 shrink-0 items-center gap-2 sm:w-[10.25rem] sm:min-w-[10.25rem] sm:max-w-[10.25rem]">
         <span className="text-muted-foreground whitespace-nowrap text-sm sm:sr-only">
           {t("common.calendar.time")}
         </span>
