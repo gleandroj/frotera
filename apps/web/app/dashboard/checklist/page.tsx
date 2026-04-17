@@ -513,7 +513,7 @@ export default function ChecklistPage() {
       >
         <SheetContent
           side="right"
-          className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[600px]"
+          className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
         >
           <SheetHeader className="shrink-0 border-b px-6 py-4 pr-12 text-left">
             <SheetTitle>{fillTemplateTitle}</SheetTitle>
