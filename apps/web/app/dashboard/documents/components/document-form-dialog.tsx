@@ -6,12 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -205,20 +204,20 @@ export function DocumentFormDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
-        <div className="relative">
-          <DialogHeader>
-            <DialogTitle>
-              {isEdit ? t('documents.editDocument') : t('documents.createDocument')}
-            </DialogTitle>
-          </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[520px]">
+        <SheetHeader className="border-b px-6 pb-4 pt-6">
+          <SheetTitle>
+            {isEdit ? t('documents.editDocument') : t('documents.createDocument')}
+          </SheetTitle>
+        </SheetHeader>
 
-          <Form {...form}>
+        <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-5"
+            className="flex flex-1 flex-col overflow-hidden"
           >
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             {/* Veículo */}
             <FormField
               control={form.control}
@@ -415,8 +414,9 @@ export function DocumentFormDialog({
                 </FormItem>
               )}
             />
+            </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2 border-t bg-background px-6 py-4">
               <Button
                 type="button"
                 variant="outline"
@@ -428,13 +428,12 @@ export function DocumentFormDialog({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? t('common.saving') : t('common.save')}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-          <DrawerStackParentDim show={vehicleFormOpen} />
-        </div>
-      </DialogContent>
-    </Dialog>
+        <DrawerStackParentDim show={vehicleFormOpen} />
+      </SheetContent>
+    </Sheet>
 
     <VehicleFormDialog
       open={vehicleFormOpen}
