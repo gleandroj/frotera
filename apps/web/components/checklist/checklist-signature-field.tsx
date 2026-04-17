@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import {
   stringifySignaturePayload,
   type ChecklistSignaturePayload,
 } from "@/lib/checklist-signature";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export type ChecklistSignatureFieldProps = {
   value: string;
@@ -23,6 +25,7 @@ export type ChecklistSignatureFieldProps = {
     tabText?: string;
     tabDraw?: string;
     textPlaceholder?: string;
+    apply?: string;
     clearDraw?: string;
     saveDraw?: string;
     savingDraw?: string;
@@ -114,6 +117,8 @@ export function ChecklistSignatureField({
   uploadPngBlob,
   labels = {},
 }: ChecklistSignatureFieldProps) {
+  const { t } = useTranslation();
+  const textInputId = useId();
   const parsed = React.useMemo(() => parseChecklistSignaturePayload(value), [value]);
   const legacyDataUrl = value?.startsWith("data:image") ? value : null;
 
@@ -127,6 +132,8 @@ export function ChecklistSignatureField({
   );
   const [hasPendingDraw, setHasPendingDraw] = React.useState(false);
   const pendingDataUrl = React.useRef<string | null>(null);
+  const [textApplyError, setTextApplyError] = React.useState<string | null>(null);
+  const [textAppliedOk, setTextAppliedOk] = React.useState(false);
 
   React.useEffect(() => {
     const p = parseChecklistSignaturePayload(value);
@@ -139,10 +146,14 @@ export function ChecklistSignatureField({
     }
   }, [value]);
 
-  const emitTextPayload = (t: string) => {
-    const trimmed = t.trim();
+  const emitTextPayload = (raw: string, opts?: { allowEmpty?: boolean }) => {
+    const trimmed = raw.trim();
     if (!trimmed) {
-      onChange("");
+      if (opts?.allowEmpty) {
+        onChange("");
+        setTextApplyError(null);
+        setTextAppliedOk(false);
+      }
       return;
     }
     const payload: Omit<ChecklistSignaturePayload, "server"> = {
@@ -153,6 +164,18 @@ export function ChecklistSignatureField({
       capturedAt: new Date().toISOString(),
     };
     onChange(stringifySignaturePayload(payload));
+    setTextApplyError(null);
+    setTextAppliedOk(true);
+  };
+
+  const applyTextClick = () => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setTextApplyError(t("checklist.signatureEmptyApply"));
+      setTextAppliedOk(false);
+      return;
+    }
+    emitTextPayload(text);
   };
 
   const commitDrawFromCanvas = (dataUrl: string) => {
@@ -207,7 +230,7 @@ export function ChecklistSignatureField({
           const next = v as "text" | "draw";
           setTab(next);
           if (next === "text") {
-            emitTextPayload(text);
+            emitTextPayload(text, { allowEmpty: true });
           }
         }}
       >
@@ -220,27 +243,33 @@ export function ChecklistSignatureField({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="text" className="space-y-2 pt-2">
-          <Label className="text-muted-foreground text-xs">
+          <Label htmlFor={textInputId} className="text-muted-foreground text-xs">
             {labels.textPlaceholder ?? "Nome completo ou texto de aceite"}
           </Label>
           <Input
+            id={textInputId}
+            dir="ltr"
             placeholder={labels.textPlaceholder ?? "Nome completo ou texto de aceite"}
             value={text}
             disabled={disabled}
+            className="text-left"
             onChange={(e) => {
               const v = e.target.value;
               setText(v);
+              setTextApplyError(null);
+              setTextAppliedOk(false);
             }}
-            onBlur={() => emitTextPayload(text)}
+            onBlur={() => emitTextPayload(text, { allowEmpty: true })}
           />
-          <Button
-            type="button"
-            size="sm"
-            disabled={disabled}
-            onClick={() => emitTextPayload(text)}
-          >
-            Aplicar
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" disabled={disabled} onClick={applyTextClick}>
+              {labels.apply ?? "Aplicar"}
+            </Button>
+            {textAppliedOk && !textApplyError && (
+              <span className="text-xs text-green-600">{t("checklist.signatureApplied")}</span>
+            )}
+          </div>
+          {textApplyError && <p className="text-xs text-destructive">{textApplyError}</p>}
         </TabsContent>
         <TabsContent value="draw" className="space-y-3 pt-2">
           <SignatureCanvas onStrokeCommitted={commitDrawFromCanvas} disabled={disabled} />

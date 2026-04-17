@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -40,6 +40,7 @@ import {
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ChecklistFillForm } from "./checklist-fill-form";
 
 type TabType = "templates" | "entries";
 
@@ -59,7 +67,8 @@ const TEMPLATE_LIST_INACTIVE = "inactive";
 export default function ChecklistPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { currentOrganization } = useAuth();
+  const searchParams = useSearchParams();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
 
   const [activeTab, setActiveTab] = useState<TabType>("templates");
@@ -79,8 +88,15 @@ export default function ChecklistPage() {
   const [templateListFilter, setTemplateListFilter] = useState<
     typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE
   >(TEMPLATE_LIST_ACTIVE);
+  const [fillOpen, setFillOpen] = useState(false);
+  const [fillTemplateId, setFillTemplateId] = useState<string | null>(null);
 
   const orgId = currentOrganization?.id;
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "entries") setActiveTab("entries");
+  }, [searchParams]);
 
   const filteredTemplates = useMemo(() => {
     if (templateListFilter === TEMPLATE_LIST_ACTIVE) {
@@ -91,6 +107,11 @@ export default function ChecklistPage() {
     }
     return templates;
   }, [templates, templateListFilter]);
+
+  const fillTemplateTitle = useMemo(() => {
+    if (!fillTemplateId) return t("checklist.fillChecklist");
+    return templates.find((tpl) => tpl.id === fillTemplateId)?.name ?? t("checklist.fillChecklist");
+  }, [fillTemplateId, templates, t]);
 
   const loadTemplates = async () => {
     if (!orgId) return;
@@ -202,7 +223,8 @@ export default function ChecklistPage() {
               title={!template.active ? t("checklist.templateInactiveHint") : undefined}
               onClick={() => {
                 if (!template.active) return;
-                router.push(`/dashboard/checklist/fill/${template.id}`);
+                setFillTemplateId(template.id);
+                setFillOpen(true);
               }}
             >
               {t("checklist.fillChecklist")}
@@ -352,35 +374,6 @@ export default function ChecklistPage() {
         </TabsList>
 
         <TabsContent value="templates" className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground shrink-0">
-              {t("checklist.templateListFilter")}
-            </span>
-            <Select
-              value={templateListFilter}
-              onValueChange={(v) =>
-                setTemplateListFilter(
-                  v as typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE,
-                )
-              }
-            >
-              <SelectTrigger className="w-[min(100%,280px)] sm:w-72">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={TEMPLATE_LIST_ACTIVE}>
-                  {t("checklist.templateListFilterActive")}
-                </SelectItem>
-                <SelectItem value={TEMPLATE_LIST_INACTIVE}>
-                  {t("checklist.templateListFilterInactive")}
-                </SelectItem>
-                <SelectItem value={TEMPLATE_LIST_ALL}>
-                  {t("checklist.templateListFilterAll")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : templates.length === 0 ? (
@@ -396,6 +389,32 @@ export default function ChecklistPage() {
               filterPlaceholder={t("common.search")}
               filterColumnId="name"
               noResultsLabel={t("checklist.noTemplatesMatchFilter")}
+              toolbarLeading={
+                <Select
+                  value={templateListFilter}
+                  aria-label={t("checklist.templateListFilter")}
+                  onValueChange={(v) =>
+                    setTemplateListFilter(
+                      v as typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE,
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-48 shrink-0 sm:w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TEMPLATE_LIST_ACTIVE}>
+                      {t("checklist.templateListFilterActive")}
+                    </SelectItem>
+                    <SelectItem value={TEMPLATE_LIST_INACTIVE}>
+                      {t("checklist.templateListFilterInactive")}
+                    </SelectItem>
+                    <SelectItem value={TEMPLATE_LIST_ALL}>
+                      {t("checklist.templateListFilterAll")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              }
             />
           )}
         </TabsContent>
@@ -422,18 +441,24 @@ export default function ChecklistPage() {
                 <SelectItem value="INCOMPLETE">{t("checklist.entryStatus.INCOMPLETE")}</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-36"
-            />
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-36"
-            />
+            <div className="flex flex-col gap-1">
+              <span className="text-muted-foreground text-xs">{t("common.from")}</span>
+              <DatePicker
+                value={dateFrom || undefined}
+                onChange={(v) => setDateFrom(v)}
+                className="w-40"
+                placeholder={t("common.calendar.pickDate")}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-muted-foreground text-xs">{t("common.to")}</span>
+              <DatePicker
+                value={dateTo || undefined}
+                onChange={(v) => setDateTo(v)}
+                className="w-40"
+                placeholder={t("common.calendar.pickDate")}
+              />
+            </div>
           </div>
 
           {loading ? (
@@ -478,6 +503,46 @@ export default function ChecklistPage() {
         organizationId={orgId}
         onSuccess={loadTemplates}
       />
+
+      <Sheet
+        open={fillOpen}
+        onOpenChange={(open) => {
+          setFillOpen(open);
+          if (!open) setFillTemplateId(null);
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[600px]"
+        >
+          <SheetHeader className="shrink-0 border-b px-6 py-4 pr-12 text-left">
+            <SheetTitle>{fillTemplateTitle}</SheetTitle>
+          </SheetHeader>
+          {fillTemplateId && orgId && (
+            <ChecklistFillForm
+              key={fillTemplateId}
+              templateId={fillTemplateId}
+              organizationId={orgId}
+              selectedCustomerId={selectedCustomerId}
+              variant="sheet"
+              onSuccess={() => {
+                setFillOpen(false);
+                setFillTemplateId(null);
+                setActiveTab("entries");
+                void loadEntries();
+              }}
+              onCancel={() => {
+                setFillOpen(false);
+                setFillTemplateId(null);
+              }}
+              onLoadError={() => {
+                setFillOpen(false);
+                setFillTemplateId(null);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

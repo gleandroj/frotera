@@ -41,6 +41,8 @@ export interface DataTableProps<TData, TValue> {
   filterColumnId?: string;
   /** Optional: "no results" message when filtered/empty. Defaults to translated dataTable.noResults. */
   noResultsLabel?: string;
+  /** Rendered before the search input in the toolbar row (e.g. extra filters). */
+  toolbarLeading?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -49,6 +51,7 @@ export function DataTable<TData, TValue>({
   filterPlaceholder,
   filterColumnId,
   noResultsLabel,
+  toolbarLeading,
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation();
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -76,45 +79,48 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex w-full flex-wrap items-center gap-2">
+        {toolbarLeading}
         {filterColumn && filterPlaceholder && (
           <Input
             placeholder={filterPlaceholder}
             value={(filterColumn.getFilterValue() as string) ?? ""}
             onChange={(event) => filterColumn.setFilterValue(event.target.value)}
-            className="max-w-sm"
+            className="min-w-[12rem] flex-1 max-w-md"
           />
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto h-8">
-              <Settings2 className="mr-2 h-4 w-4" />
-              {t("dataTable.view")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[150px]">
-            {table
-              .getAllColumns()
-              .filter(
-                (column) =>
-                  typeof column.accessorFn !== "undefined" && column.getCanHide()
-              )
-              .map((column) => {
-              const labelKey = (column.columnDef.meta as { labelKey?: string } | undefined)?.labelKey;
-              const label = labelKey ? t(labelKey) : column.id;
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {label}
-                </DropdownMenuCheckboxItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="ml-auto flex shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8">
+                <Settings2 className="mr-2 h-4 w-4" />
+                {t("dataTable.view")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[150px]">
+              {table
+                .getAllColumns()
+                .filter(
+                  (column) =>
+                    typeof column.accessorFn !== "undefined" && column.getCanHide()
+                )
+                .map((column) => {
+                  const labelKey = (column.columnDef.meta as { labelKey?: string } | undefined)?.labelKey;
+                  const label = labelKey ? t(labelKey) : column.id;
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {label}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border">

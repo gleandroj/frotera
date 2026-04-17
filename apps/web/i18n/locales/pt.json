@@ -892,6 +892,9 @@
     "signatureLegacy": "Assinatura (formato antigo)",
     "itemCount": "{{count}} item(s)",
     "requiredItemsMissing": "Preencha todos os itens obrigatórios.",
+    "fieldRequired": "Este campo é obrigatório.",
+    "signatureApplied": "Texto aplicado.",
+    "signatureEmptyApply": "Introduza texto antes de aplicar.",
     "confirmDeleteTemplate": {
       "title": "Remover este template?",
       "description": "O comportamento depende de haver ou não entradas de checklist já registadas com este template:\n\n• Se não houver nenhuma entrada, o template será apagado de forma permanente.\n\n• Se já existir pelo menos uma entrada, o template não pode ser apagado por causa do histórico: ele ficará inativo (deixa de aparecer em listagens “só ativos” e não poderá ser preenchido) até você o reativar na opção Editar.\n\nQuer continuar?",
