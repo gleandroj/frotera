@@ -55,7 +55,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     permissions: [
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ALL' },
-      { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
+      { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE'],        scope: 'ALL' },
       { module: 'REPORTS',   actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'DRIVERS',   actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
