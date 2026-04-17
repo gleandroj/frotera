@@ -76,7 +76,7 @@ export class DriversService {
       },
     });
 
-    return rows.map(this.toResponse);
+    return rows.map(this.toResponse.bind(this));
   }
 
   // ── CREATE ────────────────────────────────────────────────────────────────
