@@ -6,12 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +45,7 @@ interface CustomerFormDialogProps {
   customer: Customer | null;
   organizationId: string;
   customers: Customer[];
-  onSuccess: () => void;
+  onSuccess: (created?: Customer) => void;
   defaultParentId?: string | null;
 }
 
@@ -112,14 +111,15 @@ export function CustomerFormDialog({
           parentId: values.parentId || null,
         });
         toast.success(t("customers.updated"));
+        onSuccess();
       } else {
-        await customersAPI.create(organizationId, {
+        const { data: created } = await customersAPI.create(organizationId, {
           name: values.name,
           parentId: values.parentId || undefined,
         });
         toast.success(t("customers.created"));
+        onSuccess(created);
       }
-      onSuccess();
       onOpenChange(false);
     } catch (err: unknown) {
       const msg =
@@ -130,137 +130,139 @@ export function CustomerFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px]">
-        <DialogHeader>
-          <DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[440px]">
+        <SheetHeader className="border-b px-6 pb-4 pt-6">
+          <SheetTitle>
             {isEdit ? t("customers.editCustomer") : t("customers.createCustomer")}
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
+            className="flex flex-1 flex-col overflow-hidden"
           >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("common.name")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t("customers.namePlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("common.name")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t("customers.namePlaceholder")}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="parentId"
-              render={() => (
-                <FormItem>
-                  <FormLabel>{t("customers.parent")}</FormLabel>
-                  <Popover
-                    open={parentComboboxOpen}
-                    onOpenChange={setParentComboboxOpen}
-                  >
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "w-full justify-between font-normal h-10",
-                            !parentId && "text-muted-foreground"
-                          )}
-                        >
-                          <span className="truncate">
-                            {parentId && selectedParent ? (
-                              <span
-                                style={{
-                                  paddingLeft: (selectedParent.depth ?? 0) * 12,
-                                }}
-                                className="inline-block"
-                              >
-                                {selectedParent.name}
-                              </span>
-                            ) : (
-                              t("customers.noParent")
-                            )}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[var(--radix-popover-trigger-width)] p-0"
-                      align="start"
+              <FormField
+                control={form.control}
+                name="parentId"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>{t("customers.parent")}</FormLabel>
+                    <Popover
+                      open={parentComboboxOpen}
+                      onOpenChange={setParentComboboxOpen}
                     >
-                      <Command
-                        filter={(value, search) =>
-                          !search
-                            ? 1
-                            : value.toLowerCase().includes(search.toLowerCase())
-                              ? 1
-                              : 0
-                        }
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "h-10 w-full justify-between font-normal",
+                              !parentId && "text-muted-foreground"
+                            )}
+                          >
+                            <span className="truncate">
+                              {parentId && selectedParent ? (
+                                <span
+                                  style={{
+                                    paddingLeft: (selectedParent.depth ?? 0) * 12,
+                                  }}
+                                  className="inline-block"
+                                >
+                                  {selectedParent.name}
+                                </span>
+                              ) : (
+                                t("customers.noParent")
+                              )}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
                       >
-                        <CommandInput
-                          placeholder={t("customers.filterParent")}
-                          className="h-9"
-                        />
-                        <CommandList>
-                          <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem
-                              value={t("customers.noParent")}
-                              onSelect={() => {
-                                form.setValue("parentId", "", {
-                                  shouldValidate: true,
-                                });
-                                setParentComboboxOpen(false);
-                              }}
-                            >
-                              {t("customers.noParent")}
-                            </CommandItem>
-                            {parentOptions.map((c) => (
+                        <Command
+                          filter={(value, search) =>
+                            !search
+                              ? 1
+                              : value.toLowerCase().includes(search.toLowerCase())
+                                ? 1
+                                : 0
+                          }
+                        >
+                          <CommandInput
+                            placeholder={t("customers.filterParent")}
+                            className="h-9"
+                          />
+                          <CommandList>
+                            <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                            <CommandGroup>
                               <CommandItem
-                                key={c.id}
-                                value={c.name}
+                                value={t("customers.noParent")}
                                 onSelect={() => {
-                                  form.setValue("parentId", c.id, {
+                                  form.setValue("parentId", "", {
                                     shouldValidate: true,
                                   });
                                   setParentComboboxOpen(false);
                                 }}
                               >
-                                <span
-                                  style={{
-                                    paddingLeft: (c.depth ?? 0) * 12,
-                                  }}
-                                  className="inline-block"
-                                >
-                                  {c.name}
-                                </span>
+                                {t("customers.noParent")}
                               </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                              {parentOptions.map((c) => (
+                                <CommandItem
+                                  key={c.id}
+                                  value={c.name}
+                                  onSelect={() => {
+                                    form.setValue("parentId", c.id, {
+                                      shouldValidate: true,
+                                    });
+                                    setParentComboboxOpen(false);
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      paddingLeft: (c.depth ?? 0) * 12,
+                                    }}
+                                    className="inline-block"
+                                  >
+                                    {c.name}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2 border-t bg-background px-6 py-4">
               <Button
                 type="button"
                 variant="outline"
@@ -276,10 +278,10 @@ export function CustomerFormDialog({
                     ? t("common.save")
                     : t("customers.createCustomer")}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

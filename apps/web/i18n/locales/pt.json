@@ -56,7 +56,10 @@
     "copied": "Copiado",
     "refresh": "Atualizar",
     "continue": "Continuar",
-    "noResults": "Nenhum resultado."
+    "noResults": "Nenhum resultado.",
+    "createNewVehicle": "Novo veículo",
+    "createNewDriver": "Novo motorista",
+    "createNewCompany": "Nova empresa"
   },
   "dataTable": {
     "view": "Exibir",

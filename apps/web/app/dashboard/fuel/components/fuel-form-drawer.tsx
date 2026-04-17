@@ -40,6 +40,10 @@ import {
 } from "@/lib/frontend/api-client";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
+import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 const FUEL_TYPES: FuelType[] = ["GASOLINE", "ETHANOL", "DIESEL", "ELECTRIC", "GNV"];
 
@@ -81,9 +85,12 @@ export function FuelFormDrawer({
   onSuccess,
 }: FuelFormDrawerProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
+  const { selectedCustomerId } = useAuth();
   const [vehicles, setVehicles] = useState<Array<{ id: string; name?: string; plate?: string }>>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
 
   const isEditing = !!log;
 
@@ -150,6 +157,15 @@ export function FuelFormDrawer({
   const liters = form.watch("liters") || 0;
   const pricePerLiter = form.watch("pricePerLiter") || 0;
   const totalCost = liters * pricePerLiter;
+  const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
+
+  const refreshVehiclesSilently = () => {
+    if (!organizationId) return;
+    vehiclesAPI
+      .list(organizationId)
+      .then((res) => setVehicles(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setVehicles([]));
+  };
 
   const handleSubmit = async (data: FormData) => {
     try {
@@ -171,6 +187,7 @@ export function FuelFormDrawer({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-[600px]">
         <SheetHeader className="border-b px-6 py-4">
@@ -193,24 +210,31 @@ export function FuelFormDrawer({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("fuel.fields.vehicle")}</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
+                    <ResourceSelectCreateRow
+                      showCreate={canCreateVehicle}
+                      createLabel={t("common.createNewVehicle")}
+                      onCreateClick={() => setVehicleFormOpen(true)}
                       disabled={submitting || loadingVehicles}
                     >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("fuel.form.selectVehicle")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.name || "N/A"} ({v.plate || "N/A"})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={submitting || loadingVehicles}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={t("fuel.form.selectVehicle")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vehicles.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.name || "N/A"} ({v.plate || "N/A"})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </ResourceSelectCreateRow>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -447,5 +471,20 @@ export function FuelFormDrawer({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+
+    <VehicleFormDialog
+      open={vehicleFormOpen}
+      onOpenChange={setVehicleFormOpen}
+      vehicle={null}
+      organizationId={organizationId}
+      defaultCustomerId={selectedCustomerId}
+      onSuccess={(created) => {
+        refreshVehiclesSilently();
+        if (created?.id) {
+          form.setValue("vehicleId", created.id, { shouldValidate: true });
+        }
+      }}
+    />
+    </>
   );
 }

@@ -56,6 +56,9 @@ import {
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
+import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 
 const TRACKER_MODELS = [
   { value: "X12_GT06", label: "X12 GT06" },
@@ -69,7 +72,7 @@ interface VehicleFormDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicle: Vehicle | null;
   organizationId: string;
-  onSuccess: () => void;
+  onSuccess: (created?: Vehicle) => void;
   defaultCustomerId?: string | null;
 }
 
@@ -158,6 +161,7 @@ export function VehicleFormDialog({
   defaultCustomerId,
 }: VehicleFormDialogProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const isEdit = !!vehicle;
 
   const [devices, setDevices] = useState<TrackerDeviceOption[]>([]);
@@ -165,6 +169,7 @@ export function VehicleFormDialog({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(buildSchema(t, isEdit)),
@@ -253,11 +258,16 @@ export function VehicleFormDialog({
     try {
       if (isEdit) {
         await vehiclesAPI.update(organizationId, vehicle!.id, payload as UpdateVehiclePayload);
+        toast.success(t("vehicles.toastUpdated"));
+        onSuccess();
       } else {
-        await vehiclesAPI.create(organizationId, payload as CreateVehiclePayload);
+        const { data: created } = await vehiclesAPI.create(
+          organizationId,
+          payload as CreateVehiclePayload
+        );
+        toast.success(t("vehicles.toastCreated"));
+        onSuccess(created);
       }
-      toast.success(isEdit ? t("vehicles.toastUpdated") : t("vehicles.toastCreated"));
-      onSuccess();
       onOpenChange(false);
     } catch (err: unknown) {
       const message =
@@ -270,8 +280,21 @@ export function VehicleFormDialog({
   const customerRequired = !isEdit;
   const customerPlaceholder = customerRequired ? t("vehicles.selectClient") : t("customers.noParent");
   const selectedCustomer = customers.find((c) => c.id === customerId);
+  const canCreateCompany = can(Module.COMPANIES, Action.CREATE);
+
+  const refreshCustomersList = () => {
+    if (!organizationId) return;
+    customersAPI
+      .list(organizationId)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCustomers([]));
+  };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[640px] flex flex-col p-0">
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
@@ -443,98 +466,105 @@ export function VehicleFormDialog({
                         {t("vehicles.customer")}
                         {customerRequired && " *"}
                       </FormLabel>
-                      <Popover
-                        open={customerComboboxOpen}
-                        onOpenChange={setCustomerComboboxOpen}
+                      <ResourceSelectCreateRow
+                        showCreate={canCreateCompany}
+                        createLabel={t("common.createNewCompany")}
+                        onCreateClick={() => setCustomerFormOpen(true)}
+                        disabled={loadingCustomers}
                       >
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              disabled={loadingCustomers}
-                              className={cn(
-                                "w-full justify-between font-normal h-10",
-                                !customerId && "text-muted-foreground"
-                              )}
-                            >
-                              <span className="truncate">
-                                {customerId && selectedCustomer ? (
-                                  <span
-                                    style={{
-                                      paddingLeft: (selectedCustomer.depth ?? 0) * 12,
-                                    }}
-                                    className="inline-block"
-                                  >
-                                    {selectedCustomer.name}
-                                  </span>
-                                ) : (
-                                  customerPlaceholder
-                                )}
-                              </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[var(--radix-popover-trigger-width)] p-0"
-                          align="start"
+                        <Popover
+                          open={customerComboboxOpen}
+                          onOpenChange={setCustomerComboboxOpen}
                         >
-                          <Command
-                            filter={(value, search) =>
-                              !search
-                                ? 1
-                                : value.toLowerCase().includes(search.toLowerCase())
-                                  ? 1
-                                  : 0
-                            }
-                          >
-                            <CommandInput
-                              placeholder={t("vehicles.filterClient")}
-                              className="h-9"
-                            />
-                            <CommandList>
-                              <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-                              <CommandGroup>
-                                {!customerRequired && (
-                                  <CommandItem
-                                    value={t("customers.noParent")}
-                                    onSelect={() => {
-                                      form.setValue("customerId", "", {
-                                        shouldValidate: true,
-                                      });
-                                      setCustomerComboboxOpen(false);
-                                    }}
-                                  >
-                                    {t("customers.noParent")}
-                                  </CommandItem>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={loadingCustomers}
+                                className={cn(
+                                  "w-full justify-between font-normal h-10",
+                                  !customerId && "text-muted-foreground"
                                 )}
-                                {customers.map((c) => (
-                                  <CommandItem
-                                    key={c.id}
-                                    value={c.name}
-                                    onSelect={() => {
-                                      form.setValue("customerId", c.id, {
-                                        shouldValidate: true,
-                                      });
-                                      setCustomerComboboxOpen(false);
-                                    }}
-                                  >
+                              >
+                                <span className="truncate">
+                                  {customerId && selectedCustomer ? (
                                     <span
                                       style={{
-                                        paddingLeft: (c.depth ?? 0) * 12,
+                                        paddingLeft: (selectedCustomer.depth ?? 0) * 12,
                                       }}
                                       className="inline-block"
                                     >
-                                      {c.name}
+                                      {selectedCustomer.name}
                                     </span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                                  ) : (
+                                    customerPlaceholder
+                                  )}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[var(--radix-popover-trigger-width)] p-0"
+                            align="start"
+                          >
+                            <Command
+                              filter={(value, search) =>
+                                !search
+                                  ? 1
+                                  : value.toLowerCase().includes(search.toLowerCase())
+                                    ? 1
+                                    : 0
+                              }
+                            >
+                              <CommandInput
+                                placeholder={t("vehicles.filterClient")}
+                                className="h-9"
+                              />
+                              <CommandList>
+                                <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                                <CommandGroup>
+                                  {!customerRequired && (
+                                    <CommandItem
+                                      value={t("customers.noParent")}
+                                      onSelect={() => {
+                                        form.setValue("customerId", "", {
+                                          shouldValidate: true,
+                                        });
+                                        setCustomerComboboxOpen(false);
+                                      }}
+                                    >
+                                      {t("customers.noParent")}
+                                    </CommandItem>
+                                  )}
+                                  {customers.map((c) => (
+                                    <CommandItem
+                                      key={c.id}
+                                      value={c.name}
+                                      onSelect={() => {
+                                        form.setValue("customerId", c.id, {
+                                          shouldValidate: true,
+                                        });
+                                        setCustomerComboboxOpen(false);
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          paddingLeft: (c.depth ?? 0) * 12,
+                                        }}
+                                        className="inline-block"
+                                      >
+                                        {c.name}
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </ResourceSelectCreateRow>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -830,5 +860,21 @@ export function VehicleFormDialog({
         </Form>
       </SheetContent>
     </Sheet>
+
+    <CustomerFormDialog
+      open={customerFormOpen}
+      onOpenChange={setCustomerFormOpen}
+      customer={null}
+      organizationId={organizationId}
+      customers={customers}
+      defaultParentId={null}
+      onSuccess={(created) => {
+        refreshCustomersList();
+        if (created?.id) {
+          form.setValue("customerId", created.id, { shouldValidate: true });
+        }
+      }}
+    />
+    </>
   );
 }

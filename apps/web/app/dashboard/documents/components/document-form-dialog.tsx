@@ -47,6 +47,10 @@ import { Separator } from '@/components/ui/separator';
 import { ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ResourceSelectCreateRow } from '@/components/resource-select-create-row';
+import { VehicleFormDialog } from '@/app/dashboard/vehicles/vehicle-form-dialog';
+import { usePermissions, Module, Action } from '@/lib/hooks/use-permissions';
+import { useAuth } from '@/lib/hooks/use-auth';
 import {
   documentsAPI,
   vehiclesAPI,
@@ -102,11 +106,14 @@ export function DocumentFormDialog({
   onSuccess,
 }: DocumentFormDialogProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
+  const { selectedCustomerId } = useAuth();
   const isEdit = !!document;
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleComboboxOpen, setVehicleComboboxOpen] = useState(false);
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
 
   const form = useForm<DocumentFormValues>({
     resolver: zodResolver(buildSchema(t)),
@@ -154,6 +161,16 @@ export function DocumentFormDialog({
       .finally(() => setLoadingVehicles(false));
   }, [open, organizationId, t]);
 
+  const refreshVehiclesSilently = () => {
+    if (!organizationId) return;
+    vehiclesAPI
+      .list(organizationId)
+      .then((res) => setVehicles(res.data ?? []))
+      .catch(() => {});
+  };
+
+  const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
+
   const handleSubmit = async (values: DocumentFormValues) => {
     try {
       if (isEdit) {
@@ -186,6 +203,7 @@ export function DocumentFormDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
@@ -206,63 +224,70 @@ export function DocumentFormDialog({
               render={() => (
                 <FormItem>
                   <FormLabel>{t('documents.fields.vehicle')} *</FormLabel>
-                  <Popover
-                    open={vehicleComboboxOpen}
-                    onOpenChange={setVehicleComboboxOpen}
+                  <ResourceSelectCreateRow
+                    showCreate={!isEdit && canCreateVehicle}
+                    createLabel={t('common.createNewVehicle')}
+                    onCreateClick={() => setVehicleFormOpen(true)}
+                    disabled={isEdit || loadingVehicles}
                   >
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={isEdit || loadingVehicles}
-                          className={cn(
-                            'w-full justify-between font-normal h-10',
-                            !vehicleId && 'text-muted-foreground',
-                          )}
-                        >
-                          <span className="truncate">
-                            {loadingVehicles
-                              ? t('common.loading')
-                              : selectedVehicle
-                                ? `${selectedVehicle.plate || selectedVehicle.name || 'N/A'}`
-                                : t('documents.selectVehicle')}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[var(--radix-popover-trigger-width)] p-0"
-                      align="start"
+                    <Popover
+                      open={vehicleComboboxOpen}
+                      onOpenChange={setVehicleComboboxOpen}
                     >
-                      <Command>
-                        <CommandInput
-                          placeholder={t('documents.filterVehicle')}
-                          className="h-9"
-                        />
-                        <CommandList>
-                          <CommandEmpty>{t('common.notAvailable')}</CommandEmpty>
-                          <CommandGroup>
-                            {vehicles.map((v) => (
-                              <CommandItem
-                                key={v.id}
-                                value={v.plate || v.name || v.id}
-                                onSelect={() => {
-                                  form.setValue('vehicleId', v.id, {
-                                    shouldValidate: true,
-                                  });
-                                  setVehicleComboboxOpen(false);
-                                }}
-                              >
-                                {v.plate || v.name || 'N/A'}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            disabled={isEdit || loadingVehicles}
+                            className={cn(
+                              'w-full justify-between font-normal h-10',
+                              !vehicleId && 'text-muted-foreground',
+                            )}
+                          >
+                            <span className="truncate">
+                              {loadingVehicles
+                                ? t('common.loading')
+                                : selectedVehicle
+                                  ? `${selectedVehicle.plate || selectedVehicle.name || 'N/A'}`
+                                  : t('documents.selectVehicle')}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput
+                            placeholder={t('documents.filterVehicle')}
+                            className="h-9"
+                          />
+                          <CommandList>
+                            <CommandEmpty>{t('common.notAvailable')}</CommandEmpty>
+                            <CommandGroup>
+                              {vehicles.map((v) => (
+                                <CommandItem
+                                  key={v.id}
+                                  value={v.plate || v.name || v.id}
+                                  onSelect={() => {
+                                    form.setValue('vehicleId', v.id, {
+                                      shouldValidate: true,
+                                    });
+                                    setVehicleComboboxOpen(false);
+                                  }}
+                                >
+                                  {v.plate || v.name || 'N/A'}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </ResourceSelectCreateRow>
                   <FormMessage />
                 </FormItem>
               )}
@@ -406,5 +431,20 @@ export function DocumentFormDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    <VehicleFormDialog
+      open={vehicleFormOpen}
+      onOpenChange={setVehicleFormOpen}
+      vehicle={null}
+      organizationId={organizationId}
+      defaultCustomerId={selectedCustomerId}
+      onSuccess={(created) => {
+        refreshVehiclesSilently();
+        if (created?.id) {
+          form.setValue('vehicleId', created.id, { shouldValidate: true });
+        }
+      }}
+    />
+    </>
   );
 }

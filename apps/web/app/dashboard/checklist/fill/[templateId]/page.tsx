@@ -32,6 +32,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
+import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
+import { DriverFormDialog } from "@/app/dashboard/drivers/driver-form-dialog";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 
 // ── SignaturePad ───────────────────────────────────────────────────────────────
 
@@ -114,7 +118,8 @@ export default function FillChecklistPage({
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
 
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -125,6 +130,8 @@ export default function FillChecklistPage({
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [selectedDriver, setSelectedDriver] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [driverFormOpen, setDriverFormOpen] = useState(false);
 
   // Fetch template, vehicles, and drivers on mount
   useEffect(() => {
@@ -162,6 +169,26 @@ export default function FillChecklistPage({
 
   const handleAnswerChange = (itemId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const orgId = currentOrganization?.id;
+  const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
+  const canCreateDriver = can(Module.DRIVERS, Action.CREATE);
+
+  const refreshVehiclesSilently = () => {
+    if (!orgId) return;
+    vehiclesAPI
+      .list(orgId)
+      .then((res) => setVehicles(res.data ?? []))
+      .catch(() => setVehicles([]));
+  };
+
+  const refreshDriversSilently = () => {
+    if (!orgId) return;
+    driversAPI
+      .list(orgId)
+      .then((res) => setDrivers(res.data?.drivers ?? []))
+      .catch(() => setDrivers([]));
   };
 
   const validateRequired = (): boolean => {
@@ -264,6 +291,7 @@ export default function FillChecklistPage({
   const sortedItems = [...template.items].sort((a, b) => a.order - b.order);
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Button
@@ -291,41 +319,55 @@ export default function FillChecklistPage({
             <Label htmlFor="vehicle" className="required">
               {t("checklist.selectVehicle")} *
             </Label>
-            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-              <SelectTrigger id="vehicle">
-                <SelectValue
-                  placeholder={t("checklist.selectVehiclePlaceholder")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {vehicles.map((vehicle) => (
-                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                    {vehicle.name} ({vehicle.plate})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Driver Select */}
-          {drivers.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="driver">
-                {t("checklist.driverOptional")}
-              </Label>
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                <SelectTrigger id="driver">
-                  <SelectValue placeholder={t("checklist.driverPlaceholder")} />
+            <ResourceSelectCreateRow
+              showCreate={canCreateVehicle}
+              createLabel={t("common.createNewVehicle")}
+              onCreateClick={() => setVehicleFormOpen(true)}
+              disabled={submitting}
+            >
+              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                <SelectTrigger id="vehicle" className="w-full">
+                  <SelectValue
+                    placeholder={t("checklist.selectVehiclePlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t("checklist.noDriver")}</SelectItem>
-                  {drivers.map((driver) => (
-                    <SelectItem key={driver.id} value={driver.id}>
-                      {driver.name}
+                  {vehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                      {vehicle.name ?? "—"} ({vehicle.plate ?? "—"})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </ResourceSelectCreateRow>
+          </div>
+
+          {/* Driver Select */}
+          {(drivers.length > 0 || canCreateDriver) && (
+            <div className="space-y-2">
+              <Label htmlFor="driver">
+                {t("checklist.driverOptional")}
+              </Label>
+              <ResourceSelectCreateRow
+                showCreate={canCreateDriver}
+                createLabel={t("common.createNewDriver")}
+                onCreateClick={() => setDriverFormOpen(true)}
+                disabled={submitting}
+              >
+                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                  <SelectTrigger id="driver" className="w-full">
+                    <SelectValue placeholder={t("checklist.driverPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t("checklist.noDriver")}</SelectItem>
+                    {drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ResourceSelectCreateRow>
             </div>
           )}
 
@@ -466,5 +508,33 @@ export default function FillChecklistPage({
         </CardContent>
       </Card>
     </div>
+
+    {orgId && (
+      <>
+        <VehicleFormDialog
+          open={vehicleFormOpen}
+          onOpenChange={setVehicleFormOpen}
+          vehicle={null}
+          organizationId={orgId}
+          defaultCustomerId={selectedCustomerId}
+          onSuccess={(created) => {
+            refreshVehiclesSilently();
+            if (created?.id) setSelectedVehicle(created.id);
+          }}
+        />
+        <DriverFormDialog
+          open={driverFormOpen}
+          onOpenChange={setDriverFormOpen}
+          driver={null}
+          organizationId={orgId}
+          defaultCustomerId={selectedCustomerId}
+          onSuccess={(created) => {
+            refreshDriversSilently();
+            if (created?.id) setSelectedDriver(created.id);
+          }}
+        />
+      </>
+    )}
+    </>
   );
 }
