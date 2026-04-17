@@ -1,13 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BRAZIL_UF_SIGLAS } from '@gleandroj/shared';
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
+  Max,
 } from 'class-validator';
+
+const BRAZIL_UF_LIST = [...BRAZIL_UF_SIGLAS] as [string, ...string[]];
 
 export enum FuelTypeEnum {
   GASOLINE = 'GASOLINE',
@@ -33,9 +39,10 @@ export class CreateFuelLogDto {
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'Odometer reading in km at time of fueling' })
+  @ApiProperty({ description: 'Odometer reading in km at time of fueling (max 10 digits)' })
   @IsNumber()
   @IsPositive()
+  @Max(9_999_999_999)
   odometer: number;
 
   @ApiProperty({ description: 'Liters fueled' })
@@ -57,12 +64,24 @@ export class CreateFuelLogDto {
   @IsString()
   station?: string;
 
+  @ApiPropertyOptional({ description: 'Brazilian state (UF), e.g. RS' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== 'string') return value;
+    const s = value.trim().toUpperCase();
+    return s === '' ? undefined : s;
+  })
+  @IsString()
+  @IsIn(BRAZIL_UF_LIST)
+  state?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   city?: string;
 
-  @ApiPropertyOptional({ description: 'Receipt URL (placeholder for S3/R2)' })
+  @ApiPropertyOptional({ description: 'Receipt file URL (S3)' })
   @IsOptional()
   @IsString()
   receipt?: string;
@@ -89,6 +108,7 @@ export class UpdateFuelLogDto {
   @IsOptional()
   @IsNumber()
   @IsPositive()
+  @Max(9_999_999_999)
   odometer?: number;
 
   @ApiPropertyOptional()
@@ -117,6 +137,18 @@ export class UpdateFuelLogDto {
   @IsOptional()
   @IsString()
   city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== 'string') return value;
+    const s = value.trim().toUpperCase();
+    return s === '' ? undefined : s;
+  })
+  @IsString()
+  @IsIn(BRAZIL_UF_LIST)
+  state?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -194,6 +226,7 @@ export class FuelLogResponseDto {
   @ApiProperty() totalCost: number;
   @ApiProperty({ enum: FuelTypeEnum }) fuelType: FuelTypeEnum;
   @ApiPropertyOptional() station?: string | null;
+  @ApiPropertyOptional() state?: string | null;
   @ApiPropertyOptional() city?: string | null;
   @ApiPropertyOptional() receipt?: string | null;
   @ApiPropertyOptional() notes?: string | null;

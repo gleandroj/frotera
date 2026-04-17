@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isBrazilUfSigla } from "@gleandroj/shared";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,13 +31,38 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
+import { DateTimePicker } from "@/components/ui/date-picker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
+import {
+  formatLocaleCurrency,
+  formatLocaleDecimal,
+  getCurrencyNarrowSymbol,
+  i18nLanguageToIntlLocale,
+  parseLocalizedDecimalInput,
+} from "@/lib/locale-decimal";
 import {
   fuelAPI,
   vehiclesAPI,
   type FuelLog,
   type FuelType,
   type CreateFuelLogPayload,
+  type IbgeEstadoOption,
+  type IbgeMunicipioOption,
 } from "@/lib/frontend/api-client";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -62,7 +88,8 @@ const buildSchema = (t: (k: string) => string) =>
     date: z.string().min(1, t("fuel.form.dateRequired")),
     odometer: z
       .number({ required_error: t("fuel.form.odometerRequired") })
-      .positive(t("fuel.form.odometerPositive")),
+      .positive(t("fuel.form.odometerPositive"))
+      .max(9_999_999_999, t("fuel.form.odometerMaxDigits")),
     liters: z
       .number({ required_error: t("fuel.form.litersRequired") })
       .positive(t("fuel.form.litersPositive")),
@@ -73,7 +100,20 @@ const buildSchema = (t: (k: string) => string) =>
       required_error: t("fuel.form.fuelTypeRequired"),
     }),
     station: z.string().optional(),
-    city: z.string().optional(),
+    state: z
+      .string()
+      .optional()
+      .transform((s) => {
+        if (!s?.trim()) return undefined;
+        return s.trim().toUpperCase();
+      })
+      .refine((s) => s === undefined || isBrazilUfSigla(s), {
+        message: t("fuel.form.stateInvalid"),
+      }),
+    city: z
+      .string()
+      .optional()
+      .transform((s) => (!s?.trim() ? undefined : s.trim())),
     receipt: z.string().optional(),
     notes: z.string().optional(),
   });
@@ -85,13 +125,25 @@ export function FuelFormDrawer({
   organizationId,
   onSuccess,
 }: FuelFormDrawerProps) {
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const { can } = usePermissions();
-  const { selectedCustomerId } = useAuth();
+  const { selectedCustomerId, currentOrganization } = useAuth();
+  const intlLocale = i18nLanguageToIntlLocale(currentLanguage);
+  const currencyCode = currentOrganization?.currency ?? "BRL";
   const [vehicles, setVehicles] = useState<Array<{ id: string; name?: string; plate?: string }>>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [pricePerLiterInput, setPricePerLiterInput] = useState("");
+  const [estados, setEstados] = useState<IbgeEstadoOption[]>([]);
+  const [municipios, setMunicipios] = useState<IbgeMunicipioOption[]>([]);
+  const [loadingEstados, setLoadingEstados] = useState(false);
+  const [loadingMunicipios, setLoadingMunicipios] = useState(false);
+  const [stateComboboxOpen, setStateComboboxOpen] = useState(false);
+  const [cityComboboxOpen, setCityComboboxOpen] = useState(false);
+  const [receiptUploading, setReceiptUploading] = useState(false);
+  const receiptFileInputRef = useRef<HTMLInputElement>(null);
+  const prevStateUfRef = useRef("");
 
   const isEditing = !!log;
 
@@ -108,6 +160,7 @@ export function FuelFormDrawer({
       pricePerLiter: 0,
       fuelType: "GASOLINE",
       station: "",
+      state: "",
       city: "",
       receipt: "",
       notes: "",
@@ -116,34 +169,41 @@ export function FuelFormDrawer({
 
   useEffect(() => {
     if (!open) return;
-    form.reset(
-      log
-        ? {
-            vehicleId: log.vehicleId,
-            date: log.date,
-            odometer: log.odometer,
-            liters: log.liters,
-            pricePerLiter: log.pricePerLiter,
-            fuelType: log.fuelType,
-            station: log.station ?? "",
-            city: log.city ?? "",
-            receipt: log.receipt ?? "",
-            notes: log.notes ?? "",
-          }
-        : {
-            vehicleId: "",
-            date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-            odometer: 0,
-            liters: 0,
-            pricePerLiter: 0,
-            fuelType: "GASOLINE",
-            station: "",
-            city: "",
-            receipt: "",
-            notes: "",
-          }
+    const nextValues = log
+      ? {
+          vehicleId: log.vehicleId,
+          date: log.date,
+          odometer: log.odometer,
+          liters: log.liters,
+          pricePerLiter: log.pricePerLiter,
+          fuelType: log.fuelType,
+          station: log.station ?? "",
+          state: log.state ?? "",
+          city: log.city ?? "",
+          receipt: log.receipt ?? "",
+          notes: log.notes ?? "",
+        }
+      : {
+          vehicleId: "",
+          date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+          odometer: 0,
+          liters: 0,
+          pricePerLiter: 0,
+          fuelType: "GASOLINE" as FuelType,
+          station: "",
+          state: "",
+          city: "",
+          receipt: "",
+          notes: "",
+        };
+    form.reset(nextValues);
+    prevStateUfRef.current = (nextValues as { state?: string }).state ?? "";
+    setPricePerLiterInput(
+      formatLocaleDecimal(nextValues.pricePerLiter, intlLocale, {
+        maxFractionDigits: 3,
+      })
     );
-  }, [open, log]);
+  }, [open, log, intlLocale]);
 
   useEffect(() => {
     if (!organizationId) return;
@@ -154,6 +214,51 @@ export function FuelFormDrawer({
       .catch(() => setVehicles([]))
       .finally(() => setLoadingVehicles(false));
   }, [organizationId]);
+
+  useEffect(() => {
+    if (!open || !organizationId) return;
+    setLoadingEstados(true);
+    fuelAPI
+      .listGeoStates(organizationId)
+      .then((r) => setEstados(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setEstados([]))
+      .finally(() => setLoadingEstados(false));
+  }, [open, organizationId]);
+
+  const stateUf = form.watch("state") ?? "";
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = prevStateUfRef.current;
+    if (
+      prev &&
+      stateUf &&
+      prev !== stateUf &&
+      isBrazilUfSigla(prev) &&
+      isBrazilUfSigla(stateUf)
+    ) {
+      form.setValue("city", "", { shouldValidate: true });
+    }
+    prevStateUfRef.current = stateUf || "";
+  }, [stateUf, open, form]);
+
+  useEffect(() => {
+    if (!open || !organizationId) {
+      setMunicipios([]);
+      return;
+    }
+    const uf = (stateUf || "").trim().toUpperCase();
+    if (!isBrazilUfSigla(uf)) {
+      setMunicipios([]);
+      return;
+    }
+    setLoadingMunicipios(true);
+    fuelAPI
+      .listGeoMunicipios(organizationId, uf)
+      .then((r) => setMunicipios(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setMunicipios([]))
+      .finally(() => setLoadingMunicipios(false));
+  }, [open, organizationId, stateUf]);
 
   const liters = form.watch("liters") || 0;
   const pricePerLiter = form.watch("pricePerLiter") || 0;
@@ -244,18 +349,19 @@ export function FuelFormDrawer({
               <Separator />
 
               {/* Data e Odômetro */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,2.1fr)_minmax(0,0.95fr)] sm:items-start">
                 <FormField
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <FormLabel>{t("fuel.fields.date")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
+                        <DateTimePicker
+                          value={field.value}
+                          onChange={field.onChange}
                           disabled={submitting}
+                          className="w-full min-w-0"
                         />
                       </FormControl>
                       <FormMessage />
@@ -266,16 +372,36 @@ export function FuelFormDrawer({
                   control={form.control}
                   name="odometer"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <FormLabel>{t("fuel.fields.odometer")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.01"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={10}
+                          autoComplete="off"
                           placeholder="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          value={
+                            field.value === 0 || field.value === undefined
+                              ? ""
+                              : String(Math.min(field.value, 9_999_999_999))
+                          }
+                          onChange={(e) => {
+                            const digits = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 10);
+                            if (digits === "") {
+                              field.onChange(0);
+                              return;
+                            }
+                            field.onChange(parseInt(digits, 10));
+                          }}
                           disabled={submitting}
+                          className="font-mono tabular-nums"
                         />
                       </FormControl>
                       <FormMessage />
@@ -343,14 +469,48 @@ export function FuelFormDrawer({
                     <FormItem>
                       <FormLabel>{t("fuel.fields.pricePerLiter")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.001"
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                          disabled={submitting}
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none tabular-nums">
+                            {getCurrencyNarrowSymbol(intlLocale, currencyCode)}
+                          </span>
+                          <Input
+                            className="pl-12 font-mono tabular-nums"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            placeholder={formatLocaleDecimal(0, intlLocale, {
+                              maxFractionDigits: 3,
+                            })}
+                            name={field.name}
+                            ref={field.ref}
+                            value={pricePerLiterInput}
+                            onChange={(e) => {
+                              const next = e.target.value;
+                              setPricePerLiterInput(next);
+                              const n = parseLocalizedDecimalInput(next, intlLocale);
+                              field.onChange(
+                                n !== null && Number.isFinite(n) ? n : 0
+                              );
+                            }}
+                            onBlur={() => {
+                              const n = parseLocalizedDecimalInput(
+                                pricePerLiterInput,
+                                intlLocale
+                              );
+                              const clamped =
+                                n !== null && Number.isFinite(n)
+                                  ? Math.round(n * 1000) / 1000
+                                  : 0;
+                              field.onChange(clamped);
+                              setPricePerLiterInput(
+                                formatLocaleDecimal(clamped, intlLocale, {
+                                  maxFractionDigits: 3,
+                                })
+                              );
+                              field.onBlur();
+                            }}
+                            disabled={submitting}
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -364,30 +524,120 @@ export function FuelFormDrawer({
                   {t("fuel.fields.totalCost")}
                 </span>
                 <span className="text-lg font-semibold">
-                  {new Intl.NumberFormat("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  }).format(totalCost)}
+                  {formatLocaleCurrency(totalCost, intlLocale, currencyCode)}
                 </span>
               </div>
 
               <Separator />
 
-              {/* Posto e Cidade */}
+              {/* Posto */}
+              <FormField
+                control={form.control}
+                name="station"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("fuel.fields.station")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t("fuel.form.stationPlaceholder")}
+                        {...field}
+                        disabled={submitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Estado e cidade (IBGE) */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="station"
+                  name="state"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("fuel.fields.station")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("fuel.form.stationPlaceholder")}
-                          {...field}
-                          disabled={submitting}
-                        />
-                      </FormControl>
+                    <FormItem className="flex flex-col">
+                      <FormLabel>{t("fuel.fields.state")}</FormLabel>
+                      <Popover
+                        open={stateComboboxOpen}
+                        onOpenChange={setStateComboboxOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={stateComboboxOpen}
+                              disabled={submitting || loadingEstados}
+                              className={cn(
+                                "w-full justify-between font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <span className="truncate">
+                                {field.value && isBrazilUfSigla(field.value)
+                                  ? estados.find((e) => e.sigla === field.value)
+                                      ? `${field.value} — ${estados.find((e) => e.sigla === field.value)?.nome}`
+                                      : field.value
+                                  : t("fuel.form.selectState")}
+                              </span>
+                              {loadingEstados ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-60" />
+                              ) : (
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              )}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[var(--radix-popover-trigger-width)] p-0"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput
+                              placeholder={t("fuel.form.filterState")}
+                              className="h-9"
+                            />
+                            <CommandList>
+                              <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="__clear__"
+                                  onSelect={() => {
+                                    field.onChange("");
+                                    form.setValue("city", "", {
+                                      shouldValidate: true,
+                                    });
+                                    setStateComboboxOpen(false);
+                                  }}
+                                >
+                                  {t("fuel.form.clearState")}
+                                </CommandItem>
+                                {estados.map((e) => (
+                                  <CommandItem
+                                    key={e.sigla}
+                                    value={`${e.sigla} ${e.nome}`}
+                                    onSelect={() => {
+                                      field.onChange(e.sigla);
+                                      setStateComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === e.sigla
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {e.sigla} — {e.nome}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -396,22 +646,92 @@ export function FuelFormDrawer({
                   control={form.control}
                   name="city"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>{t("fuel.fields.city")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("fuel.form.cityPlaceholder")}
-                          {...field}
-                          disabled={submitting}
-                        />
-                      </FormControl>
+                      <Popover
+                        open={cityComboboxOpen}
+                        onOpenChange={setCityComboboxOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={cityComboboxOpen}
+                              disabled={
+                                submitting ||
+                                !stateUf ||
+                                !isBrazilUfSigla(stateUf.trim().toUpperCase()) ||
+                                loadingMunicipios
+                              }
+                              className={cn(
+                                "w-full justify-between font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <span className="truncate">
+                                {field.value ||
+                                  (stateUf
+                                    ? t("fuel.form.selectCity")
+                                    : t("fuel.form.selectStateFirst"))}
+                              </span>
+                              {loadingMunicipios ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-60" />
+                              ) : (
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              )}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[var(--radix-popover-trigger-width)] p-0"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput
+                              placeholder={t("fuel.form.filterCity")}
+                              className="h-9"
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {loadingMunicipios
+                                  ? t("fuel.form.loadingGeo")
+                                  : t("common.noResults")}
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {municipios.map((m) => (
+                                  <CommandItem
+                                    key={m.id}
+                                    value={m.nome}
+                                    onSelect={() => {
+                                      field.onChange(m.nome);
+                                      setCityComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === m.nome
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {m.nome}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Comprovante */}
+              {/* Comprovante (upload S3) */}
               <FormField
                 control={form.control}
                 name="receipt"
@@ -419,13 +739,77 @@ export function FuelFormDrawer({
                   <FormItem>
                     <FormLabel>{t("fuel.fields.receipt")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="url"
-                        placeholder={t("fuel.form.receiptPlaceholder")}
-                        {...field}
-                        disabled={submitting}
-                      />
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          ref={receiptFileInputRef}
+                          type="file"
+                          className="sr-only"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          tabIndex={-1}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            try {
+                              setReceiptUploading(true);
+                              const { data } = await fuelAPI.uploadReceipt(
+                                organizationId,
+                                file
+                              );
+                              field.onChange(data.fileUrl);
+                              toast.success(t("fuel.form.receiptUploadOk"));
+                            } catch {
+                              toast.error(t("fuel.form.receiptUploadError"));
+                            } finally {
+                              setReceiptUploading(false);
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={submitting || receiptUploading}
+                          onClick={() => receiptFileInputRef.current?.click()}
+                        >
+                          {receiptUploading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {t("fuel.form.receiptUploading")}
+                            </>
+                          ) : field.value ? (
+                            t("fuel.form.receiptReplace")
+                          ) : (
+                            t("fuel.form.receiptSelect")
+                          )}
+                        </Button>
+                        {field.value ? (
+                          <>
+                            <Button type="button" variant="link" className="px-0 h-auto" asChild>
+                              <a
+                                href={field.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {t("fuel.form.receiptView")}
+                              </a>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground"
+                              disabled={submitting || receiptUploading}
+                              onClick={() => field.onChange("")}
+                            >
+                              {t("fuel.form.receiptRemove")}
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {t("fuel.form.receiptHint")}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

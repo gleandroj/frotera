@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FuelService } from './fuel.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CustomersService } from '@/customers/customers.service';
+import { S3Service } from '@/utils/s3.service';
 import { FuelPriceApiService } from './fuel-price-api.service';
 import { ApiCode } from '@/common/api-codes.enum';
 import {
@@ -40,6 +41,10 @@ describe('FuelService', () => {
     getLatestPrice: jest.fn().mockResolvedValue(null),
   };
 
+  const mockS3Service = {
+    uploadFile: jest.fn().mockResolvedValue('https://s3.example.com/receipt.jpg'),
+  };
+
   // Test data
   const orgId = 'org-1';
   const userId = 'user-1';
@@ -73,6 +78,7 @@ describe('FuelService', () => {
     totalCost: 325,
     fuelType: FuelTypeEnum.GASOLINE,
     station: null,
+    state: null,
     city: null,
     receipt: null,
     notes: null,
@@ -100,6 +106,10 @@ describe('FuelService', () => {
         {
           provide: FuelPriceApiService,
           useValue: mockFuelPriceApiService,
+        },
+        {
+          provide: S3Service,
+          useValue: mockS3Service,
         },
       ],
     }).compile();

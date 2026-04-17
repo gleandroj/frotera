@@ -459,8 +459,9 @@ model FuelLog {
   fuelType       FuelType
 
   station        String?   // nome do posto
-  city           String?
-  receipt        String?   // URL da foto do comprovante (placeholder S3/R2)
+  state          String?   // UF (ex.: RS, SP) — alinhado a municípios IBGE
+  city           String?   // nome do município (IBGE)
+  receipt        String?   // URL do comprovante no S3
   notes          String?
 
   // Campo calculado no momento da escrita (km/l vs abastecimento anterior do mesmo veículo)

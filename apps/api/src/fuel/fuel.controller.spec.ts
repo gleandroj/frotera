@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FuelController } from './fuel.controller';
 import { FuelService } from './fuel.service';
+import { FuelGeoService } from './fuel-geo.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import {
   CreateFuelLogDto,
@@ -24,6 +25,12 @@ describe('FuelController', () => {
     delete: jest.fn(),
     getStats: jest.fn(),
     getMarketPrices: jest.fn(),
+    uploadReceipt: jest.fn(),
+  };
+
+  const mockFuelGeoService = {
+    listEstados: jest.fn().mockResolvedValue([]),
+    listMunicipios: jest.fn().mockResolvedValue([]),
   };
 
   // Test data
@@ -44,6 +51,7 @@ describe('FuelController', () => {
     totalCost: 325,
     fuelType: FuelTypeEnum.GASOLINE,
     station: undefined,
+    state: undefined,
     city: undefined,
     receipt: undefined,
     notes: undefined,
@@ -83,6 +91,10 @@ describe('FuelController', () => {
         {
           provide: FuelService,
           useValue: mockFuelService,
+        },
+        {
+          provide: FuelGeoService,
+          useValue: mockFuelGeoService,
         },
       ],
     })

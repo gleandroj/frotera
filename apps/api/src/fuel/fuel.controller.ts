@@ -10,9 +10,17 @@ import {
   UseGuards,
   Request,
   HttpCode,
+  HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiCreatedResponse,
   ApiTags,
@@ -20,6 +28,8 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { FuelService } from './fuel.service';
+import { FuelGeoService } from './fuel-geo.service';
+import { FUEL_RECEIPT_UPLOAD_MAX_BYTES } from './fuel-receipt-upload';
 import {
   CreateFuelLogDto,
   UpdateFuelLogDto,
@@ -34,7 +44,10 @@ import {
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class FuelController {
-  constructor(private readonly fuelService: FuelService) {}
+  constructor(
+    private readonly fuelService: FuelService,
+    private readonly fuelGeoService: FuelGeoService,
+  ) {}
 
   /**
    * GET /api/organizations/:orgId/fuel/market-prices — MUST come before /stats and /:id
@@ -61,6 +74,90 @@ export class FuelController {
   ): Promise<FuelStatsResponseDto> {
     const userId = req.user.userId;
     return this.fuelService.getStats(organizationId, userId, query);
+  }
+
+  /**
+   * GET /api/organizations/:orgId/fuel/geo/states — estados (tabela `ibge_ufs`, seed IBGE)
+   */
+  @Get('geo/states')
+  @ApiOkResponse({
+    schema: {
+      example: [{ sigla: 'RS', nome: 'Rio Grande do Sul' }],
+    },
+  })
+  async listGeoStates(
+    @Request() req: any,
+    @Param('organizationId') organizationId: string,
+  ): Promise<Array<{ sigla: string; nome: string }>> {
+    const userId = req.user.userId;
+    return this.fuelGeoService.listEstados(organizationId, userId);
+  }
+
+  /**
+   * GET /api/organizations/:orgId/fuel/geo/municipios?uf=RS — municípios (`ibge_municipios`, seed IBGE)
+   */
+  @Get('geo/municipios')
+  @ApiOkResponse({
+    schema: {
+      example: [{ id: 4314902, nome: 'Porto Alegre' }],
+    },
+  })
+  async listGeoMunicipios(
+    @Request() req: any,
+    @Param('organizationId') organizationId: string,
+    @Query('uf') uf: string,
+  ): Promise<Array<{ id: number; nome: string }>> {
+    const userId = req.user.userId;
+    return this.fuelGeoService.listMunicipios(organizationId, userId, uf);
+  }
+
+  /**
+   * POST /api/organizations/:orgId/fuel/upload-receipt — comprovante → S3
+   */
+  @Post('upload-receipt')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiCreatedResponse({
+    schema: {
+      example: {
+        fileUrl: 'https://…',
+        originalName: 'nota.jpg',
+        mimeType: 'image/jpeg',
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: FUEL_RECEIPT_UPLOAD_MAX_BYTES } }),
+  )
+  async uploadReceipt(
+    @Request() req: any,
+    @Param('organizationId') organizationId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        fileIsRequired: true,
+        validators: [
+          new MaxFileSizeValidator({ maxSize: FUEL_RECEIPT_UPLOAD_MAX_BYTES }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<{ fileUrl: string; originalName: string; mimeType: string }> {
+    const userId = req.user.userId;
+    return this.fuelService.uploadReceipt(
+      organizationId,
+      userId,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
   }
 
   /**

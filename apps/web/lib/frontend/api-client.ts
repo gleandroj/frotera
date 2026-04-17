@@ -736,6 +736,7 @@ export interface FuelLog {
   totalCost: number;
   fuelType: FuelType;
   station?: string | null;
+  state?: string | null;
   city?: string | null;
   receipt?: string | null;
   notes?: string | null;
@@ -764,6 +765,7 @@ export interface CreateFuelLogPayload {
   pricePerLiter: number;
   fuelType: FuelType;
   station?: string;
+  state?: string;
   city?: string;
   receipt?: string;
   notes?: string;
@@ -777,9 +779,20 @@ export interface UpdateFuelLogPayload {
   pricePerLiter?: number;
   fuelType?: FuelType;
   station?: string;
+  state?: string;
   city?: string;
   receipt?: string;
   notes?: string;
+}
+
+export interface IbgeEstadoOption {
+  sigla: string;
+  nome: string;
+}
+
+export interface IbgeMunicipioOption {
+  id: number;
+  nome: string;
 }
 
 export interface FuelListParams {
@@ -826,6 +839,26 @@ export const fuelAPI = {
       `/api/organizations/${organizationId}/fuel/stats`,
       { params },
     ),
+  listGeoStates: (organizationId: string) =>
+    externalApi.get<IbgeEstadoOption[]>(
+      `/api/organizations/${organizationId}/fuel/geo/states`,
+    ),
+  listGeoMunicipios: (organizationId: string, uf: string) =>
+    externalApi.get<IbgeMunicipioOption[]>(
+      `/api/organizations/${organizationId}/fuel/geo/municipios`,
+      { params: { uf } },
+    ),
+  uploadReceipt: (organizationId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return externalApi.post<{
+      fileUrl: string;
+      originalName: string;
+      mimeType: string;
+    }>(`/api/organizations/${organizationId}/fuel/upload-receipt`, body, {
+      timeout: 120_000,
+    });
+  },
 };
 
 // ── FUEL REPORTS ─────────────────────────────────────────────────────────────

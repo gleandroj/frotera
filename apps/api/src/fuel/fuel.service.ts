@@ -1,8 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { isBrazilUfSigla } from '@gleandroj/shared';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CustomersService } from '@/customers/customers.service';
+import { S3Service } from '@/utils/s3.service';
 import { FuelPriceApiService } from './fuel-price-api.service';
 import { ApiCode } from '@/common/api-codes.enum';
+import {
+  assertFuelReceiptMime,
+  FUEL_RECEIPT_UPLOAD_MAX_BYTES,
+} from './fuel-receipt-upload';
 import {
   CreateFuelLogDto,
   UpdateFuelLogDto,
@@ -18,6 +29,7 @@ export class FuelService {
     private readonly prisma: PrismaService,
     private readonly customersService: CustomersService,
     private readonly fuelPriceApiService: FuelPriceApiService,
+    private readonly s3: S3Service,
   ) {}
 
   /**
@@ -158,8 +170,8 @@ export class FuelService {
     // Get market price reference
     let marketPriceRef: number | null = null;
     if (organization) {
-      // For now, use 'SP' as default state. This should be configurable in Organization model.
-      const orgState = 'SP'; // TODO: use organization.state when available
+      const orgState =
+        dto.state && isBrazilUfSigla(dto.state) ? dto.state : 'SP';
       const snapshot = await this.fuelPriceApiService.getLatestPrice(
         orgState,
         dto.fuelType,
@@ -180,6 +192,7 @@ export class FuelService {
         totalCost,
         fuelType: dto.fuelType,
         station: dto.station,
+        state: dto.state ?? null,
         city: dto.city,
         receipt: dto.receipt,
         notes: dto.notes,
@@ -321,6 +334,8 @@ export class FuelService {
         totalCost,
         fuelType: dto.fuelType ?? currentLog.fuelType,
         station: dto.station ?? currentLog.station,
+        state:
+          dto.state !== undefined ? dto.state ?? null : currentLog.state,
         city: dto.city ?? currentLog.city,
         receipt: dto.receipt ?? currentLog.receipt,
         notes: dto.notes ?? currentLog.notes,
@@ -536,6 +551,40 @@ export class FuelService {
     }
   }
 
+  /**
+   * Upload de comprovante (imagem ou PDF) para S3.
+   */
+  async uploadReceipt(
+    organizationId: string,
+    userId: string,
+    buffer: Buffer,
+    originalName: string,
+    mimetype: string,
+  ): Promise<{ fileUrl: string; originalName: string; mimeType: string }> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { userId, organizationId },
+      select: { id: true },
+    });
+    if (!member) {
+      throw new ForbiddenException('Not a member of this organization');
+    }
+    assertFuelReceiptMime(mimetype);
+    if (buffer.length > FUEL_RECEIPT_UPLOAD_MAX_BYTES) {
+      throw new BadRequestException(
+        `Arquivo muito grande (máx. ${Math.floor(FUEL_RECEIPT_UPLOAD_MAX_BYTES / (1024 * 1024))} MB).`,
+      );
+    }
+    const norm = mimetype.toLowerCase().split(';')[0].trim();
+    const prefix = `organizations/${organizationId}/fuel-receipts`;
+    const fileUrl = await this.s3.uploadFile(
+      buffer,
+      originalName,
+      norm,
+      prefix,
+    );
+    return { fileUrl, originalName, mimeType: norm };
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ────────────────────────────────────────────────────────────────────────────
@@ -558,6 +607,7 @@ export class FuelService {
       totalCost: log.totalCost,
       fuelType: log.fuelType,
       station: log.station ?? undefined,
+      state: log.state ?? undefined,
       city: log.city ?? undefined,
       receipt: log.receipt ?? undefined,
       notes: log.notes ?? undefined,

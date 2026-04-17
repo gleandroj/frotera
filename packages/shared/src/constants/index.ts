@@ -20,3 +20,40 @@ export const HTTP_STATUS = {
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
+
+/** Brazilian federative units (UF) — official two-letter codes (IBGE). */
+export const BRAZIL_UF_SIGLAS = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+] as const;
+
+export type BrazilUfSigla = (typeof BRAZIL_UF_SIGLAS)[number];
+
+export function isBrazilUfSigla(s: string): s is BrazilUfSigla {
+  return (BRAZIL_UF_SIGLAS as readonly string[]).includes(s);
+}
