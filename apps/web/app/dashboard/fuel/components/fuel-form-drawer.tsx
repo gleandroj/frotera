@@ -70,6 +70,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
 import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
+import { DriverFormDialog } from "@/app/dashboard/drivers/driver-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
@@ -172,6 +173,7 @@ export function FuelFormDrawer({
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [driverFormOpen, setDriverFormOpen] = useState(false);
   const [pricePerLiterInput, setPricePerLiterInput] = useState("");
   const [litersInput, setLitersInput] = useState("");
   const [estados, setEstados] = useState<IbgeEstadoOption[]>([]);
@@ -346,6 +348,7 @@ export function FuelFormDrawer({
       ? litersVal * priceVal
       : null;
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
+  const canCreateDriver = can(Module.DRIVERS, Action.CREATE);
 
   const refreshVehiclesSilently = () => {
     if (!organizationId) return;
@@ -353,6 +356,14 @@ export function FuelFormDrawer({
       .list(organizationId)
       .then((res) => setVehicles(Array.isArray(res.data) ? res.data : []))
       .catch(() => setVehicles([]));
+  };
+
+  const refreshDriversSilently = () => {
+    if (!organizationId) return;
+    driversAPI
+      .list(organizationId, selectedCustomerId ? { customerId: selectedCustomerId } : undefined)
+      .then((res) => setDrivers(Array.isArray(res.data?.drivers) ? res.data.drivers : []))
+      .catch(() => setDrivers([]));
   };
 
   const handleSubmit = async (data: FormData) => {
@@ -467,25 +478,32 @@ export function FuelFormDrawer({
                         ({t("common.optional")})
                       </span>
                     </FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
+                    <ResourceSelectCreateRow
+                      showCreate={canCreateDriver}
+                      createLabel={t("common.createNewDriver")}
+                      onCreateClick={() => setDriverFormOpen(true)}
                       disabled={submitting || loadingDrivers}
                     >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={t("fuel.form.selectDriver")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={DRIVER_NONE}>{t("fuel.form.noDriver")}</SelectItem>
-                        {drivers.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={submitting || loadingDrivers}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={t("fuel.form.selectDriver")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={DRIVER_NONE}>{t("fuel.form.noDriver")}</SelectItem>
+                          {drivers.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </ResourceSelectCreateRow>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -493,13 +511,13 @@ export function FuelFormDrawer({
 
               <Separator />
 
-              {/* Data e Odômetro: flex evita colunas que comprimem data+hora contra o hodômetro */}
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+              {/* Data e hodômetro: grid com minmax(0,1fr) evita overflow da data+hora por baixo do campo ao lado */}
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-8 sm:gap-y-0">
                 <FormField
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem className="min-w-0 w-full flex-1">
+                    <FormItem className="min-w-0 max-w-full">
                       <FormLabel>{t("fuel.fields.date")}</FormLabel>
                       <FormControl>
                         <DateTimePicker
@@ -517,7 +535,7 @@ export function FuelFormDrawer({
                   control={form.control}
                   name="odometer"
                   render={({ field }) => (
-                    <FormItem className="w-full shrink-0 sm:w-44 md:w-48">
+                    <FormItem className="w-full sm:w-44 md:w-48 sm:justify-self-start">
                       <FormLabel>{t("fuel.fields.odometer")}</FormLabel>
                       <FormControl>
                         <Input
@@ -1037,7 +1055,7 @@ export function FuelFormDrawer({
             {submitting ? t("common.saving") : t("common.save")}
           </Button>
         </SheetFooter>
-        <DrawerStackParentDim show={vehicleFormOpen} />
+        <DrawerStackParentDim show={vehicleFormOpen || driverFormOpen} />
       </SheetContent>
     </Sheet>
 
@@ -1052,6 +1070,21 @@ export function FuelFormDrawer({
         refreshVehiclesSilently();
         if (created?.id) {
           form.setValue("vehicleId", created.id, { shouldValidate: true });
+        }
+      }}
+    />
+
+    <DriverFormDialog
+      open={driverFormOpen}
+      onOpenChange={setDriverFormOpen}
+      driver={null}
+      organizationId={organizationId}
+      defaultCustomerId={selectedCustomerId}
+      hideOverlay
+      onSuccess={(created) => {
+        refreshDriversSilently();
+        if (created?.id) {
+          form.setValue("driverId", created.id, { shouldValidate: true });
         }
       }}
     />
