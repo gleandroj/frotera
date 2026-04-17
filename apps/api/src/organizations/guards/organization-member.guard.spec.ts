@@ -148,8 +148,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId,
         organizationId,
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: false,
+        role: { permissions: [] },
       });
       customersService.getAllowedCustomerIds.mockResolvedValueOnce(null);
 
@@ -162,6 +163,9 @@ describe('OrganizationMemberGuard', () => {
             organizationId,
           },
         },
+        include: {
+          role: { include: { permissions: true } },
+        },
       });
     });
 
@@ -170,8 +174,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: false,
+        role: { permissions: [] },
       };
       const context = createMockContext();
       (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(
@@ -191,8 +196,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: true,
+        role: { permissions: [] },
       };
       const context = createMockContext();
       (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(
@@ -213,8 +219,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: true,
+        role: { permissions: [] },
       };
       const allowedIds = ['customer-1', 'customer-2'];
       const context = createMockContext();
@@ -235,8 +242,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: false,
+        role: { permissions: [] },
       };
       const context = createMockContext();
       (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(
@@ -258,8 +266,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: orgId1,
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: false,
+        role: { permissions: [] },
       };
 
       const context1 = createMockContext({
@@ -290,9 +299,12 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'ADMIN',
+        roleId: 'role-1',
         customerRestricted: false,
-        permissions: ['read', 'write'],
+        role: {
+          id: 'role-1',
+          permissions: [{ module: 'COMPANIES', actions: ['VIEW', 'EDIT'] }],
+        },
       };
       const context = createMockContext();
       (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(
@@ -311,8 +323,9 @@ describe('OrganizationMemberGuard', () => {
         id: 'member-1',
         userId: 'user-1',
         organizationId: 'org-1',
-        role: 'MEMBER',
+        roleId: 'role-1',
         customerRestricted: true,
+        role: { permissions: [] },
       };
       const context = createMockContext();
       (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(

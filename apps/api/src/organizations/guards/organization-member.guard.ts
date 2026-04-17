@@ -43,6 +43,9 @@ export class OrganizationMemberGuard implements CanActivate {
           organizationId,
         },
       },
+      include: {
+        role: { include: { permissions: true } },
+      },
     });
 
     if (!membership) {

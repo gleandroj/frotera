@@ -48,12 +48,16 @@ describe('PermissionGuard', () => {
     params?: any;
     headers?: any;
     path?: string;
+    organizationMember?: any;
   }): ExecutionContext {
     const request = {
       user: overrides && 'user' in overrides ? overrides.user : { userId: 'user-1', isSuperAdmin: false },
       params: overrides?.params ?? { organizationId: 'org-1' },
       headers: overrides?.headers ?? { authorization: 'Bearer valid_token' },
       path: overrides?.path ?? '/api/test',
+      ...(overrides?.organizationMember !== undefined
+        ? { organizationMember: overrides.organizationMember }
+        : {}),
     };
     return {
       switchToHttp: () => ({
@@ -191,6 +195,62 @@ describe('PermissionGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
+    });
+
+    it('should reuse request.organizationMember when it matches user, org, and has role.permissions', async () => {
+      const context = createMockContext({
+        organizationMember: {
+          userId: 'user-1',
+          organizationId: 'org-1',
+          role: {
+            permissions: [{ module: 'FUEL', actions: ['VIEW'] }],
+          },
+        },
+      });
+      reflector.getAllAndOverride.mockReturnValueOnce({
+        module: 'FUEL',
+        action: 'VIEW',
+      });
+      (prismaService.user.findUnique as any).mockResolvedValueOnce({
+        isSuperAdmin: false,
+      });
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(prismaService.organizationMember.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('should query DB when cached organizationMember organizationId does not match params', async () => {
+      const context = createMockContext({
+        params: { organizationId: 'org-1' },
+        organizationMember: {
+          userId: 'user-1',
+          organizationId: 'org-other',
+          role: {
+            permissions: [{ module: 'FUEL', actions: ['VIEW'] }],
+          },
+        },
+      });
+      reflector.getAllAndOverride.mockReturnValueOnce({
+        module: 'FUEL',
+        action: 'VIEW',
+      });
+      (prismaService.user.findUnique as any).mockResolvedValueOnce({
+        isSuperAdmin: false,
+      });
+      (prismaService.organizationMember.findFirst as any).mockResolvedValueOnce({
+        userId: 'user-1',
+        organizationId: 'org-1',
+        role: {
+          permissions: [{ module: 'FUEL', actions: ['VIEW'] }],
+        },
+      });
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(prismaService.organizationMember.findFirst).toHaveBeenCalledTimes(1);
     });
 
     it('should check permissions for the correct organization', async () => {

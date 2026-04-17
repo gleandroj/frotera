@@ -13,7 +13,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { PermissionGuard } from "@/auth/guards/permission.guard";
+import { Permission } from "@/auth/decorators/permission.decorator";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
+import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
 import { CustomersService } from "./customers.service";
 import {
   CreateCustomerDto,
@@ -21,29 +24,22 @@ import {
   CustomersListResponseDto,
   UpdateCustomerDto,
 } from "./customers.dto";
-import { ApiCode } from "@/common/api-codes.enum";
-import { ForbiddenException } from "@nestjs/common";
 
 interface RequestWithMember extends ExpressRequest {
-  user: { userId: string };
-  organizationMember: { id: string; organizationId: string; customerRestricted: boolean; role: string };
+  user: { userId: string; isSuperAdmin?: boolean };
+  organizationMember: { id: string; organizationId: string; customerRestricted: boolean };
   allowedCustomerIds: string[] | null;
 }
 
 @ApiTags("customers")
 @Controller("organizations/:organizationId/customers")
-@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
-  private requireAdminOrOwner(member: { role: string }) {
-    if (member.role !== "OWNER" && member.role !== "ADMIN") {
-      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-    }
-  }
-
   @Get()
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "List customers for the organization (hierarchy)" })
   @ApiResponse({ status: 200, type: CustomersListResponseDto })
   async list(
@@ -71,6 +67,7 @@ export class CustomersController {
   }
 
   @Post()
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.CREATE)
   @ApiOperation({ summary: "Create a customer" })
   @ApiResponse({ status: 201, type: CustomerResponseDto })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -79,7 +76,6 @@ export class CustomersController {
     @Body() body: CreateCustomerDto,
     @Request() req: RequestWithMember,
   ): Promise<CustomerResponseDto> {
-    this.requireAdminOrOwner(req.organizationMember);
     return this.customersService.create(
       organizationId,
       body,
@@ -88,6 +84,7 @@ export class CustomersController {
   }
 
   @Get(":customerId")
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Get customer by id" })
   @ApiResponse({ status: 200, type: CustomerResponseDto })
   @ApiResponse({ status: 404, description: "Not found" })
@@ -104,6 +101,7 @@ export class CustomersController {
   }
 
   @Patch(":customerId")
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Update customer" })
   @ApiResponse({ status: 200, type: CustomerResponseDto })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -114,7 +112,6 @@ export class CustomersController {
     @Body() body: UpdateCustomerDto,
     @Request() req: RequestWithMember,
   ): Promise<CustomerResponseDto> {
-    this.requireAdminOrOwner(req.organizationMember);
     return this.customersService.update(
       customerId,
       organizationId,
@@ -124,6 +121,7 @@ export class CustomersController {
   }
 
   @Delete(":customerId")
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.DELETE)
   @ApiOperation({ summary: "Delete customer (fails if has children or vehicles)" })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 400, description: "Has children or vehicles" })
@@ -134,7 +132,6 @@ export class CustomersController {
     @Param("customerId") customerId: string,
     @Request() req: RequestWithMember,
   ): Promise<void> {
-    this.requireAdminOrOwner(req.organizationMember);
     await this.customersService.delete(
       customerId,
       organizationId,

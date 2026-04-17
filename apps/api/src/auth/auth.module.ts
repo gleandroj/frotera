@@ -7,6 +7,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { TokenService } from '../utils/tokens';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PermissionGuard } from './guards/permission.guard';
 import { EmailModule } from '../email/email.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 
@@ -31,7 +32,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     forwardRef(() => OrganizationsModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, JwtService],
-  exports: [AuthService, JwtService],
+  providers: [AuthService, TokenService, JwtService, PermissionGuard],
+  exports: [AuthService, JwtService, PermissionGuard],
 })
 export class AuthModule {}

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -13,10 +12,12 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
-import { ApiCode } from "@/common/api-codes.enum";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { PermissionGuard } from "@/auth/guards/permission.guard";
+import { Permission } from "@/auth/decorators/permission.decorator";
 import { CustomersService } from "@/customers/customers.service";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
+import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
 import {
   CreateVehicleDto,
   UpdateVehicleDto,
@@ -26,12 +27,12 @@ import { VehiclesService } from "./vehicles.service";
 
 interface RequestWithAllowedCustomers extends ExpressRequest {
   allowedCustomerIds: string[] | null;
-  organizationMember: { role: string };
+  organizationMember: { id: string; organizationId: string; customerRestricted: boolean };
 }
 
 @ApiTags("vehicles")
 @Controller("organizations/:organizationId/vehicles")
-@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class VehiclesController {
   constructor(
@@ -39,13 +40,8 @@ export class VehiclesController {
     private readonly customersService: CustomersService,
   ) {}
 
-  private requireAdminOrOwner(member: { role: string }) {
-    if (member.role !== "OWNER" && member.role !== "ADMIN") {
-      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-    }
-  }
-
   @Post()
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.CREATE)
   @ApiOperation({ summary: "Create a vehicle" })
   @ApiResponse({ status: 201, type: VehicleResponseDto })
   @ApiResponse({ status: 400, description: "Bad request" })
@@ -55,7 +51,6 @@ export class VehiclesController {
     @Body() body: CreateVehicleDto,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
-    this.requireAdminOrOwner(req.organizationMember);
     return this.vehiclesService.create(
       organizationId,
       body,
@@ -64,6 +59,7 @@ export class VehiclesController {
   }
 
   @Get()
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "List vehicles for the organization" })
   @ApiResponse({ status: 200, type: () => [VehicleResponseDto] })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -92,6 +88,7 @@ export class VehiclesController {
   }
 
   @Get(":vehicleId")
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Get vehicle by id" })
   @ApiResponse({ status: 200, type: VehicleResponseDto })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -109,6 +106,7 @@ export class VehiclesController {
   }
 
   @Patch(":vehicleId")
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Update vehicle" })
   @ApiResponse({ status: 200, type: VehicleResponseDto })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -119,7 +117,6 @@ export class VehiclesController {
     @Body() body: UpdateVehicleDto,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto> {
-    this.requireAdminOrOwner(req.organizationMember);
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,
@@ -133,6 +130,7 @@ export class VehiclesController {
   }
 
   @Delete(":vehicleId")
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.DELETE)
   @ApiOperation({ summary: "Delete vehicle" })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 403, description: "Forbidden" })
@@ -142,7 +140,6 @@ export class VehiclesController {
     @Param("vehicleId") vehicleId: string,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<void> {
-    this.requireAdminOrOwner(req.organizationMember);
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
       vehicleId,

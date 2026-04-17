@@ -53,7 +53,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Administrador da organização. Sem gestão de roles e sem deletar usuários.',
     color: '#2563EB',
     permissions: [
-      { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
+      { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE'],        scope: 'ALL' },
