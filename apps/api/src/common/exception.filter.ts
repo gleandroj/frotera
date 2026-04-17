@@ -42,10 +42,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorCode = this.getDefaultErrorCode(status);
     }
 
-    // If the message itself is a snack case code, treat it as errorCode
-    if (isSnackCaseCode(message)) {
+    // If the message itself is a SCREAMING_SNAKE_CASE code, treat it as errorCode
+    // and keep a non-empty human message for clients that only show `message`.
+    if (typeof message === "string" && isSnackCaseCode(message)) {
       errorCode = message;
-      message = ""; // Optionally, you can set a default message or leave it empty
+      message = this.defaultMessageForApiCode(message);
     }
 
     // Send response with error code for frontend translation
@@ -59,6 +60,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     response.status(status).json(errorResponse);
+  }
+
+  /** Short PT-BR fallback when the exception body is only an ApiCode string. */
+  private defaultMessageForApiCode(code: string): string {
+    const map: Record<string, string> = {
+      [ApiCode.AUTH_FORBIDDEN]:
+        "Você não tem permissão para realizar esta ação.",
+      [ApiCode.AUTH_UNAUTHORIZED]: "Autenticação necessária.",
+      [ApiCode.COMMON_NOT_FOUND]: "Recurso não encontrado.",
+      [ApiCode.COMMON_BAD_REQUEST]: "Requisição inválida.",
+    };
+    return map[code] ?? code;
   }
 
   private getDefaultErrorCode(status: number): string {

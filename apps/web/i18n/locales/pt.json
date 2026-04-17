@@ -63,6 +63,14 @@
     "createNewDriver": "Novo motorista",
     "createNewCompany": "Nova empresa"
   },
+  "errors": {
+    "api": {
+      "AUTH_FORBIDDEN": "Você não tem permissão para realizar esta ação.",
+      "AUTH_UNAUTHORIZED": "Autenticação necessária.",
+      "COMMON_NOT_FOUND": "Recurso não encontrado.",
+      "COMMON_BAD_REQUEST": "Requisição inválida."
+    }
+  },
   "dataTable": {
     "view": "Exibir",
     "rowsTotal": "{{count}} linha(s) no total.",

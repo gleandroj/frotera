@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { vehiclesAPI, trackerDevicesAPI } from "@/lib/frontend/api-client";
 import { useTrackerPositions } from "@/lib/hooks/use-tracker-positions";
 import type { PositionPoint } from "@/components/devices/device-map";
@@ -52,6 +54,8 @@ export default function VehicleDetailPage() {
   const params = useParams();
   const vehicleId = typeof params?.vehicleId === "string" ? params.vehicleId : null;
   const { currentOrganization } = useAuth();
+  const { can } = usePermissions();
+  const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [initialHistory, setInitialHistory] = useState<PositionPoint[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export default function VehicleDetailPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setLoadError(err?.response?.data?.message ?? t("common.error"));
+          setLoadError(getApiErrorMessage(err, t));
         }
       })
       .finally(() => {
@@ -164,7 +168,7 @@ export default function VehicleDetailPage() {
               </p>
             </div>
           </div>
-          {vehicle && currentOrganization?.id && (
+          {vehicle && currentOrganization?.id && canEditVehicle && (
             <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={() => setEditDialogOpen(true)}>
               <Pencil className="h-4 w-4" />
               {t("common.edit")}
@@ -371,7 +375,7 @@ export default function VehicleDetailPage() {
         </Tabs>
       )}
 
-      {currentOrganization?.id && vehicle && (
+      {currentOrganization?.id && vehicle && canEditVehicle && (
         <VehicleFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}

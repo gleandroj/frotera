@@ -1,7 +1,9 @@
 "use client";
 
 import { useAuth } from "@/lib/hooks/use-auth";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { vehiclesAPI, type Vehicle } from "@/lib/frontend/api-client";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { DataTable } from "@/components/ui/data-table";
@@ -13,6 +15,9 @@ import { DeleteVehicleDialog } from "./delete-vehicle-dialog";
 export default function VehiclesPage() {
   const { t } = useTranslation();
   const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
+  const canDeleteVehicle = can(Module.VEHICLES, Action.DELETE);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export default function VehiclesPage() {
         if (Array.isArray(res.data)) setVehicles(res.data);
       })
       .catch((err) => {
-        setError(err?.response?.data?.message ?? t("common.error"));
+        setError(getApiErrorMessage(err, t));
       })
       .finally(() => setLoading(false));
   }, [currentOrganization?.id, selectedCustomerId, t]);
@@ -50,8 +55,10 @@ export default function VehiclesPage() {
       getVehicleColumns(t, {
         onEdit: setEditVehicle,
         onDelete: setDeleteVehicle,
+        canEditVehicle,
+        canDeleteVehicle,
       }),
-    [t],
+    [t, canEditVehicle, canDeleteVehicle],
   );
 
   if (!currentOrganization) {

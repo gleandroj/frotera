@@ -18,13 +18,16 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 export interface VehicleColumnsOptions {
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicle: Vehicle) => void;
+  canEditVehicle?: boolean;
+  canDeleteVehicle?: boolean;
 }
 
 export function getVehicleColumns(
   t: TFunction,
   options: VehicleColumnsOptions,
 ): ColumnDef<Vehicle>[] {
-  const { onEdit, onDelete } = options;
+  const { onEdit, onDelete, canEditVehicle = true, canDeleteVehicle = true } =
+    options;
 
   return [
     {
@@ -126,17 +129,21 @@ export function getVehicleColumns(
                     {t("common.view")}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(vehicle)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  {t("common.edit")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(vehicle)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
+                {canEditVehicle && (
+                  <DropdownMenuItem onClick={() => onEdit(vehicle)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {t("common.edit")}
+                  </DropdownMenuItem>
+                )}
+                {canDeleteVehicle && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(vehicle)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("common.delete")}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

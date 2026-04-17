@@ -60,6 +60,7 @@ import { ResourceSelectCreateRow } from "@/components/resource-select-create-row
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 const TRACKER_MODELS = [
   { value: "X12_GT06", label: "X12 GT06" },
@@ -178,6 +179,7 @@ export function VehicleFormDialog({
   const { t } = useTranslation();
   const { can } = usePermissions();
   const isEdit = !!vehicle;
+  const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
 
   const [devices, setDevices] = useState<TrackerDeviceOption[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
@@ -194,6 +196,12 @@ export function VehicleFormDialog({
   const { isSubmitting } = form.formState;
   const deviceOption = form.watch("deviceOption");
   const customerId = form.watch("customerId");
+
+  useEffect(() => {
+    if (open && isEdit && !canEditVehicle) {
+      onOpenChange(false);
+    }
+  }, [open, isEdit, canEditVehicle, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -285,10 +293,7 @@ export function VehicleFormDialog({
       }
       onOpenChange(false);
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        t("vehicles.toastError");
-      toast.error(message);
+      toast.error(getApiErrorMessage(err, t, "vehicles.toastError"));
     }
   };
 
