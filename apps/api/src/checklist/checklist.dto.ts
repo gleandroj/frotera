@@ -4,7 +4,7 @@ import {
   IsOptional, IsString, ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
-import { ItemType, EntryStatus } from "@prisma/client";
+import { ChecklistDriverRequirement, ItemType, EntryStatus } from "@prisma/client";
 
 export class ChecklistTemplateItemDto {
   @ApiProperty() @IsString() @IsNotEmpty() label: string;
@@ -18,6 +18,10 @@ export class CreateChecklistTemplateDto {
   @ApiProperty() @IsString() @IsNotEmpty() name: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() active?: boolean;
+  @ApiProperty() @IsBoolean() vehicleRequired: boolean;
+  @ApiProperty({ enum: ChecklistDriverRequirement })
+  @IsEnum(ChecklistDriverRequirement)
+  driverRequirement: ChecklistDriverRequirement;
   @ApiProperty({ type: [ChecklistTemplateItemDto] })
   @IsArray() @ValidateNested({ each: true }) @Type(() => ChecklistTemplateItemDto)
   items: ChecklistTemplateItemDto[];
@@ -27,6 +31,11 @@ export class UpdateChecklistTemplateDto {
   @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() active?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() vehicleRequired?: boolean;
+  @ApiPropertyOptional({ enum: ChecklistDriverRequirement })
+  @IsOptional()
+  @IsEnum(ChecklistDriverRequirement)
+  driverRequirement?: ChecklistDriverRequirement;
   @ApiPropertyOptional({ type: [ChecklistTemplateItemDto] })
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ChecklistTemplateItemDto)
   items?: ChecklistTemplateItemDto[];
@@ -48,6 +57,8 @@ export class ChecklistTemplateResponseDto {
   @ApiProperty() name: string;
   @ApiPropertyOptional() description?: string | null;
   @ApiProperty() active: boolean;
+  @ApiProperty() vehicleRequired: boolean;
+  @ApiProperty({ enum: ChecklistDriverRequirement }) driverRequirement: ChecklistDriverRequirement;
   @ApiProperty({ type: [ChecklistTemplateItemResponseDto] }) items: ChecklistTemplateItemResponseDto[];
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
@@ -61,7 +72,7 @@ export class ChecklistAnswerInputDto {
 
 export class CreateChecklistEntryDto {
   @ApiProperty() @IsString() @IsNotEmpty() templateId: string;
-  @ApiProperty() @IsString() @IsNotEmpty() vehicleId: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vehicleId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() driverId?: string;
   @ApiProperty({ type: [ChecklistAnswerInputDto] })
   @IsArray() @ValidateNested({ each: true }) @Type(() => ChecklistAnswerInputDto)
@@ -71,7 +82,7 @@ export class CreateChecklistEntryDto {
 export class CreatePublicChecklistEntryDto {
   @ApiProperty() @IsString() @IsNotEmpty() organizationId: string;
   @ApiProperty() @IsString() @IsNotEmpty() templateId: string;
-  @ApiProperty() @IsString() @IsNotEmpty() vehicleId: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vehicleId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() driverId?: string;
   @ApiProperty({ type: [ChecklistAnswerInputDto] })
   @IsArray() @ValidateNested({ each: true }) @Type(() => ChecklistAnswerInputDto)
@@ -109,7 +120,8 @@ export class ChecklistEntryResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() organizationId: string;
   @ApiProperty() templateId: string;
-  @ApiProperty() vehicleId: string;
+  @ApiPropertyOptional() templateName?: string | null;
+  @ApiPropertyOptional() vehicleId?: string | null;
   @ApiPropertyOptional() vehicleName?: string | null;
   @ApiPropertyOptional() vehiclePlate?: string | null;
   @ApiPropertyOptional() driverId?: string | null;

@@ -9,6 +9,8 @@
     "success": "Sucesso",
     "tryAgain": "Tentar Novamente",
     "save": "Salvar",
+    "saving": "Salvando...",
+    "days": "dia(s)",
     "cancel": "Cancelar",
     "delete": "Excluir",
     "edit": "Editar",
@@ -839,6 +841,19 @@
     "vehicleRequired": "Selecione um veículo.",
     "driverOptional": "Motorista (opcional)",
     "driverPlaceholder": "Nome do motorista",
+    "noDriver": "Sem motorista",
+    "noVehicle": "Sem veículo",
+    "driverRequired": "Selecione um motorista.",
+    "driverRequiredButNone": "Este template exige motorista, mas não há motoristas cadastrados. Cadastre um motorista ou ajuste o template.",
+    "templateFillContextTitle": "Ao preencher o checklist",
+    "templateVehicleRequiredSwitch": "Exigir seleção de veículo",
+    "templateDriverRequirementLabel": "Motorista no formulário",
+    "driverRequirement": {
+      "REQUIRED": "Obrigatório",
+      "OPTIONAL": "Opcional",
+      "HIDDEN": "Não exibir"
+    },
+    "driver": "Motorista",
     "submitChecklist": "Enviar Checklist",
     "submitting": "Enviando...",
     "entryStatus": {
@@ -851,6 +866,8 @@
     "answeredAt": "Preenchido em",
     "vehicle": "Veículo",
     "template": "Template",
+    "photoPreview": "Visualizar foto",
+    "photoAttached": "Foto anexada",
     "itemCount": "{{count}} item(s)",
     "requiredItemsMissing": "Preencha todos os itens obrigatórios.",
     "confirmDeleteTemplate": {

@@ -110,6 +110,8 @@ interface Template {
   id: string;
   name: string;
   description?: string | null;
+  vehicleRequired: boolean;
+  driverRequirement: ChecklistDriverRequirement;
   items: TemplateItem[];
 }
 
@@ -129,6 +131,39 @@ interface DriverOption {
 const publicApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "",
 });
+
+/** Radix Select não permite SelectItem com value="". */
+const NO_DRIVER_SELECT_VALUE = "__checklist_no_driver__";
+const NO_VEHICLE_SELECT_VALUE = "__checklist_no_vehicle__";
+
+type ChecklistDriverRequirement = "REQUIRED" | "OPTIONAL" | "HIDDEN";
+
+const EMPTY_SELECT_PREFIX = "__rsf_select_empty__";
+
+function selectItemValue(itemId: string, option: string, index: number): string {
+  return option === "" ? `${EMPTY_SELECT_PREFIX}${itemId}:${index}` : option;
+}
+
+function answerFromSelectValue(itemId: string, value: string): string {
+  if (!value.startsWith(EMPTY_SELECT_PREFIX)) return value;
+  const rest = value.slice(EMPTY_SELECT_PREFIX.length);
+  const colon = rest.indexOf(":");
+  if (colon < 0) return value;
+  if (rest.slice(0, colon) !== itemId) return value;
+  return "";
+}
+
+function selectControlValue(
+  itemId: string,
+  answer: string | undefined,
+  options: string[],
+): string {
+  if (answer === undefined) return "";
+  if (answer !== "") return answer;
+  const idx = options.findIndex((o) => o === "");
+  if (idx < 0) return "";
+  return `${EMPTY_SELECT_PREFIX}${itemId}:${idx}`;
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -186,16 +221,30 @@ export default function PublicFillPage() {
     load();
   }, [orgId, templateId]);
 
+  useEffect(() => {
+    if (!template) return;
+    if (template.driverRequirement === "HIDDEN") {
+      setSelectedDriver("");
+    }
+  }, [template?.id, template?.driverRequirement]);
+
   const handleAnswerChange = (itemId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [itemId]: value }));
   };
 
   const handleSubmit = async () => {
-    if (!selectedVehicle) {
+    if (!template) return;
+
+    const { vehicleRequired, driverRequirement: driverReq } = template;
+
+    if (vehicleRequired && !selectedVehicle) {
       toast.error("Selecione um veículo antes de enviar.");
       return;
     }
-    if (!template) return;
+    if (driverReq === "REQUIRED" && !selectedDriver) {
+      toast.error("Selecione um motorista antes de enviar.");
+      return;
+    }
 
     const requiredItems = template.items.filter((i) => i.required);
     for (const item of requiredItems) {
@@ -210,8 +259,10 @@ export default function PublicFillPage() {
       await publicApi.post(`/api/public/checklist/entries`, {
         organizationId: orgId,
         templateId,
-        vehicleId: selectedVehicle,
-        driverId: selectedDriver || undefined,
+        ...(selectedVehicle ? { vehicleId: selectedVehicle } : {}),
+        ...(driverReq !== "HIDDEN" && selectedDriver
+          ? { driverId: selectedDriver }
+          : {}),
         answers: Object.entries(answers).map(([itemId, value]) => {
           const item = template.items.find((i) => i.id === itemId);
           return {
@@ -265,6 +316,7 @@ export default function PublicFillPage() {
   }
 
   const sortedItems = [...template.items].sort((a, b) => a.order - b.order);
+  const { vehicleRequired, driverRequirement: driverReq } = template;
 
   return (
     <div className="min-h-screen bg-muted/30 p-4 flex flex-col items-center">
@@ -283,12 +335,29 @@ export default function PublicFillPage() {
           <CardContent className="space-y-4">
             {/* Vehicle */}
             <div className="space-y-2">
-              <Label>Veículo *</Label>
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <Label>
+                Veículo
+                {vehicleRequired ? " *" : " (opcional)"}
+              </Label>
+              <Select
+                value={
+                  !vehicleRequired && selectedVehicle === ""
+                    ? NO_VEHICLE_SELECT_VALUE
+                    : selectedVehicle
+                }
+                onValueChange={(v) =>
+                  setSelectedVehicle(v === NO_VEHICLE_SELECT_VALUE ? "" : v)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um veículo" />
                 </SelectTrigger>
                 <SelectContent>
+                  {!vehicleRequired && (
+                    <SelectItem value={NO_VEHICLE_SELECT_VALUE}>
+                      Sem veículo
+                    </SelectItem>
+                  )}
                   {vehicles.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.name} {v.plate ? `(${v.plate})` : ""}
@@ -299,22 +368,45 @@ export default function PublicFillPage() {
             </div>
 
             {/* Driver */}
-            {drivers.length > 0 && (
+            {driverReq !== "HIDDEN" && (
               <div className="space-y-2">
-                <Label>Motorista (opcional)</Label>
-                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um motorista" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
-                    {drivers.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>
+                  Motorista
+                  {driverReq === "REQUIRED" ? " *" : " (opcional)"}
+                </Label>
+                {driverReq === "REQUIRED" && drivers.length === 0 ? (
+                  <p className="text-sm text-destructive">
+                    Não há motoristas cadastrados. Entre em contato com a
+                    organização.
+                  </p>
+                ) : (
+                  <Select
+                    value={
+                      selectedDriver === ""
+                        ? NO_DRIVER_SELECT_VALUE
+                        : selectedDriver
+                    }
+                    onValueChange={(v) =>
+                      setSelectedDriver(v === NO_DRIVER_SELECT_VALUE ? "" : v)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um motorista" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driverReq === "OPTIONAL" && (
+                        <SelectItem value={NO_DRIVER_SELECT_VALUE}>
+                          Nenhum
+                        </SelectItem>
+                      )}
+                      {drivers.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
           </CardContent>
@@ -399,8 +491,10 @@ export default function PublicFillPage() {
 
                 {item.type === "SELECT" && (
                   <Select
-                    value={answers[item.id] || ""}
-                    onValueChange={(value) => handleAnswerChange(item.id, value)}
+                    value={selectControlValue(item.id, answers[item.id], item.options)}
+                    onValueChange={(value) =>
+                      handleAnswerChange(item.id, answerFromSelectValue(item.id, value))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue
@@ -408,9 +502,12 @@ export default function PublicFillPage() {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {item.options.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                      {item.options.map((option, idx) => (
+                        <SelectItem
+                          key={`${item.id}-${idx}`}
+                          value={selectItemValue(item.id, option, idx)}
+                        >
+                          {option || "—"}
                         </SelectItem>
                       ))}
                     </SelectContent>

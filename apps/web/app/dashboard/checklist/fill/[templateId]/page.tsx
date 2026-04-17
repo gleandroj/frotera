@@ -107,6 +107,37 @@ function SignaturePad({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+/** Radix Select não permite SelectItem com value="". */
+const NO_DRIVER_SELECT_VALUE = "__checklist_no_driver__";
+const NO_VEHICLE_SELECT_VALUE = "__checklist_no_vehicle__";
+
+const EMPTY_SELECT_PREFIX = "__rsf_select_empty__";
+
+function selectItemValue(itemId: string, option: string, index: number): string {
+  return option === "" ? `${EMPTY_SELECT_PREFIX}${itemId}:${index}` : option;
+}
+
+function answerFromSelectValue(itemId: string, value: string): string {
+  if (!value.startsWith(EMPTY_SELECT_PREFIX)) return value;
+  const rest = value.slice(EMPTY_SELECT_PREFIX.length);
+  const colon = rest.indexOf(":");
+  if (colon < 0) return value;
+  if (rest.slice(0, colon) !== itemId) return value;
+  return "";
+}
+
+function selectControlValue(
+  itemId: string,
+  answer: string | undefined,
+  options: string[],
+): string {
+  if (answer === undefined) return "";
+  if (answer !== "") return answer;
+  const idx = options.findIndex((o) => o === "");
+  if (idx < 0) return "";
+  return `${EMPTY_SELECT_PREFIX}${itemId}:${idx}`;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FillChecklistPage({
@@ -167,6 +198,13 @@ export default function FillChecklistPage({
     loadData();
   }, [currentOrganization?.id, templateId, router, t, searchParams]);
 
+  useEffect(() => {
+    if (!template) return;
+    if (template.driverRequirement === "HIDDEN") {
+      setSelectedDriver("");
+    }
+  }, [template?.id, template?.driverRequirement]);
+
   const handleAnswerChange = (itemId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [itemId]: value }));
   };
@@ -206,8 +244,17 @@ export default function FillChecklistPage({
   };
 
   const handleSubmit = async () => {
-    if (!currentOrganization?.id || !template || !selectedVehicle) {
+    if (!currentOrganization?.id || !template) return;
+
+    const { vehicleRequired, driverRequirement: driverReq } = template;
+
+    if (vehicleRequired && !selectedVehicle) {
       toast.error(t("checklist.vehicleRequired"));
+      return;
+    }
+
+    if (driverReq === "REQUIRED" && !selectedDriver) {
+      toast.error(t("checklist.driverRequired"));
       return;
     }
 
@@ -220,8 +267,10 @@ export default function FillChecklistPage({
 
       const payload: CreateChecklistEntryPayload = {
         templateId,
-        vehicleId: selectedVehicle,
-        driverId: selectedDriver || undefined,
+        ...(selectedVehicle ? { vehicleId: selectedVehicle } : {}),
+        ...(driverReq !== "HIDDEN" && selectedDriver
+          ? { driverId: selectedDriver }
+          : {}),
         answers: Object.entries(answers).map(([itemId, value]) => {
           const item = template.items.find((i) => i.id === itemId);
           return {
@@ -289,6 +338,7 @@ export default function FillChecklistPage({
   }
 
   const sortedItems = [...template.items].sort((a, b) => a.order - b.order);
+  const { vehicleRequired, driverRequirement: driverReq } = template;
 
   return (
     <>
@@ -316,8 +366,12 @@ export default function FillChecklistPage({
         <CardContent className="space-y-6">
           {/* Vehicle Select */}
           <div className="space-y-2">
-            <Label htmlFor="vehicle" className="required">
-              {t("checklist.selectVehicle")} *
+            <Label
+              htmlFor="vehicle"
+              className={vehicleRequired ? "required" : undefined}
+            >
+              {t("checklist.selectVehicle")}
+              {vehicleRequired ? " *" : ` (${t("common.optional")})`}
             </Label>
             <ResourceSelectCreateRow
               showCreate={canCreateVehicle}
@@ -325,13 +379,27 @@ export default function FillChecklistPage({
               onCreateClick={() => setVehicleFormOpen(true)}
               disabled={submitting}
             >
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <Select
+                value={
+                  !vehicleRequired && selectedVehicle === ""
+                    ? NO_VEHICLE_SELECT_VALUE
+                    : selectedVehicle
+                }
+                onValueChange={(v) =>
+                  setSelectedVehicle(v === NO_VEHICLE_SELECT_VALUE ? "" : v)
+                }
+              >
                 <SelectTrigger id="vehicle" className="w-full">
                   <SelectValue
                     placeholder={t("checklist.selectVehiclePlaceholder")}
                   />
                 </SelectTrigger>
                 <SelectContent>
+                  {!vehicleRequired && (
+                    <SelectItem value={NO_VEHICLE_SELECT_VALUE}>
+                      {t("checklist.noVehicle")}
+                    </SelectItem>
+                  )}
                   {vehicles.map((vehicle) => (
                     <SelectItem key={vehicle.id} value={vehicle.id}>
                       {vehicle.name ?? "—"} ({vehicle.plate ?? "—"})
@@ -343,31 +411,55 @@ export default function FillChecklistPage({
           </div>
 
           {/* Driver Select */}
-          {(drivers.length > 0 || canCreateDriver) && (
+          {driverReq !== "HIDDEN" && (
             <div className="space-y-2">
               <Label htmlFor="driver">
-                {t("checklist.driverOptional")}
+                {t("checklist.driver")}
+                {driverReq === "REQUIRED" ? " *" : ` (${t("common.optional")})`}
               </Label>
-              <ResourceSelectCreateRow
-                showCreate={canCreateDriver}
-                createLabel={t("common.createNewDriver")}
-                onCreateClick={() => setDriverFormOpen(true)}
-                disabled={submitting}
-              >
-                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                  <SelectTrigger id="driver" className="w-full">
-                    <SelectValue placeholder={t("checklist.driverPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">{t("checklist.noDriver")}</SelectItem>
-                    {drivers.map((driver) => (
-                      <SelectItem key={driver.id} value={driver.id}>
-                        {driver.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </ResourceSelectCreateRow>
+              {driverReq === "REQUIRED" &&
+              drivers.length === 0 &&
+              !canCreateDriver ? (
+                <p className="text-sm text-destructive">
+                  {t("checklist.driverRequiredButNone")}
+                </p>
+              ) : (
+                <ResourceSelectCreateRow
+                  showCreate={canCreateDriver}
+                  createLabel={t("common.createNewDriver")}
+                  onCreateClick={() => setDriverFormOpen(true)}
+                  disabled={submitting}
+                >
+                  <Select
+                    value={
+                      selectedDriver === ""
+                        ? NO_DRIVER_SELECT_VALUE
+                        : selectedDriver
+                    }
+                    onValueChange={(v) =>
+                      setSelectedDriver(v === NO_DRIVER_SELECT_VALUE ? "" : v)
+                    }
+                  >
+                    <SelectTrigger id="driver" className="w-full">
+                      <SelectValue
+                        placeholder={t("checklist.driverPlaceholder")}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driverReq === "OPTIONAL" && (
+                        <SelectItem value={NO_DRIVER_SELECT_VALUE}>
+                          {t("checklist.noDriver")}
+                        </SelectItem>
+                      )}
+                      {drivers.map((driver) => (
+                        <SelectItem key={driver.id} value={driver.id}>
+                          {driver.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </ResourceSelectCreateRow>
+              )}
             </div>
           )}
 
@@ -443,16 +535,21 @@ export default function FillChecklistPage({
                 {/* SELECT */}
                 {item.type === "SELECT" && (
                   <Select
-                    value={answers[item.id] || ""}
-                    onValueChange={(value) => handleAnswerChange(item.id, value)}
+                    value={selectControlValue(item.id, answers[item.id], item.options)}
+                    onValueChange={(value) =>
+                      handleAnswerChange(item.id, answerFromSelectValue(item.id, value))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={`Selecione ${item.label.toLowerCase()}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {item.options.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                      {item.options.map((option, idx) => (
+                        <SelectItem
+                          key={`${item.id}-${idx}`}
+                          value={selectItemValue(item.id, option, idx)}
+                        >
+                          {option || "—"}
                         </SelectItem>
                       ))}
                     </SelectContent>

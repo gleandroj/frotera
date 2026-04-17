@@ -226,19 +226,35 @@ export default function ChecklistPage() {
 
   const entryColumns: ColumnDef<ChecklistEntry>[] = [
     {
-      accessorKey: "templateId",
+      id: "template",
+      accessorKey: "templateName",
       header: t("checklist.columns.template"),
-      cell: ({ row }) => (row.getValue("templateId") as string).substring(0, 8) + "…",
+      cell: ({ row }) => {
+        const e = row.original;
+        return e.templateName ?? e.templateId;
+      },
     },
     {
-      accessorKey: "vehicleId",
+      id: "vehicle",
+      accessorFn: (row) =>
+        [row.vehicleName, row.vehiclePlate].filter(Boolean).join(" ") || row.vehicleId,
       header: t("checklist.columns.vehicle"),
-      cell: ({ row }) => (row.getValue("vehicleId") as string).substring(0, 8) + "…",
+      cell: ({ row }) => {
+        const e = row.original;
+        if (e.vehicleName || e.vehiclePlate) {
+          return `${e.vehicleName ?? ""}${e.vehiclePlate ? ` (${e.vehiclePlate})` : ""}`.trim();
+        }
+        return e.vehicleId;
+      },
     },
     {
-      accessorKey: "memberId",
+      id: "member",
+      accessorKey: "memberName",
       header: t("checklist.columns.member"),
-      cell: ({ row }) => (row.getValue("memberId") as string).substring(0, 8) + "…",
+      cell: ({ row }) => {
+        const e = row.original;
+        return e.memberName ?? e.memberId;
+      },
     },
     {
       accessorKey: "status",

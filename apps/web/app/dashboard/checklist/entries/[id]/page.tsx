@@ -8,8 +8,8 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import {
   checklistAPI,
-  ChecklistEntry,
-  ChecklistTemplate,
+  type ChecklistAnswer,
+  type ChecklistEntry,
   EntryStatus,
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
@@ -32,6 +32,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+/** Data URLs em `target=_blank` costumam abrir aba em branco; use modal ou URL http(s). */
+function checklistPhotoSrc(answer: ChecklistAnswer): string | null {
+  const raw = answer.photoUrl || answer.value;
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (
+    trimmed.startsWith("data:image") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    return trimmed;
+  }
+  return null;
+}
 
 export default function ChecklistEntryDetailPage({
   params,
@@ -45,9 +66,9 @@ export default function ChecklistEntryDetailPage({
   const { can } = usePermissions();
 
   const [entry, setEntry] = useState<ChecklistEntry | null>(null);
-  const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const orgId = currentOrganization?.id;
 
@@ -60,10 +81,6 @@ export default function ChecklistEntryDetailPage({
         setLoading(true);
         const entryRes = await checklistAPI.getEntry(orgId, id);
         setEntry(entryRes.data);
-        // Load template in parallel for name display — non-blocking
-        checklistAPI.getTemplate(orgId, entryRes.data.templateId)
-          .then((res) => setTemplate(res.data))
-          .catch(() => {}); // template name is optional
       } catch (err) {
         console.error("Failed to load entry:", err);
         toast.error(t("checklist.toastError"));
@@ -105,20 +122,20 @@ export default function ChecklistEntryDetailPage({
     }
   };
 
-  const formatAnswerValue = (answer: any, itemType: string): string => {
-    if (!answer || !answer.value) {
-      return answer?.photoUrl ? `📎 ${answer.photoUrl}` : "—";
+  const formatAnswerValue = (answer: ChecklistAnswer | undefined, itemType: string): string => {
+    if (!answer) return "—";
+    if (itemType === "PHOTO") {
+      return checklistPhotoSrc(answer) ? t("checklist.photoAttached") : "—";
+    }
+    if (answer.value === undefined || answer.value === null || answer.value === "") {
+      return answer.photoUrl ? t("checklist.photoAttached") : "—";
     }
 
     switch (itemType) {
       case "YES_NO":
-        return answer.value === "true" || answer.value === true
-          ? t("common.yes")
-          : t("common.no");
-      case "PHOTO":
-        return answer.photoUrl || answer.value;
+        return answer.value === "true" ? t("common.yes") : t("common.no");
       default:
-        return answer.value;
+        return String(answer.value);
     }
   };
 
@@ -194,7 +211,7 @@ export default function ChecklistEntryDetailPage({
               <p className="text-sm font-medium text-muted-foreground">
                 {t("checklist.template")}
               </p>
-              <p className="text-base">{template?.name ?? "—"}</p>
+              <p className="text-base">{entry.templateName ?? "—"}</p>
             </div>
 
             {/* Vehicle */}
@@ -205,7 +222,7 @@ export default function ChecklistEntryDetailPage({
               <p className="text-base">
                 {entry.vehicleName || entry.vehiclePlate
                   ? `${entry.vehicleName ?? ""} ${entry.vehiclePlate ? `(${entry.vehiclePlate})` : ""}`.trim()
-                  : entry.vehicleId}
+                  : entry.vehicleId ?? "—"}
               </p>
             </div>
 
@@ -213,7 +230,7 @@ export default function ChecklistEntryDetailPage({
             {(entry.driverId || entry.driverName) && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Motorista
+                  {t("checklist.driver")}
                 </p>
                 <p className="text-base">{entry.driverName ?? entry.driverId}</p>
               </div>
@@ -312,18 +329,37 @@ export default function ChecklistEntryDetailPage({
                     </TableCell>
                     <TableCell>{answer.itemType ? t(`checklist.itemTypes.${answer.itemType}`) : "—"}</TableCell>
                     <TableCell>
-                      {answer.itemType === "PHOTO" && answer.photoUrl ? (
-                        <a
-                          href={answer.photoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline break-all"
-                        >
-                          {t("common.view")}
-                        </a>
-                      ) : (
-                        formatAnswerValue(answer, answer.itemType ?? "")
-                      )}
+                      {(() => {
+                        const photoSrc =
+                          answer.itemType === "PHOTO"
+                            ? checklistPhotoSrc(answer)
+                            : null;
+                        if (photoSrc) {
+                          const isHttp =
+                            photoSrc.startsWith("http://") ||
+                            photoSrc.startsWith("https://");
+                          return isHttp ? (
+                            <a
+                              href={photoSrc}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline break-all"
+                            >
+                              {t("common.view")}
+                            </a>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="h-auto p-0 text-primary"
+                              onClick={() => setPhotoPreview(photoSrc)}
+                            >
+                              {t("common.view")}
+                            </Button>
+                          );
+                        }
+                        return formatAnswerValue(answer, answer.itemType ?? "");
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -332,6 +368,21 @@ export default function ChecklistEntryDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!photoPreview} onOpenChange={(open) => !open && setPhotoPreview(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t("checklist.photoPreview")}</DialogTitle>
+          </DialogHeader>
+          {photoPreview && (
+            <img
+              src={photoPreview}
+              alt=""
+              className="max-h-[70vh] w-full object-contain rounded-md border"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

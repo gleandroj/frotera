@@ -42,6 +42,7 @@ import {
 import { GripVertical, Trash2, Plus } from "lucide-react";
 import {
   checklistAPI,
+  type ChecklistDriverRequirement,
   type ChecklistTemplate,
   type CreateChecklistTemplatePayload,
   type ItemType,
@@ -191,6 +192,9 @@ export function ChecklistTemplateFormDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [active, setActive] = useState(true);
+  const [vehicleRequired, setVehicleRequired] = useState(true);
+  const [driverRequirement, setDriverRequirement] =
+    useState<ChecklistDriverRequirement>("OPTIONAL");
   const [items, setItems] = useState<FormItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -206,6 +210,8 @@ export function ChecklistTemplateFormDialog({
       setName(template.name);
       setDescription(template.description ?? "");
       setActive(template.active);
+      setVehicleRequired(template.vehicleRequired);
+      setDriverRequirement(template.driverRequirement);
       setItems(
         template.items.map((item) => ({
           tempId: item.id,
@@ -219,6 +225,8 @@ export function ChecklistTemplateFormDialog({
       setName("");
       setDescription("");
       setActive(true);
+      setVehicleRequired(true);
+      setDriverRequirement("OPTIONAL");
       setItems([]);
     }
   }, [open, template?.id]);
@@ -262,6 +270,8 @@ export function ChecklistTemplateFormDialog({
       name: name.trim(),
       description: description.trim() || undefined,
       active,
+      vehicleRequired,
+      driverRequirement,
       items: items.map((item, index) => ({
         label: item.label,
         type: item.type,
@@ -340,6 +350,44 @@ export function ChecklistTemplateFormDialog({
             <Label htmlFor="template-active" className="cursor-pointer">
               {t("checklist.templateActive")}
             </Label>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+            <p className="text-sm font-medium">{t("checklist.templateFillContextTitle")}</p>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="template-vehicle-required"
+                checked={vehicleRequired}
+                onCheckedChange={setVehicleRequired}
+                disabled={loading}
+              />
+              <Label htmlFor="template-vehicle-required" className="cursor-pointer leading-snug">
+                {t("checklist.templateVehicleRequiredSwitch")}
+              </Label>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("checklist.templateDriverRequirementLabel")}</Label>
+              <Select
+                value={driverRequirement}
+                onValueChange={(v) => setDriverRequirement(v as ChecklistDriverRequirement)}
+                disabled={loading}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="REQUIRED">
+                    {t("checklist.driverRequirement.REQUIRED")}
+                  </SelectItem>
+                  <SelectItem value="OPTIONAL">
+                    {t("checklist.driverRequirement.OPTIONAL")}
+                  </SelectItem>
+                  <SelectItem value="HIDDEN">
+                    {t("checklist.driverRequirement.HIDDEN")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Separator />

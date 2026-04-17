@@ -921,6 +921,7 @@ export const fuelReportsAPI = {
 
 export type ItemType = "YES_NO" | "TEXT" | "NUMBER" | "PHOTO" | "SELECT" | "SIGNATURE" | "FILE";
 export type EntryStatus = "PENDING" | "COMPLETED" | "INCOMPLETE";
+export type ChecklistDriverRequirement = "REQUIRED" | "OPTIONAL" | "HIDDEN";
 
 export interface ChecklistTemplateItem {
   id: string;
@@ -938,6 +939,8 @@ export interface ChecklistTemplate {
   name: string;
   description?: string | null;
   active: boolean;
+  vehicleRequired: boolean;
+  driverRequirement: ChecklistDriverRequirement;
   items: ChecklistTemplateItem[];
   createdAt: string;
   updatedAt: string;
@@ -960,7 +963,8 @@ export interface ChecklistEntry {
   id: string;
   organizationId: string;
   templateId: string;
-  vehicleId: string;
+  templateName?: string | null;
+  vehicleId?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;
   driverId?: string | null;
@@ -978,6 +982,8 @@ export interface CreateChecklistTemplatePayload {
   name: string;
   description?: string;
   active?: boolean;
+  vehicleRequired: boolean;
+  driverRequirement: ChecklistDriverRequirement;
   items: {
     label: string;
     type: ItemType;
@@ -989,7 +995,7 @@ export interface CreateChecklistTemplatePayload {
 
 export interface CreateChecklistEntryPayload {
   templateId: string;
-  vehicleId: string;
+  vehicleId?: string;
   driverId?: string;
   answers: { itemId: string; value?: string; photoUrl?: string }[];
 }

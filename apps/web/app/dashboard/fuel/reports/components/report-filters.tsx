@@ -12,6 +12,9 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { Vehicle } from "@/lib/frontend/api-client";
 import { X } from "lucide-react";
 
+/** Radix Select não permite SelectItem com value="". */
+const ALL_VEHICLES_SELECT_VALUE = "__fuel_report_all_vehicles__";
+
 interface ReportFiltersProps {
   vehicles: Vehicle[];
   selectedVehicleId?: string;
@@ -46,16 +49,20 @@ export function ReportFilters({
           {t("navigation.items.vehicles")}
         </label>
         <Select
-          value={selectedVehicleId || ""}
+          value={selectedVehicleId || ALL_VEHICLES_SELECT_VALUE}
           onValueChange={(value) =>
-            onVehicleChange?.(value === "" ? null : value)
+            onVehicleChange?.(
+              value === ALL_VEHICLES_SELECT_VALUE ? null : value,
+            )
           }
         >
           <SelectTrigger>
             <SelectValue placeholder={t("fuel.form.selectVehicle")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t("common.all")}</SelectItem>
+            <SelectItem value={ALL_VEHICLES_SELECT_VALUE}>
+              {t("common.all")}
+            </SelectItem>
             {vehicles.map((vehicle) => (
               <SelectItem key={vehicle.id} value={vehicle.id}>
                 {vehicle.name || vehicle.plate || vehicle.id}

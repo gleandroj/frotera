@@ -12,7 +12,7 @@ import {
   UpdateChecklistEntryStatusDto,
   UpdateChecklistTemplateDto,
 } from './checklist.dto';
-import { EntryStatus, ItemType } from '@prisma/client';
+import { ChecklistDriverRequirement, EntryStatus, ItemType } from '@prisma/client';
 
 describe('ChecklistController', () => {
   let controller: ChecklistController;
@@ -33,6 +33,8 @@ describe('ChecklistController', () => {
     name: 'Pré-Viagem',
     description: null,
     active: true,
+    vehicleRequired: true,
+    driverRequirement: ChecklistDriverRequirement.OPTIONAL,
     items: [
       {
         id: 'item-1',
@@ -52,6 +54,7 @@ describe('ChecklistController', () => {
     id: entryId,
     organizationId: orgId,
     templateId,
+    templateName: 'Pré-Viagem',
     vehicleId,
     driverId: null,
     memberId,
@@ -127,6 +130,8 @@ describe('ChecklistController', () => {
 
       const dto: CreateChecklistTemplateDto = {
         name: 'Pré-Viagem',
+        vehicleRequired: true,
+        driverRequirement: ChecklistDriverRequirement.OPTIONAL,
         items: [
           { label: 'Pneus OK?', type: ItemType.YES_NO, required: true, order: 1 },
         ],
@@ -145,6 +150,8 @@ describe('ChecklistController', () => {
         name: 'Pré-Viagem',
         description: 'Verificação antes da saída',
         active: false,
+        vehicleRequired: true,
+        driverRequirement: ChecklistDriverRequirement.OPTIONAL,
         items: [
           { label: 'Km atual', type: ItemType.NUMBER, required: true, order: 1 },
           { label: 'Tipo de combustível', type: ItemType.SELECT, required: false, options: ['Gasolina', 'Diesel'], order: 2 },

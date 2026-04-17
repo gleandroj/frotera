@@ -522,12 +522,23 @@ enum EntryStatus {
   @@map("entry_status")
 }
 
+enum ChecklistDriverRequirement {
+  REQUIRED
+  OPTIONAL
+  HIDDEN
+
+  @@map("checklist_driver_requirement")
+}
+
 model ChecklistTemplate {
   id             String   @id @default(cuid())
   organizationId String
   name           String
   description    String?
   active         Boolean  @default(true)
+  /// Quando false, a entrada pode ser criada sem veículo.
+  vehicleRequired Boolean @default(true)
+  driverRequirement ChecklistDriverRequirement @default(OPTIONAL)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -561,7 +572,7 @@ model ChecklistEntry {
   id             String      @id @default(cuid())
   organizationId String
   templateId     String
-  vehicleId      String
+  vehicleId      String?
   driverId       String?
   memberId       String
   status         EntryStatus @default(PENDING)
@@ -571,7 +582,7 @@ model ChecklistEntry {
 
   organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   template     ChecklistTemplate  @relation(fields: [templateId], references: [id])
-  vehicle      Vehicle            @relation(fields: [vehicleId], references: [id])
+  vehicle      Vehicle?           @relation(fields: [vehicleId], references: [id])
   member       OrganizationMember @relation(fields: [memberId], references: [id])
   answers      ChecklistAnswer[]
 
