@@ -1034,7 +1034,7 @@ export const checklistAPI = {
       payload,
     ),
   deleteTemplate: (organizationId: string, templateId: string) =>
-    externalApi.delete(
+    externalApi.delete<{ message: string }>(
       `/api/organizations/${organizationId}/checklist/templates/${templateId}`,
     ),
   listEntries: (organizationId: string, filters?: ChecklistEntryFilters) =>
@@ -1047,6 +1047,22 @@ export const checklistAPI = {
       `/api/organizations/${organizationId}/checklist/entries`,
       payload,
     ),
+  uploadAttachment: (
+    organizationId: string,
+    file: File,
+    purpose: "photo" | "file" | "signature",
+  ) => {
+    const body = new FormData();
+    body.append("file", file);
+    return externalApi.post<{ fileUrl: string; originalName: string; mimeType: string }>(
+      `/api/organizations/${organizationId}/checklist/upload`,
+      body,
+      {
+        params: { purpose },
+        timeout: 120_000,
+      },
+    );
+  },
   getEntry: (organizationId: string, entryId: string) =>
     externalApi.get<ChecklistEntry>(
       `/api/organizations/${organizationId}/checklist/entries/${entryId}`,
@@ -1084,4 +1100,21 @@ export const publicChecklistAPI = {
     driverId?: string;
     answers: { itemId: string; value?: string; photoUrl?: string }[];
   }) => externalApi.post<ChecklistEntry>(`/api/public/checklist/entries`, payload),
+  uploadAttachment: (
+    organizationId: string,
+    templateId: string,
+    file: File,
+    purpose: "photo" | "file" | "signature",
+  ) => {
+    const body = new FormData();
+    body.append("file", file);
+    return externalApi.post<{ fileUrl: string; originalName: string; mimeType: string }>(
+      `/api/public/checklist/upload`,
+      body,
+      {
+        params: { organizationId, templateId, purpose },
+        timeout: 120_000,
+      },
+    );
+  },
 };

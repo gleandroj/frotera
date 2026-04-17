@@ -7,6 +7,16 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/** Radix Select portals outside the sheet; modal Dialog treats those clicks as "outside". */
+function pointerEventTargetIsInsideRadixSelectMenu(event: {
+  target: EventTarget | null
+  detail?: { originalEvent?: Event }
+}): boolean {
+  const candidates = [event.target, event.detail?.originalEvent?.target]
+  return candidates.some(
+    (t) => t instanceof Element && !!t.closest("[data-radix-select-viewport]"),
+  )
+}
 
 const Sheet = SheetPrimitive.Root
 
@@ -90,7 +100,7 @@ const hasTitleInChildren = (children: React.ReactNode): boolean => {
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, hideOverlay, ...props }, ref) => {
+>(({ side = "right", className, children, hideOverlay, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
   // Check if children contains a Title
   const hasTitle = hasTitleInChildren(children)
 
@@ -107,6 +117,18 @@ const SheetContent = React.forwardRef<
           "!fixed"
         )}
         {...props}
+        onPointerDownOutside={(event) => {
+          if (pointerEventTargetIsInsideRadixSelectMenu(event)) {
+            event.preventDefault()
+          }
+          onPointerDownOutside?.(event)
+        }}
+        onInteractOutside={(event) => {
+          if (pointerEventTargetIsInsideRadixSelectMenu(event)) {
+            event.preventDefault()
+          }
+          onInteractOutside?.(event)
+        }}
       >
         {!hasTitle && (
           <SheetPrimitive.Title className="sr-only">Sheet</SheetPrimitive.Title>

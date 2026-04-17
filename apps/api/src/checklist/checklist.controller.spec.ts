@@ -25,7 +25,7 @@ describe('ChecklistController', () => {
   const entryId = 'entry-1';
   const vehicleId = 'vehicle-1';
 
-  const mockRequest = { user: { userId } };
+  const mockRequest = { user: { userId }, ip: "203.0.113.1" };
 
   const mockTemplate: ChecklistTemplateResponseDto = {
     id: templateId,
@@ -73,21 +73,16 @@ describe('ChecklistController', () => {
     deleteTemplate: jest.fn(),
     listEntries: jest.fn(),
     createEntry: jest.fn(),
+    getMemberIdForUser: jest.fn(),
+    uploadForMember: jest.fn(),
     getEntry: jest.fn(),
     updateEntryStatus: jest.fn(),
-    prisma: {
-      organizationMember: {
-        findFirst: jest.fn(),
-      },
-    },
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    mockChecklistService.prisma.organizationMember.findFirst.mockResolvedValue({
-      id: memberId,
-    });
+    mockChecklistService.getMemberIdForUser.mockResolvedValue(memberId);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ChecklistController],
@@ -263,10 +258,10 @@ describe('ChecklistController', () => {
 
       const result = await controller.createEntry(orgId, dto, mockRequest as any);
 
-      expect(mockChecklistService.prisma.organizationMember.findFirst).toHaveBeenCalledWith({
-        where: { userId, organizationId: orgId },
+      expect(mockChecklistService.getMemberIdForUser).toHaveBeenCalledWith(orgId, userId);
+      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, {
+        clientIp: "203.0.113.1",
       });
-      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto);
       expect(result).toEqual(mockEntry);
     });
 
@@ -282,7 +277,42 @@ describe('ChecklistController', () => {
 
       await controller.createEntry(orgId, dto, mockRequest as any);
 
-      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto);
+      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, {
+        clientIp: "203.0.113.1",
+      });
+    });
+  });
+
+  describe('uploadChecklistFile', () => {
+    it('should upload and return file metadata', async () => {
+      mockChecklistService.uploadForMember.mockResolvedValue({
+        fileUrl: "https://bucket.example/sig.png",
+        originalName: "sig.png",
+        mimeType: "image/png",
+      });
+
+      const file = {
+        buffer: Buffer.from("fake"),
+        originalname: "sig.png",
+        mimetype: "image/png",
+      };
+
+      const result = await controller.uploadChecklistFile(
+        orgId,
+        mockRequest as any,
+        "signature",
+        file as Express.Multer.File,
+      );
+
+      expect(service.uploadForMember).toHaveBeenCalledWith(
+        orgId,
+        userId,
+        "signature",
+        file.buffer,
+        "sig.png",
+        "image/png",
+      );
+      expect(result.fileUrl).toBe("https://bucket.example/sig.png");
     });
   });
 

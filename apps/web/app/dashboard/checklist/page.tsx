@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/hooks/use-auth";
@@ -52,6 +52,10 @@ type TabType = "templates" | "entries";
 
 const STATUS_ALL = "all";
 
+const TEMPLATE_LIST_ALL = "all";
+const TEMPLATE_LIST_ACTIVE = "active";
+const TEMPLATE_LIST_INACTIVE = "inactive";
+
 export default function ChecklistPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -72,8 +76,21 @@ export default function ChecklistPage() {
   const [dateTo, setDateTo] = useState("");
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ChecklistTemplate | null>(null);
+  const [templateListFilter, setTemplateListFilter] = useState<
+    typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE
+  >(TEMPLATE_LIST_ACTIVE);
 
   const orgId = currentOrganization?.id;
+
+  const filteredTemplates = useMemo(() => {
+    if (templateListFilter === TEMPLATE_LIST_ACTIVE) {
+      return templates.filter((tpl) => tpl.active);
+    }
+    if (templateListFilter === TEMPLATE_LIST_INACTIVE) {
+      return templates.filter((tpl) => !tpl.active);
+    }
+    return templates;
+  }, [templates, templateListFilter]);
 
   const loadTemplates = async () => {
     if (!orgId) return;
@@ -123,11 +140,21 @@ export default function ChecklistPage() {
     if (!templateToDelete || !orgId) return;
     try {
       setIsDeleting(true);
-      await checklistAPI.deleteTemplate(orgId, templateToDelete.id);
-      setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateToDelete.id));
+      const res = await checklistAPI.deleteTemplate(orgId, templateToDelete.id);
+      const msg = res.data?.message;
+      if (msg === "CHECKLIST_TEMPLATE_DEACTIVATED") {
+        setTemplates((prev) =>
+          prev.map((tpl) =>
+            tpl.id === templateToDelete.id ? { ...tpl, active: false } : tpl,
+          ),
+        );
+        toast.success(t("checklist.toastTemplateDeactivated"));
+      } else {
+        setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateToDelete.id));
+        toast.success(t("checklist.toastDeleted"));
+      }
       setDeleteDialogOpen(false);
       setTemplateToDelete(null);
-      toast.success(t("checklist.toastDeleted"));
     } catch {
       toast.error(t("checklist.toastError"));
     } finally {
@@ -171,7 +198,12 @@ export default function ChecklistPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/dashboard/checklist/fill/${template.id}`)}
+              disabled={!template.active}
+              title={!template.active ? t("checklist.templateInactiveHint") : undefined}
+              onClick={() => {
+                if (!template.active) return;
+                router.push(`/dashboard/checklist/fill/${template.id}`);
+              }}
             >
               {t("checklist.fillChecklist")}
             </Button>
@@ -191,7 +223,9 @@ export default function ChecklistPage() {
                   {t("common.edit")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={!template.active}
                   onClick={() => {
+                    if (!template.active) return;
                     const url = `${window.location.origin}/fill?orgId=${orgId}&templateId=${template.id}`;
                     navigator.clipboard.writeText(url);
                     toast.success(t("checklist.linkCopied"));
@@ -301,7 +335,7 @@ export default function ChecklistPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("checklist.title")}</h1>
-          <p className="text-muted-foreground">{t("checklist.title")}</p>
+          <p className="text-muted-foreground">{t("checklist.pageSubtitle")}</p>
         </div>
         {activeTab === "templates" && can(Module.CHECKLIST, Action.CREATE) && (
           <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
@@ -318,17 +352,50 @@ export default function ChecklistPage() {
         </TabsList>
 
         <TabsContent value="templates" className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground shrink-0">
+              {t("checklist.templateListFilter")}
+            </span>
+            <Select
+              value={templateListFilter}
+              onValueChange={(v) =>
+                setTemplateListFilter(
+                  v as typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE,
+                )
+              }
+            >
+              <SelectTrigger className="w-[min(100%,280px)] sm:w-72">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TEMPLATE_LIST_ACTIVE}>
+                  {t("checklist.templateListFilterActive")}
+                </SelectItem>
+                <SelectItem value={TEMPLATE_LIST_INACTIVE}>
+                  {t("checklist.templateListFilterInactive")}
+                </SelectItem>
+                <SelectItem value={TEMPLATE_LIST_ALL}>
+                  {t("checklist.templateListFilterAll")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : templates.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("checklist.noTemplates")}</p>
+          ) : filteredTemplates.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {t("checklist.noTemplatesMatchFilter")}
+            </p>
           ) : (
             <DataTable
               columns={templateColumns}
-              data={templates}
+              data={filteredTemplates}
               filterPlaceholder={t("common.search")}
               filterColumnId="name"
-              noResultsLabel={t("checklist.noTemplates")}
+              noResultsLabel={t("checklist.noTemplatesMatchFilter")}
             />
           )}
         </TabsContent>
@@ -387,7 +454,7 @@ export default function ChecklistPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("checklist.confirmDeleteTemplate.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="whitespace-pre-line text-left">
               {t("checklist.confirmDeleteTemplate.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -398,7 +465,7 @@ export default function ChecklistPage() {
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
-              {isDeleting ? t("common.loading") : t("common.delete")}
+              {isDeleting ? t("common.loading") : t("checklist.confirmDeleteTemplate.confirmButton")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -36,76 +36,12 @@ import { ResourceSelectCreateRow } from "@/components/resource-select-create-row
 import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
 import { DriverFormDialog } from "@/app/dashboard/drivers/driver-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
-
-// ── SignaturePad ───────────────────────────────────────────────────────────────
-
-function SignaturePad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const drawing = React.useRef(false);
-
-  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const src = "touches" in e ? e.touches[0] : e;
-    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
-  };
-
-  const start = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const { x, y } = getPos(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    drawing.current = true;
-  };
-
-  const move = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!drawing.current) return;
-    e.preventDefault();
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    const { x, y } = getPos(e, canvas);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stop = () => {
-    if (!drawing.current) return;
-    drawing.current = false;
-    onChange(canvasRef.current!.toDataURL());
-  };
-
-  const clear = () => {
-    const canvas = canvasRef.current!;
-    canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
-    onChange("");
-  };
-
-  return (
-    <div className="space-y-2">
-      <canvas
-        ref={canvasRef}
-        width={400}
-        height={150}
-        className="w-full rounded border bg-white touch-none cursor-crosshair"
-        onMouseDown={start}
-        onMouseMove={move}
-        onMouseUp={stop}
-        onMouseLeave={stop}
-        onTouchStart={start}
-        onTouchMove={move}
-        onTouchEnd={stop}
-      />
-      <Button type="button" variant="outline" size="sm" onClick={clear}>
-        Limpar assinatura
-      </Button>
-      {value && <p className="text-xs text-green-600">Assinatura capturada</p>}
-    </div>
-  );
-}
+import { ChecklistSignatureField } from "@/components/checklist/checklist-signature-field";
+import {
+  getChecklistAttachmentPhotoUrl,
+  parseChecklistAttachment,
+  stringifyChecklistAttachment,
+} from "@/lib/checklist-answer-utils";
 
 /** Radix Select não permite SelectItem com value="". */
 const NO_DRIVER_SELECT_VALUE = "__checklist_no_driver__";
@@ -161,6 +97,7 @@ export default function FillChecklistPage({
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [selectedDriver, setSelectedDriver] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [attachmentUploadingId, setAttachmentUploadingId] = useState<string | null>(null);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [driverFormOpen, setDriverFormOpen] = useState(false);
 
@@ -234,7 +171,15 @@ export default function FillChecklistPage({
 
     const requiredItems = template.items.filter((item) => item.required);
     for (const item of requiredItems) {
-      if (!answers[item.id]) {
+      const raw = answers[item.id];
+      if (item.type === "PHOTO" || item.type === "FILE") {
+        if (!getChecklistAttachmentPhotoUrl(raw)) {
+          toast.error(t("checklist.requiredItemsMissing"));
+          return false;
+        }
+        continue;
+      }
+      if (!raw?.trim()) {
         toast.error(t("checklist.requiredItemsMissing"));
         return false;
       }
@@ -271,13 +216,24 @@ export default function FillChecklistPage({
         ...(driverReq !== "HIDDEN" && selectedDriver
           ? { driverId: selectedDriver }
           : {}),
-        answers: Object.entries(answers).map(([itemId, value]) => {
+        answers: Object.entries(answers).map(([itemId, raw]) => {
           const item = template.items.find((i) => i.id === itemId);
-          return {
-            itemId,
-            value,
-            photoUrl: item?.type === "PHOTO" || item?.type === "FILE" ? value : undefined,
-          };
+          if (item?.type === "PHOTO" || item?.type === "FILE") {
+            const att = parseChecklistAttachment(raw);
+            const meta =
+              att?.originalName || att?.mimeType
+                ? JSON.stringify({
+                    originalName: att.originalName,
+                    mimeType: att.mimeType,
+                  })
+                : undefined;
+            return {
+              itemId,
+              value: meta,
+              photoUrl: att?.photoUrl,
+            };
+          }
+          return { itemId, value: raw, photoUrl: undefined };
         }),
       };
 
@@ -518,16 +474,38 @@ export default function FillChecklistPage({
                     <Input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      disabled={submitting || attachmentUploadingId === item.id}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setAnswers((prev) => ({ ...prev, [item.id]: reader.result as string }));
-                        reader.readAsDataURL(file);
+                        if (!file || !orgId) return;
+                        setAttachmentUploadingId(item.id);
+                        try {
+                          const { data } = await checklistAPI.uploadAttachment(orgId, file, "photo");
+                          setAnswers((prev) => ({
+                            ...prev,
+                            [item.id]: stringifyChecklistAttachment({
+                              photoUrl: data.fileUrl,
+                              originalName: file.name,
+                              mimeType: file.type || data.mimeType,
+                            }),
+                          }));
+                        } catch {
+                          toast.error(t("checklist.toastError"));
+                        } finally {
+                          setAttachmentUploadingId(null);
+                          e.target.value = "";
+                        }
                       }}
                     />
-                    {answers[item.id] && (
-                      <img src={answers[item.id]} alt="preview" className="h-24 w-auto rounded border object-cover" />
+                    {attachmentUploadingId === item.id && (
+                      <p className="text-xs text-muted-foreground">{t("checklist.uploadingAttachment")}</p>
+                    )}
+                    {getChecklistAttachmentPhotoUrl(answers[item.id]) && (
+                      <img
+                        src={getChecklistAttachmentPhotoUrl(answers[item.id])!}
+                        alt=""
+                        className="h-24 w-auto rounded border object-cover"
+                      />
                     )}
                   </div>
                 )}
@@ -557,10 +535,16 @@ export default function FillChecklistPage({
                 )}
 
                 {/* SIGNATURE */}
-                {item.type === "SIGNATURE" && (
-                  <SignaturePad
+                {item.type === "SIGNATURE" && orgId && (
+                  <ChecklistSignatureField
                     value={answers[item.id] ?? ""}
                     onChange={(v) => setAnswers((prev) => ({ ...prev, [item.id]: v }))}
+                    disabled={submitting}
+                    uploadPngBlob={async (blob) => {
+                      const file = new File([blob], "signature.png", { type: "image/png" });
+                      const { data } = await checklistAPI.uploadAttachment(orgId, file, "signature");
+                      return data.fileUrl;
+                    }}
                   />
                 )}
 
@@ -569,16 +553,36 @@ export default function FillChecklistPage({
                   <div className="space-y-2">
                     <Input
                       type="file"
-                      onChange={(e) => {
+                      disabled={submitting || attachmentUploadingId === item.id}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setAnswers((prev) => ({ ...prev, [item.id]: reader.result as string }));
-                        reader.readAsDataURL(file);
+                        if (!file || !orgId) return;
+                        setAttachmentUploadingId(item.id);
+                        try {
+                          const { data } = await checklistAPI.uploadAttachment(orgId, file, "file");
+                          setAnswers((prev) => ({
+                            ...prev,
+                            [item.id]: stringifyChecklistAttachment({
+                              photoUrl: data.fileUrl,
+                              originalName: file.name,
+                              mimeType: file.type || data.mimeType,
+                            }),
+                          }));
+                        } catch {
+                          toast.error(t("checklist.toastError"));
+                        } finally {
+                          setAttachmentUploadingId(null);
+                          e.target.value = "";
+                        }
                       }}
                     />
-                    {answers[item.id] && (
-                      <p className="text-xs text-muted-foreground">Arquivo selecionado</p>
+                    {attachmentUploadingId === item.id && (
+                      <p className="text-xs text-muted-foreground">{t("checklist.uploadingAttachment")}</p>
+                    )}
+                    {parseChecklistAttachment(answers[item.id])?.originalName && (
+                      <p className="text-xs text-muted-foreground">
+                        {parseChecklistAttachment(answers[item.id])?.originalName}
+                      </p>
                     )}
                   </div>
                 )}
@@ -596,7 +600,7 @@ export default function FillChecklistPage({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !!attachmentUploadingId}
               className="flex-1"
             >
               {submitting ? t("checklist.submitting") : t("checklist.submitChecklist")}

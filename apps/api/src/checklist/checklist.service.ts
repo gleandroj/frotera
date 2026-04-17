@@ -1,16 +1,107 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ChecklistDriverRequirement } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ChecklistDriverRequirement, ItemType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { S3Service } from "../utils/s3.service";
 import { ApiCode } from "../common/api-codes.enum";
+import {
+  assertChecklistUploadMime,
+  type ChecklistUploadPurpose,
+  CHECKLIST_UPLOAD_MAX_BYTES,
+} from "./checklist-upload.mime";
 import {
   ChecklistEntryFilterDto, ChecklistEntryResponseDto, ChecklistTemplateResponseDto,
   CreateChecklistEntryDto, CreateChecklistTemplateDto, CreatePublicChecklistEntryDto,
   UpdateChecklistEntryStatusDto, UpdateChecklistTemplateDto,
 } from "./checklist.dto";
 
+export type CreateEntryOptions = { clientIp?: string | null };
+
 @Injectable()
 export class ChecklistService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3: S3Service,
+  ) {}
+
+  /** Exposto para validação em controllers (ParseFilePipe não cobre MIME por purpose). */
+  static readonly uploadMaxBytes = CHECKLIST_UPLOAD_MAX_BYTES;
+
+  private parseUploadPurpose(raw: string | undefined): ChecklistUploadPurpose {
+    const p = (raw ?? "").toLowerCase().trim();
+    if (p === "photo" || p === "file" || p === "signature") return p;
+    throw new BadRequestException('Parâmetro "purpose" deve ser photo, file ou signature.');
+  }
+
+  async uploadForMember(
+    organizationId: string,
+    userId: string,
+    purposeRaw: string | undefined,
+    buffer: Buffer,
+    originalName: string,
+    mimetype: string,
+  ): Promise<{ fileUrl: string; originalName: string; mimeType: string }> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { userId, organizationId },
+      select: { id: true },
+    });
+    if (!member) throw new ForbiddenException();
+    const purpose = this.parseUploadPurpose(purposeRaw);
+    assertChecklistUploadMime(purpose, mimetype);
+    const prefix = `organizations/${organizationId}/checklist-attachments`;
+    const fileUrl = await this.s3.uploadFile(buffer, originalName, mimetype, prefix);
+    return { fileUrl, originalName, mimeType: mimetype };
+  }
+
+  async uploadForPublicTemplate(
+    organizationId: string,
+    templateId: string,
+    purposeRaw: string | undefined,
+    buffer: Buffer,
+    originalName: string,
+    mimetype: string,
+  ): Promise<{ fileUrl: string; originalName: string; mimeType: string }> {
+    const tpl = await this.prisma.checklistTemplate.findFirst({
+      where: { id: templateId, organizationId, active: true },
+      select: { id: true },
+    });
+    if (!tpl) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    const purpose = this.parseUploadPurpose(purposeRaw);
+    assertChecklistUploadMime(purpose, mimetype);
+    const prefix = `organizations/${organizationId}/checklist-attachments`;
+    const fileUrl = await this.s3.uploadFile(buffer, originalName, mimetype, prefix);
+    return { fileUrl, originalName, mimeType: mimetype };
+  }
+
+  private enrichSignatureValue(value: string | undefined | null, clientIp: string | null): string | null {
+    if (value === undefined || value === null) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (!trimmed.startsWith("{")) return trimmed;
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object" && parsed.version === 1) {
+        return JSON.stringify({
+          ...parsed,
+          server: {
+            ip: clientIp,
+            recordedAt: new Date().toISOString(),
+          },
+        });
+      }
+    } catch {
+      /* keep raw */
+    }
+    return trimmed;
+  }
+
+  async getMemberIdForUser(organizationId: string, userId: string): Promise<string> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { userId, organizationId },
+      select: { id: true },
+    });
+    if (!member) throw new ForbiddenException();
+    return member.id;
+  }
 
   async listTemplates(organizationId: string): Promise<ChecklistTemplateResponseDto[]> {
     const templates = await this.prisma.checklistTemplate.findMany({
@@ -131,7 +222,12 @@ export class ChecklistService {
     return entries.map((e) => this.toEntryResponse(e, driverMap.get(e.driverId ?? "") ?? null));
   }
 
-  async createEntry(organizationId: string, memberId: string, dto: CreateChecklistEntryDto): Promise<ChecklistEntryResponseDto> {
+  async createEntry(
+    organizationId: string,
+    memberId: string,
+    dto: CreateChecklistEntryDto,
+    opts?: CreateEntryOptions,
+  ): Promise<ChecklistEntryResponseDto> {
     const rawVehicleId = dto.vehicleId?.trim() || undefined;
     const rawDriverId = dto.driverId?.trim() || undefined;
 
@@ -183,19 +279,24 @@ export class ChecklistService {
     const status = allAnswered ? "COMPLETED" : "INCOMPLETE";
 
     const itemMap = new Map(template.items.map((i) => [i.id, i]));
+    const clientIp = opts?.clientIp ?? null;
 
     const entry = await this.prisma.checklistEntry.create({
       data: {
         organizationId,
         templateId: dto.templateId,
-        vehicleId: resolvedVehicleId,
-        driverId: resolvedDriverId,
+        vehicleId: resolvedVehicleId ?? undefined,
+        driverId: resolvedDriverId ?? undefined,
         memberId,
         status,
         completedAt: status === "COMPLETED" ? new Date() : null,
         answers: {
           create: dto.answers.map((a) => {
             const item = itemMap.get(a.itemId)!;
+            const valueStored =
+              item.type === ItemType.SIGNATURE
+                ? this.enrichSignatureValue(a.value, clientIp)
+                : (a.value ?? null);
             return {
               itemId: a.itemId,
               itemLabel: item.label,
@@ -203,7 +304,7 @@ export class ChecklistService {
               itemOptions: item.options ?? [],
               itemRequired: item.required,
               itemOrder: item.order,
-              value: a.value ?? null,
+              value: valueStored,
               photoUrl: a.photoUrl ?? null,
             };
           }),
@@ -280,19 +381,27 @@ export class ChecklistService {
     return this.toEntryResponse(entry, driverName);
   }
 
-  async createPublicEntry(dto: CreatePublicChecklistEntryDto): Promise<ChecklistEntryResponseDto> {
+  async createPublicEntry(
+    dto: CreatePublicChecklistEntryDto,
+    opts?: CreateEntryOptions,
+  ): Promise<ChecklistEntryResponseDto> {
     const fallbackMember = await this.prisma.organizationMember.findFirst({
       where: { organizationId: dto.organizationId },
       orderBy: { createdAt: "asc" },
     });
     if (!fallbackMember) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
 
-    return this.createEntry(dto.organizationId, fallbackMember.id, {
-      templateId: dto.templateId,
-      ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
-      ...(dto.driverId !== undefined && { driverId: dto.driverId }),
-      answers: dto.answers,
-    });
+    return this.createEntry(
+      dto.organizationId,
+      fallbackMember.id,
+      {
+        templateId: dto.templateId,
+        ...(dto.vehicleId !== undefined && { vehicleId: dto.vehicleId }),
+        ...(dto.driverId !== undefined && { driverId: dto.driverId }),
+        answers: dto.answers,
+      },
+      opts,
+    );
   }
 
   async getPublicTemplate(organizationId: string, templateId: string): Promise<ChecklistTemplateResponseDto> {

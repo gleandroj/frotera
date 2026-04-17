@@ -1,10 +1,14 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus, MaxFileSizeValidator,
+  Param, ParseFilePipe, Patch, Post, Query, Request, UploadedFile, UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChecklistService } from "./checklist.service";
+import { clientIpFromRequest } from "./checklist-client-ip";
 import {
   ChecklistEntryFilterDto, CreateChecklistEntryDto,
   CreateChecklistTemplateDto, UpdateChecklistEntryStatusDto, UpdateChecklistTemplateDto,
@@ -66,6 +70,48 @@ export class ChecklistController {
     return this.checklistService.deleteTemplate(templateId, organizationId);
   }
 
+  @Post("upload")
+  @HttpCode(201)
+  @ApiOperation({ summary: "Upload de anexo para checklist (foto, arquivo ou PNG de assinatura)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["file"],
+      properties: {
+        file: { type: "string", format: "binary" },
+        purpose: { type: "string", enum: ["photo", "file", "signature"] },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: ChecklistService.uploadMaxBytes } }),
+  )
+  async uploadChecklistFile(
+    @Param("organizationId") organizationId: string,
+    @Request() req: RequestWithUser,
+    @Query("purpose") purpose: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        fileIsRequired: true,
+        validators: [
+          new MaxFileSizeValidator({ maxSize: ChecklistService.uploadMaxBytes }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<{ fileUrl: string; originalName: string; mimeType: string }> {
+    return this.checklistService.uploadForMember(
+      organizationId,
+      req.user.userId,
+      purpose,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+  }
+
   // ─── Entries ────────────────────────────────────────────────────────────────
 
   @Get("entries")
@@ -84,10 +130,10 @@ export class ChecklistController {
     @Body() body: CreateChecklistEntryDto,
     @Request() req: RequestWithUser,
   ) {
-    const membership = await this.checklistService["prisma"].organizationMember.findFirst({
-      where: { userId: req.user.userId, organizationId },
+    const memberId = await this.checklistService.getMemberIdForUser(organizationId, req.user.userId);
+    return this.checklistService.createEntry(organizationId, memberId, body, {
+      clientIp: clientIpFromRequest(req),
     });
-    return this.checklistService.createEntry(organizationId, membership!.id, body);
   }
 
   @Get("entries/:entryId")

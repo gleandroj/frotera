@@ -38,18 +38,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { parseChecklistAttachment } from "@/lib/checklist-answer-utils";
+import { parseChecklistSignaturePayload } from "@/lib/checklist-signature";
 
-/** Data URLs em `target=_blank` costumam abrir aba em branco; use modal ou URL http(s). */
-function checklistPhotoSrc(answer: ChecklistAnswer): string | null {
-  const raw = answer.photoUrl || answer.value;
-  if (!raw || typeof raw !== "string") return null;
-  const trimmed = raw.trim();
+/** URL ou data URL de foto/arquivo (photoUrl ou JSON em value). */
+function checklistAttachmentSrc(answer: ChecklistAnswer): string | null {
+  const pu = answer.photoUrl?.trim();
   if (
-    trimmed.startsWith("data:image") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://")
+    pu &&
+    (pu.startsWith("data:image") || pu.startsWith("http://") || pu.startsWith("https://"))
   ) {
-    return trimmed;
+    return pu;
+  }
+  const att = parseChecklistAttachment(answer.value ?? undefined);
+  if (att?.photoUrl) return att.photoUrl;
+  const val = answer.value?.trim();
+  if (
+    val &&
+    (val.startsWith("data:image") || val.startsWith("http://") || val.startsWith("https://"))
+  ) {
+    return val;
   }
   return null;
 }
@@ -124,8 +132,21 @@ export default function ChecklistEntryDetailPage({
 
   const formatAnswerValue = (answer: ChecklistAnswer | undefined, itemType: string): string => {
     if (!answer) return "—";
-    if (itemType === "PHOTO") {
-      return checklistPhotoSrc(answer) ? t("checklist.photoAttached") : "—";
+    if (itemType === "PHOTO" || itemType === "FILE") {
+      return checklistAttachmentSrc(answer) ? t("checklist.photoAttached") : "—";
+    }
+    if (itemType === "SIGNATURE") {
+      const p = parseChecklistSignaturePayload(answer.value ?? undefined);
+      if (p) {
+        const parts: string[] = [];
+        if (p.mode === "text" && p.text) parts.push(p.text);
+        if (p.mode === "draw" && p.drawImageUrl) parts.push(t("checklist.signatureDrawAttached"));
+        if (p.server?.ip != null && p.server.ip !== "")
+          parts.push(`${t("checklist.signatureIp")}: ${p.server.ip}`);
+        return parts.length > 0 ? parts.join(" · ") : "—";
+      }
+      if (answer.value?.startsWith("data:image")) return t("checklist.signatureLegacy");
+      return answer.value && answer.value.length > 0 ? answer.value.slice(0, 120) : "—";
     }
     if (answer.value === undefined || answer.value === null || answer.value === "") {
       return answer.photoUrl ? t("checklist.photoAttached") : "—";
@@ -330,35 +351,70 @@ export default function ChecklistEntryDetailPage({
                     <TableCell>{answer.itemType ? t(`checklist.itemTypes.${answer.itemType}`) : "—"}</TableCell>
                     <TableCell>
                       {(() => {
-                        const photoSrc =
-                          answer.itemType === "PHOTO"
-                            ? checklistPhotoSrc(answer)
-                            : null;
-                        if (photoSrc) {
+                        const type = answer.itemType ?? "";
+                        if (type === "PHOTO" || type === "FILE") {
+                          const src = checklistAttachmentSrc(answer);
+                          if (!src) {
+                            return formatAnswerValue(answer, type);
+                          }
                           const isHttp =
-                            photoSrc.startsWith("http://") ||
-                            photoSrc.startsWith("https://");
+                            src.startsWith("http://") || src.startsWith("https://");
                           return isHttp ? (
                             <a
-                              href={photoSrc}
+                              href={src}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline break-all"
                             >
-                              {t("common.view")}
+                              {type === "FILE"
+                                ? t("checklist.openAttachment")
+                                : t("common.view")}
                             </a>
                           ) : (
                             <Button
                               type="button"
                               variant="link"
                               className="h-auto p-0 text-primary"
-                              onClick={() => setPhotoPreview(photoSrc)}
+                              onClick={() => setPhotoPreview(src)}
                             >
                               {t("common.view")}
                             </Button>
                           );
                         }
-                        return formatAnswerValue(answer, answer.itemType ?? "");
+                        if (type === "SIGNATURE") {
+                          const p = parseChecklistSignaturePayload(answer.value ?? undefined);
+                          const drawUrl = p?.drawImageUrl;
+                          const isHttpDraw =
+                            drawUrl &&
+                            (drawUrl.startsWith("http://") ||
+                              drawUrl.startsWith("https://"));
+                          return (
+                            <div className="space-y-1 text-sm">
+                              <div>{formatAnswerValue(answer, type)}</div>
+                              {isHttpDraw && (
+                                <a
+                                  href={drawUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline break-all"
+                                >
+                                  {t("checklist.signatureDrawAttached")}
+                                </a>
+                              )}
+                              {drawUrl?.startsWith("data:image") && (
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  className="h-auto p-0 text-primary"
+                                  onClick={() => setPhotoPreview(drawUrl)}
+                                >
+                                  {t("checklist.signatureDrawAttached")}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        }
+                        return formatAnswerValue(answer, type);
                       })()}
                     </TableCell>
                   </TableRow>
