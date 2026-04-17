@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
   Sheet,
@@ -42,6 +44,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import {
   driversAPI,
@@ -51,9 +54,33 @@ import {
   type CreateDriverPayload,
   type UpdateDriverPayload,
 } from "@/lib/frontend/api-client";
-import { ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+function maskCpf(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+}
+
+function maskCnh(value: string) {
+  return value.replace(/\D/g, "").slice(0, 11);
+}
 
 const CNH_CATEGORIES = ["A", "B", "C", "D", "E", "AB", "AC", "AD", "AE"] as const;
 
@@ -222,7 +249,11 @@ export function DriverFormDialog({
                           <Input
                             placeholder="000.000.000-00"
                             className="font-mono"
-                            {...field}
+                            inputMode="numeric"
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(maskCpf(e.target.value))
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -236,7 +267,14 @@ export function DriverFormDialog({
                       <FormItem>
                         <FormLabel>{t("common.phone")}</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input
+                            placeholder="(00) 00000-0000"
+                            inputMode="tel"
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(maskPhone(e.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -358,7 +396,15 @@ export function DriverFormDialog({
                       <FormItem>
                         <FormLabel>{t("drivers.cnh")}</FormLabel>
                         <FormControl>
-                          <Input className="font-mono" {...field} />
+                          <Input
+                            className="font-mono"
+                            placeholder="00000000000"
+                            inputMode="numeric"
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(maskCnh(e.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -401,15 +447,54 @@ export function DriverFormDialog({
                   <FormField
                     control={form.control}
                     name="cnhExpiry"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("drivers.cnhExpiry")}</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const [calendarOpen, setCalendarOpen] = useState(false);
+                      const selectedDate = field.value
+                        ? parseISO(field.value)
+                        : undefined;
+                      return (
+                        <FormItem>
+                          <FormLabel>{t("drivers.cnhExpiry")}</FormLabel>
+                          <Popover
+                            open={calendarOpen}
+                            onOpenChange={setCalendarOpen}
+                          >
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal h-10",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {selectedDate
+                                    ? format(selectedDate, "dd/MM/yyyy", {
+                                        locale: ptBR,
+                                      })
+                                    : t("drivers.selectDate")}
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={(d) => {
+                                  field.onChange(
+                                    d ? format(d, "yyyy-MM-dd") : ""
+                                  );
+                                  setCalendarOpen(false);
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
               </div>

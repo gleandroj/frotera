@@ -1121,6 +1121,7 @@
     "cnh": "CNH",
     "cnhCategory": "Categoria CNH",
     "cnhExpiry": "Vencimento da CNH",
+    "selectDate": "Selecione uma data",
     "selectCnhCategory": "Selecione a categoria",
     "noCnhCategory": "Sem categoria",
     "customer": "Empresa",
