@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "clean": "rm -rf dist",
-    "db:seed": "ts-node prisma/seed.ts",
+    "db:seed": "prisma generate --schema=./prisma/schema.prisma && ts-node prisma/seed.ts",
     "db:push": "prisma generate --schema=./prisma/schema.prisma && prisma db push --schema=./prisma/schema.prisma",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma"
   },
@@ -145,6 +145,6 @@
     "setupFilesAfterEnv": ["<rootDir>/../jest-setup.ts"]
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "prisma generate --schema=./prisma/schema.prisma && ts-node prisma/seed.ts"
   }
 }

@@ -25,25 +25,29 @@ export class FuelPriceApiService {
     diesel: FuelType.DIESEL,
   };
 
-  // Mapping from state code to uppercase (e.g., 'sp' -> 'SP')
-  private readonly STATE_CODES = [
-    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-  ];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
   ) {}
 
+  private calendarDayKey(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+
+  private sameCalendarDay(a: Date, b: Date): boolean {
+    return this.calendarDayKey(a) === this.calendarDayKey(b);
+  }
+
+  private samePrice(a: number, b: number): boolean {
+    return Math.abs(a - b) < 1e-5;
+  }
+
   /**
-   * Busca preços de combustível da API externa e persiste como snapshots
+   * Busca preços de combustível da API externa e persiste como snapshots.
+   * Só grava quando o dia de referência ou o valor mudou em relação ao último snapshot (estado+tipo).
    */
   async fetchAndStoreAllPrices(): Promise<void> {
     try {
-      this.logger.log('Iniciando fetch de preços de combustível...');
-
       const response = await firstValueFrom(
         this.httpService.get<CombustivelApiResponse>(this.API_URL),
       );
@@ -56,6 +60,14 @@ export class FuelPriceApiService {
       }
 
       const refDate = new Date(data.data_coleta);
+      if (Number.isNaN(refDate.getTime())) {
+        this.logger.warn(`data_coleta inválida: ${data.data_coleta}`);
+        return;
+      }
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
 
       // Iterar por cada tipo de combustível retornado pela API
       for (const [fuelName, statesPrices] of Object.entries(data.precos)) {
@@ -77,18 +89,38 @@ export class FuelPriceApiService {
           }
 
           try {
+            const latest = await this.prisma.fuelPriceSnapshot.findFirst({
+              where: { state: stateUpper, fuelType },
+              orderBy: { refDate: 'desc' },
+            });
+
+            if (
+              latest &&
+              this.sameCalendarDay(latest.refDate, refDate) &&
+              this.samePrice(latest.avgPrice, price)
+            ) {
+              skipped += 1;
+              continue;
+            }
+
             const existing = await this.prisma.fuelPriceSnapshot.findFirst({
               where: { state: stateUpper, fuelType, refDate },
             });
             if (existing) {
+              if (this.samePrice(existing.avgPrice, price)) {
+                skipped += 1;
+                continue;
+              }
               await this.prisma.fuelPriceSnapshot.update({
                 where: { id: existing.id },
                 data: { avgPrice: price, fetchedAt: new Date() },
               });
+              updated += 1;
             } else {
               await this.prisma.fuelPriceSnapshot.create({
                 data: { state: stateUpper, fuelType, avgPrice: price, refDate, source: 'combustivelapi' },
               });
+              created += 1;
             }
           } catch (error) {
             this.logger.debug(`Erro ao salvar snapshot ${stateUpper}/${fuelName}: ${error.message}`);
@@ -96,7 +128,11 @@ export class FuelPriceApiService {
         }
       }
 
-      this.logger.log('Preços de combustível atualizados com sucesso');
+      if (created > 0 || updated > 0) {
+        this.logger.log(
+          `Preços combustível: ${created} criados, ${updated} atualizados, ${skipped} ignorados (sem mudança)`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Erro ao buscar preços da API externa: ${error.message}`,

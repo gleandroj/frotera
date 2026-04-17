@@ -501,6 +501,25 @@ model FuelPriceSnapshot {
   @@map("fuel_price_snapshots")
 }
 
+// Localidades IBGE — populadas via `pnpm db:seed` (arquivos em prisma/data/), sem chamada runtime à API do IBGE
+model IbgeUf {
+  sigla      String          @id
+  nome       String
+  municipios IbgeMunicipio[]
+
+  @@map("ibge_ufs")
+}
+
+model IbgeMunicipio {
+  id      Int    @id // código IBGE do município
+  nome    String
+  ufSigla String
+  uf      IbgeUf @relation(fields: [ufSigla], references: [sigla], onDelete: Cascade)
+
+  @@index([ufSigla, nome])
+  @@map("ibge_municipios")
+}
+
 // ─── Checklist ────────────────────────────────────────────────────────────────
 
 enum ItemType {

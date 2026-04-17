@@ -1,10 +1,13 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const prisma = new PrismaClient();
 
 interface SeedOptions {
   seedAdminUser: boolean;
+  seedIbge: boolean;
 }
 
 // ============================================================
@@ -267,6 +270,51 @@ async function seedAdminUser(ownerRoleId: string) {
   };
 }
 
+async function seedIbgeLocalidades(): Promise<void> {
+  const dataDir = path.join(__dirname, "data");
+  const ufsPath = path.join(dataDir, "ibge-ufs.json");
+  const munPath = path.join(dataDir, "ibge-municipios.json");
+  if (!fs.existsSync(ufsPath) || !fs.existsSync(munPath)) {
+    console.log(
+      "   ⚠️  IBGE: arquivos prisma/data/ibge-ufs.json ou ibge-municipios.json ausentes — pulando",
+    );
+    return;
+  }
+  const ufs = JSON.parse(fs.readFileSync(ufsPath, "utf8")) as Array<{
+    sigla: string;
+    nome: string;
+  }>;
+  const municipios = JSON.parse(fs.readFileSync(munPath, "utf8")) as Array<{
+    id: number;
+    nome: string;
+    uf: string;
+  }>;
+
+  // SQL bruto: evita depender dos delegates `ibgeUf` / `ibgeMunicipio` nos tipos do
+  // `PrismaClient` em layouts onde `ts-node` resolve um client gerado desatualizado.
+  const MUN_BATCH = 400;
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`DELETE FROM "ibge_municipios"`;
+    await tx.$executeRaw`DELETE FROM "ibge_ufs"`;
+    const ufRows = ufs.map((u) => Prisma.sql`(${u.sigla}, ${u.nome})`);
+    await tx.$executeRaw`
+      INSERT INTO "ibge_ufs" ("sigla", "nome")
+      VALUES ${Prisma.join(ufRows)}
+    `;
+    for (let i = 0; i < municipios.length; i += MUN_BATCH) {
+      const chunk = municipios.slice(i, i + MUN_BATCH);
+      const munRows = chunk.map(
+        (m) => Prisma.sql`(${m.id}, ${m.nome}, ${m.uf})`,
+      );
+      await tx.$executeRaw`
+        INSERT INTO "ibge_municipios" ("id", "nome", "ufSigla")
+        VALUES ${Prisma.join(munRows)}
+      `;
+    }
+  });
+  console.log(`   ✅ IBGE: ${ufs.length} UFs, ${municipios.length} municípios`);
+}
+
 async function seedAppSettings() {
   const existing = await prisma.appSettings.findFirst();
   if (existing) {
@@ -287,11 +335,13 @@ async function main() {
 
   const options: SeedOptions = {
     seedAdminUser: !args.includes("--skip-admin"),
+    seedIbge: !args.includes("--skip-ibge"),
   };
 
   console.log("🚀 Starting Database Seeding");
   console.log("=============================");
   console.log(`Admin User: ${options.seedAdminUser ? "YES" : "SKIP"}`);
+  console.log(`IBGE (UF/município): ${options.seedIbge ? "YES" : "SKIP"}`);
   console.log("");
 
   // 1. Seed App Settings
@@ -299,6 +349,13 @@ async function main() {
   console.log("----------------------------------------");
   await seedAppSettings();
   console.log("");
+
+  if (options.seedIbge) {
+    console.log("🗺️  IBGE localidades (referência)");
+    console.log("----------------------------------");
+    await seedIbgeLocalidades();
+    console.log("");
+  }
 
   // 2. Seed System Roles (RBAC)
   console.log("🔐 Seeding System Roles (RBAC)");
