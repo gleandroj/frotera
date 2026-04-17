@@ -3,8 +3,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ApiCode } from "../common/api-codes.enum";
 import {
   ChecklistEntryFilterDto, ChecklistEntryResponseDto, ChecklistTemplateResponseDto,
-  CreateChecklistEntryDto, CreateChecklistTemplateDto, UpdateChecklistEntryStatusDto,
-  UpdateChecklistTemplateDto,
+  CreateChecklistEntryDto, CreateChecklistTemplateDto, CreatePublicChecklistEntryDto,
+  UpdateChecklistEntryStatusDto, UpdateChecklistTemplateDto,
 } from "./checklist.dto";
 
 @Injectable()
@@ -56,19 +56,6 @@ export class ChecklistService {
     if (!existing) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
 
     return this.prisma.$transaction(async (tx) => {
-      if (dto.items !== undefined) {
-        // Delete answers referencing current items before deleting items (FK constraint)
-        const currentItems = await tx.checklistTemplateItem.findMany({
-          where: { templateId },
-          select: { id: true },
-        });
-        if (currentItems.length > 0) {
-          await tx.checklistAnswer.deleteMany({
-            where: { itemId: { in: currentItems.map((i) => i.id) } },
-          });
-        }
-      }
-
       const template = await tx.checklistTemplate.update({
         where: { id: templateId },
         data: {
@@ -120,9 +107,22 @@ export class ChecklistService {
       };
     }
     const entries = await this.prisma.checklistEntry.findMany({
-      where, include: { answers: true }, orderBy: { createdAt: "desc" },
+      where,
+      include: {
+        answers: true,
+        vehicle: { select: { name: true, plate: true } },
+        member: { include: { user: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: "desc" },
     });
-    return entries.map(this.toEntryResponse);
+
+    const driverIds = [...new Set(entries.map((e) => e.driverId).filter(Boolean))] as string[];
+    const driversFound = driverIds.length > 0
+      ? await this.prisma.driver.findMany({ where: { id: { in: driverIds } }, select: { id: true, name: true } })
+      : [];
+    const driverMap = new Map(driversFound.map((d) => [d.id, d.name]));
+
+    return entries.map((e) => this.toEntryResponse(e, driverMap.get(e.driverId ?? "") ?? null));
   }
 
   async createEntry(organizationId: string, memberId: string, dto: CreateChecklistEntryDto): Promise<ChecklistEntryResponseDto> {
@@ -147,6 +147,8 @@ export class ChecklistService {
     const allAnswered = template.items.every((i) => answeredItemIds.has(i.id));
     const status = allAnswered ? "COMPLETED" : "INCOMPLETE";
 
+    const itemMap = new Map(template.items.map((i) => [i.id, i]));
+
     const entry = await this.prisma.checklistEntry.create({
       data: {
         organizationId,
@@ -157,23 +159,46 @@ export class ChecklistService {
         status,
         completedAt: status === "COMPLETED" ? new Date() : null,
         answers: {
-          create: dto.answers.map((a) => ({
-            itemId: a.itemId, value: a.value ?? null, photoUrl: a.photoUrl ?? null,
-          })),
+          create: dto.answers.map((a) => {
+            const item = itemMap.get(a.itemId)!;
+            return {
+              itemId: a.itemId,
+              itemLabel: item.label,
+              itemType: item.type as string,
+              itemOptions: item.options ?? [],
+              itemRequired: item.required,
+              itemOrder: item.order,
+              value: a.value ?? null,
+              photoUrl: a.photoUrl ?? null,
+            };
+          }),
         },
       },
       include: { answers: true },
     });
-    return this.toEntryResponse(entry);
+    return this.toEntryResponse(entry, null);
   }
 
   async getEntry(entryId: string, organizationId: string): Promise<ChecklistEntryResponseDto> {
     const entry = await this.prisma.checklistEntry.findFirst({
       where: { id: entryId, organizationId },
-      include: { answers: true },
+      include: {
+        answers: true,
+        vehicle: { select: { name: true, plate: true } },
+        member: { include: { user: { select: { name: true } } } },
+      },
     });
     if (!entry) throw new NotFoundException(ApiCode.CHECKLIST_ENTRY_NOT_FOUND);
-    return this.toEntryResponse(entry);
+
+    let driverName: string | null = null;
+    if (entry.driverId) {
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: entry.driverId, organizationId },
+        select: { name: true },
+      });
+      driverName = driver?.name ?? entry.driverId;
+    }
+    return this.toEntryResponse(entry, driverName);
   }
 
   async updateEntryStatus(entryId: string, organizationId: string, dto: UpdateChecklistEntryStatusDto): Promise<ChecklistEntryResponseDto> {
@@ -190,7 +215,42 @@ export class ChecklistService {
       },
       include: { answers: true },
     });
-    return this.toEntryResponse(entry);
+    return this.toEntryResponse(entry, null);
+  }
+
+  async createPublicEntry(dto: CreatePublicChecklistEntryDto): Promise<ChecklistEntryResponseDto> {
+    const fallbackMember = await this.prisma.organizationMember.findFirst({
+      where: { organizationId: dto.organizationId },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!fallbackMember) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+
+    return this.createEntry(dto.organizationId, fallbackMember.id, {
+      templateId: dto.templateId,
+      vehicleId: dto.vehicleId,
+      driverId: dto.driverId,
+      answers: dto.answers,
+    });
+  }
+
+  async getPublicTemplate(organizationId: string, templateId: string): Promise<ChecklistTemplateResponseDto> {
+    return this.getTemplate(templateId, organizationId);
+  }
+
+  async listPublicVehicles(organizationId: string) {
+    return this.prisma.vehicle.findMany({
+      where: { organizationId },
+      select: { id: true, name: true, plate: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  async listPublicDrivers(organizationId: string) {
+    return this.prisma.driver.findMany({
+      where: { organizationId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
   }
 
   private toTemplateResponse(t: any): ChecklistTemplateResponseDto {
@@ -205,13 +265,23 @@ export class ChecklistService {
     };
   }
 
-  private toEntryResponse(e: any): ChecklistEntryResponseDto {
+  private toEntryResponse(e: any, driverName?: string | null): ChecklistEntryResponseDto {
     return {
       id: e.id, organizationId: e.organizationId, templateId: e.templateId,
-      vehicleId: e.vehicleId, driverId: e.driverId, memberId: e.memberId,
+      vehicleId: e.vehicleId,
+      vehicleName: e.vehicle?.name ?? null,
+      vehiclePlate: e.vehicle?.plate ?? null,
+      driverId: e.driverId,
+      driverName: driverName ?? null,
+      memberId: e.memberId,
+      memberName: e.member?.user?.name ?? null,
       status: e.status, completedAt: e.completedAt?.toISOString() ?? null,
       answers: (e.answers ?? []).map((a: any) => ({
-        id: a.id, entryId: a.entryId, itemId: a.itemId, value: a.value, photoUrl: a.photoUrl,
+        id: a.id, entryId: a.entryId, itemId: a.itemId,
+        itemLabel: a.itemLabel ?? null, itemType: a.itemType ?? null,
+        itemOptions: a.itemOptions ?? [], itemRequired: a.itemRequired ?? null,
+        itemOrder: a.itemOrder ?? null,
+        value: a.value, photoUrl: a.photoUrl,
       })),
       createdAt: e.createdAt.toISOString(), updatedAt: e.updatedAt.toISOString(),
     };

@@ -68,6 +68,16 @@ export class CreateChecklistEntryDto {
   answers: ChecklistAnswerInputDto[];
 }
 
+export class CreatePublicChecklistEntryDto {
+  @ApiProperty() @IsString() @IsNotEmpty() organizationId: string;
+  @ApiProperty() @IsString() @IsNotEmpty() templateId: string;
+  @ApiProperty() @IsString() @IsNotEmpty() vehicleId: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() driverId?: string;
+  @ApiProperty({ type: [ChecklistAnswerInputDto] })
+  @IsArray() @ValidateNested({ each: true }) @Type(() => ChecklistAnswerInputDto)
+  answers: ChecklistAnswerInputDto[];
+}
+
 export class UpdateChecklistEntryStatusDto {
   @ApiProperty({ enum: EntryStatus }) @IsEnum(EntryStatus) status: EntryStatus;
 }
@@ -85,7 +95,12 @@ export class ChecklistEntryFilterDto {
 export class ChecklistAnswerResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() entryId: string;
-  @ApiProperty() itemId: string;
+  @ApiPropertyOptional() itemId?: string | null;
+  @ApiPropertyOptional() itemLabel?: string | null;
+  @ApiPropertyOptional() itemType?: string | null;
+  @ApiProperty({ type: [String] }) itemOptions: string[];
+  @ApiPropertyOptional() itemRequired?: boolean | null;
+  @ApiPropertyOptional() itemOrder?: number | null;
   @ApiPropertyOptional() value?: string | null;
   @ApiPropertyOptional() photoUrl?: string | null;
 }
@@ -95,8 +110,12 @@ export class ChecklistEntryResponseDto {
   @ApiProperty() organizationId: string;
   @ApiProperty() templateId: string;
   @ApiProperty() vehicleId: string;
+  @ApiPropertyOptional() vehicleName?: string | null;
+  @ApiPropertyOptional() vehiclePlate?: string | null;
   @ApiPropertyOptional() driverId?: string | null;
+  @ApiPropertyOptional() driverName?: string | null;
   @ApiProperty() memberId: string;
+  @ApiPropertyOptional() memberName?: string | null;
   @ApiProperty({ enum: EntryStatus }) status: EntryStatus;
   @ApiPropertyOptional() completedAt?: string | null;
   @ApiProperty({ type: [ChecklistAnswerResponseDto] }) answers: ChecklistAnswerResponseDto[];

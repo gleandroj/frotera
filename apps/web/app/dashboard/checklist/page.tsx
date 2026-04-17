@@ -167,39 +167,52 @@ export default function ChecklistPage() {
       cell: ({ row }) => {
         const template = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">{t("common.actions")}</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
-              >
-                {t("common.edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(`/dashboard/checklist/fill/${template.id}`)}
-              >
-                {t("checklist.fillChecklist")}
-              </DropdownMenuItem>
-              {can(Module.CHECKLIST, Action.DELETE) && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => { setTemplateToDelete(template); setDeleteDialogOpen(true); }}
-                  >
-                    {t("common.delete")}
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/dashboard/checklist/fill/${template.id}`)}
+            >
+              {t("checklist.fillChecklist")}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">{t("common.actions")}</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
+                >
+                  {t("common.edit")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const url = `${window.location.origin}/fill?orgId=${orgId}&templateId=${template.id}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success(t("checklist.linkCopied"));
+                  }}
+                >
+                  {t("checklist.copyLink")}
+                </DropdownMenuItem>
+                {can(Module.CHECKLIST, Action.DELETE) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => { setTemplateToDelete(template); setDeleteDialogOpen(true); }}
+                    >
+                      {t("common.delete")}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },

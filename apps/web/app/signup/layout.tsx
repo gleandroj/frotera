@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: t("pageTitle.signup"),
-    description: "Crie sua conta RS Frotas para começar a rastrear e gerenciar sua frota com tecnologia de ponta, reduza custos e aumente a eficiência operacional.",
+    description: "Crie sua conta Rotera para começar a rastrear e gerenciar sua frota com tecnologia de ponta, reduza custos e aumente a eficiência operacional.",
   };
 }
 

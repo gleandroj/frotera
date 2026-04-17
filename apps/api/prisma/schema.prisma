@@ -584,16 +584,21 @@ model ChecklistEntry {
 }
 
 model ChecklistAnswer {
-  id        String   @id @default(cuid())
-  entryId   String
-  itemId    String
-  value     String?
-  photoUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  entryId      String
+  itemId       String?
+  itemLabel    String?
+  itemType     String?
+  itemOptions  String[]
+  itemRequired Boolean?
+  itemOrder    Int?
+  value        String?
+  photoUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  entry ChecklistEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  item  ChecklistTemplateItem @relation(fields: [itemId], references: [id])
+  entry ChecklistEntry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  item  ChecklistTemplateItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
 
   @@unique([entryId, itemId])
   @@index([entryId])

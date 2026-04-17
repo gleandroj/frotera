@@ -2,14 +2,16 @@
 
 import * as React from "react";
 import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
   checklistAPI,
   vehiclesAPI,
+  driversAPI,
   type ChecklistTemplate,
   type Vehicle,
+  type Driver,
   type CreateChecklistEntryPayload,
 } from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
@@ -111,31 +113,41 @@ export default function FillChecklistPage({
   const { templateId } = use(params);
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentOrganization } = useAuth();
 
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [selectedVehicle, setSelectedVehicle] = useState("");
-  const [driverName, setDriverName] = useState("");
+  const [selectedDriver, setSelectedDriver] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  // Fetch template and vehicles on mount
+  // Fetch template, vehicles, and drivers on mount
   useEffect(() => {
     if (!currentOrganization?.id || !templateId) return;
 
     const loadData = async () => {
       try {
         setLoading(true);
-        const [templateRes, vehiclesRes] = await Promise.all([
+        const [templateRes, vehiclesRes, driversRes] = await Promise.all([
           checklistAPI.getTemplate(currentOrganization.id, templateId),
           vehiclesAPI.list(currentOrganization.id),
+          driversAPI.list(currentOrganization.id),
         ]);
 
         setTemplate(templateRes.data);
         setVehicles(vehiclesRes.data ?? []);
+        setDrivers(driversRes.data?.drivers ?? []);
+
+        // Pre-fill from URL params
+        const paramVehicle = searchParams.get("vehicleId");
+        const paramDriver = searchParams.get("driverId");
+        if (paramVehicle) setSelectedVehicle(paramVehicle);
+        if (paramDriver) setSelectedDriver(paramDriver);
       } catch (err) {
         console.error("Failed to load checklist data:", err);
         toast.error(t("checklist.toastError"));
@@ -146,7 +158,7 @@ export default function FillChecklistPage({
     };
 
     loadData();
-  }, [currentOrganization?.id, templateId, router, t]);
+  }, [currentOrganization?.id, templateId, router, t, searchParams]);
 
   const handleAnswerChange = (itemId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [itemId]: value }));
@@ -182,7 +194,7 @@ export default function FillChecklistPage({
       const payload: CreateChecklistEntryPayload = {
         templateId,
         vehicleId: selectedVehicle,
-        driverId: driverName || undefined,
+        driverId: selectedDriver || undefined,
         answers: Object.entries(answers).map(([itemId, value]) => {
           const item = template.items.find((i) => i.id === itemId);
           return {
@@ -295,18 +307,27 @@ export default function FillChecklistPage({
             </Select>
           </div>
 
-          {/* Driver Name Input */}
-          <div className="space-y-2">
-            <Label htmlFor="driver">
-              {t("checklist.driverOptional")}
-            </Label>
-            <Input
-              id="driver"
-              placeholder={t("checklist.driverPlaceholder")}
-              value={driverName}
-              onChange={(e) => setDriverName(e.target.value)}
-            />
-          </div>
+          {/* Driver Select */}
+          {drivers.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="driver">
+                {t("checklist.driverOptional")}
+              </Label>
+              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                <SelectTrigger id="driver">
+                  <SelectValue placeholder={t("checklist.driverPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t("checklist.noDriver")}</SelectItem>
+                  {drivers.map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id}>
+                      {driver.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Template Items */}
           <div className="space-y-6 border-t pt-6">

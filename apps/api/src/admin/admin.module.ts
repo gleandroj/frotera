@@ -44,7 +44,7 @@ const loginPageTranslations = {
   pages: {
     loginPage: {
       welcomeHeader: "Bem-vindo",
-      welcomeMessage: "Painel administrativo do RS Frotas",
+      welcomeMessage: "Painel administrativo do Rotera",
     },
   },
 };
@@ -300,7 +300,7 @@ const modelNavigationGroups: Record<string, string> = {
                 return baseResource;
               }),
               branding: {
-                companyName: "RS Frotas Admin",
+                companyName: "Rotera Admin",
                 withMadeWithLove: false,
               },
               locale: {

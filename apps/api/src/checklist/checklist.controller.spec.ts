@@ -57,7 +57,7 @@ describe('ChecklistController', () => {
     memberId,
     status: EntryStatus.COMPLETED,
     completedAt: '2026-04-17T10:00:00.000Z',
-    answers: [{ id: 'ans-1', entryId, itemId: 'item-1', value: 'true', photoUrl: null }],
+    answers: [{ id: 'ans-1', entryId, itemId: 'item-1', itemOptions: [], value: 'true', photoUrl: null }],
     createdAt: '2026-04-17T10:00:00.000Z',
     updatedAt: '2026-04-17T10:00:00.000Z',
   };

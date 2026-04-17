@@ -19,12 +19,6 @@ export function Logo({
     lg: "text-3xl",
   };
 
-  const frotasSizeClasses = {
-    sm: "text-lg",
-    md: "text-2xl",
-    lg: "text-3xl",
-  };
-
   // Determine text colors based on variant
   const getTextColor = () => {
     if (variant === "light") return "text-white";
@@ -36,16 +30,16 @@ export function Logo({
 
   return (
     <div className={`flex flex-col items-start ${className}`}>
-      <div className="flex items-baseline gap-1">
-        {/* RS with transport industry gradient (Orange to Red) */}
+      <div className="flex items-baseline gap-0">
+        {/* Ro with gradient */}
         <span className={`${sizeClasses[size]} font-bold`}>
           <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 bg-clip-text text-transparent">
-            RS
+            Ro
           </span>
         </span>
-        {/* Frotas */}
-        <span className={`${frotasSizeClasses[size]} font-bold ${textColor}`}>
-          Frotas
+        {/* tera */}
+        <span className={`${sizeClasses[size]} font-bold ${textColor}`}>
+          tera
         </span>
       </div>
 

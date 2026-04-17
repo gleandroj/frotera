@@ -263,7 +263,7 @@
       }
     },
     "branding": {
-      "companyName": "RS Frotas",
+      "companyName": "Rotera",
       "login": {
         "heroTitle": "Gestão inteligente de frotas impulsionada por IA",
         "heroDescription": "Rastreie, gerencie e otimize sua frota com tecnologia de ponta. Monitore veículos em tempo real, reduza custos e melhore a eficiência operacional.",
@@ -535,7 +535,7 @@
   },
   "troubleshoot": {
     "title": "Diagnósticos do Sistema",
-    "subtitle": "Verifique a saúde e o status da sua implantação RS Frotas",
+    "subtitle": "Verifique a saúde e o status da sua implantação Rotera",
     "nextjsAppStatus": "Status da Aplicação Next.js",
     "nestjsAppStatus": "Status da Aplicação Nest.js",
     "lastChecked": "Última verificação",
@@ -614,7 +614,7 @@
     "failedToCreateOrganization": "Falha ao criar organização. Tente novamente.",
     "redirectingToDashboard": "Redirecionando para o painel...",
     "mustProvideNameAndSlug": "Você deve fornecer um nome e slug para sua organização.",
-    "setupFirstOrganization": "Configure sua primeira organização para começar a usar o RS Frotas",
+    "setupFirstOrganization": "Configure sua primeira organização para começar a usar o Rotera",
     "setupNewOrganization": "Configure uma nova organização para sua equipe",
     "newUserAlert": "Como um novo usuário, você precisa criar uma organização para acessar os recursos da plataforma.",
     "skipForNow": "Pular por enquanto",
@@ -707,7 +707,7 @@
       "checklist": "Checklists"
     },
     "footer": {
-      "copyright": "© {{year}} RS Frotas",
+      "copyright": "© {{year}} Rotera",
       "description": "Sistema de Rastreamento e Gestão de Frotas"
     },
     "badges": {
@@ -768,7 +768,7 @@
     "qrCodeAlt": "Código QR do 2FA"
   },
   "pageTitle": {
-    "default": "RS Frotas - Gestão Inteligente de Frotas",
+    "default": "Rotera - Gestão Inteligente de Frotas",
     "dashboard": "Painel",
     "team": "Gerenciamento de Usuários",
     "login": "Entrar",

@@ -936,7 +936,12 @@ export interface ChecklistTemplate {
 export interface ChecklistAnswer {
   id: string;
   entryId: string;
-  itemId: string;
+  itemId?: string | null;
+  itemLabel?: string | null;
+  itemType?: string | null;
+  itemOptions?: string[];
+  itemRequired?: boolean | null;
+  itemOrder?: number | null;
   value?: string | null;
   photoUrl?: string | null;
 }
@@ -946,8 +951,12 @@ export interface ChecklistEntry {
   organizationId: string;
   templateId: string;
   vehicleId: string;
+  vehicleName?: string | null;
+  vehiclePlate?: string | null;
   driverId?: string | null;
+  driverName?: string | null;
   memberId: string;
+  memberName?: string | null;
   status: EntryStatus;
   completedAt?: string | null;
   answers: ChecklistAnswer[];
@@ -1035,4 +1044,28 @@ export const checklistAPI = {
       `/api/organizations/${organizationId}/checklist/entries/${entryId}`,
       { status },
     ),
+};
+
+export const publicChecklistAPI = {
+  getTemplate: (organizationId: string, templateId: string) =>
+    externalApi.get<ChecklistTemplate>(`/api/public/checklist/template`, {
+      params: { organizationId, templateId },
+    }),
+  listVehicles: (organizationId: string) =>
+    externalApi.get<{ id: string; name?: string | null; plate?: string | null }[]>(
+      `/api/public/checklist/vehicles`,
+      { params: { organizationId } },
+    ),
+  listDrivers: (organizationId: string) =>
+    externalApi.get<{ id: string; name: string }[]>(
+      `/api/public/checklist/drivers`,
+      { params: { organizationId } },
+    ),
+  createEntry: (payload: {
+    organizationId: string;
+    templateId: string;
+    vehicleId: string;
+    driverId?: string;
+    answers: { itemId: string; value?: string; photoUrl?: string }[];
+  }) => externalApi.post<ChecklistEntry>(`/api/public/checklist/entries`, payload),
 };

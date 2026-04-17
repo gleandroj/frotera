@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: {
-      template: "%s | RS Frotas",
+      template: "%s | Rotera",
       default: t("pageTitle.default"),
     },
     description:
@@ -28,9 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
       "IA",
       "telemetria",
     ],
-    authors: [{ name: "RS Frotas Team" }],
-    creator: "RS Frotas",
-    publisher: "RS Frotas",
+    authors: [{ name: "Rotera Team" }],
+    creator: "Rotera",
+    publisher: "Rotera",
     formatDetection: {
       email: false,
       address: false,

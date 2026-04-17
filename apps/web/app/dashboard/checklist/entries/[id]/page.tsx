@@ -60,6 +60,10 @@ export default function ChecklistEntryDetailPage({
         setLoading(true);
         const entryRes = await checklistAPI.getEntry(orgId, id);
         setEntry(entryRes.data);
+        // Load template in parallel for name display — non-blocking
+        checklistAPI.getTemplate(orgId, entryRes.data.templateId)
+          .then((res) => setTemplate(res.data))
+          .catch(() => {}); // template name is optional
       } catch (err) {
         console.error("Failed to load entry:", err);
         toast.error(t("checklist.toastError"));
@@ -71,23 +75,6 @@ export default function ChecklistEntryDetailPage({
 
     loadData();
   }, [orgId, id, router, t]);
-
-  // Load template after entry is loaded
-  useEffect(() => {
-    if (!orgId || !entry) return;
-
-    const loadTemplate = async () => {
-      try {
-        const templateRes = await checklistAPI.getTemplate(orgId, entry.templateId);
-        setTemplate(templateRes.data);
-      } catch (err) {
-        console.error("Failed to load template:", err);
-        toast.error(t("checklist.toastError"));
-      }
-    };
-
-    loadTemplate();
-  }, [orgId, entry, t]);
 
   const handleStatusChange = async (newStatus: EntryStatus) => {
     if (!orgId || !entry) return;
@@ -165,7 +152,7 @@ export default function ChecklistEntryDetailPage({
     );
   }
 
-  if (!entry || !template) {
+  if (!entry) {
     return (
       <div className="space-y-4">
         <div>
@@ -180,11 +167,8 @@ export default function ChecklistEntryDetailPage({
     );
   }
 
-  // Sort template items by order
-  const sortedItems = [...template.items].sort((a, b) => a.order - b.order);
-
-  // Create a map of answers by itemId for easy lookup
-  const answerMap = new Map(entry.answers.map((a) => [a.itemId, a]));
+  // Sort answers by snapshot order
+  const sortedAnswers = [...entry.answers].sort((a, b) => (a.itemOrder ?? 0) - (b.itemOrder ?? 0));
 
   return (
     <div className="space-y-6">
@@ -210,7 +194,7 @@ export default function ChecklistEntryDetailPage({
               <p className="text-sm font-medium text-muted-foreground">
                 {t("checklist.template")}
               </p>
-              <p className="text-base">{template.name}</p>
+              <p className="text-base">{template?.name ?? "—"}</p>
             </div>
 
             {/* Vehicle */}
@@ -218,16 +202,20 @@ export default function ChecklistEntryDetailPage({
               <p className="text-sm font-medium text-muted-foreground">
                 {t("checklist.vehicle")}
               </p>
-              <p className="text-base">{entry.vehicleId}</p>
+              <p className="text-base">
+                {entry.vehicleName || entry.vehiclePlate
+                  ? `${entry.vehicleName ?? ""} ${entry.vehiclePlate ? `(${entry.vehiclePlate})` : ""}`.trim()
+                  : entry.vehicleId}
+              </p>
             </div>
 
             {/* Driver */}
-            {entry.driverId && (
+            {(entry.driverId || entry.driverName) && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Motorista
                 </p>
-                <p className="text-base">{entry.driverId}</p>
+                <p className="text-base">{entry.driverName ?? entry.driverId}</p>
               </div>
             )}
 
@@ -236,7 +224,7 @@ export default function ChecklistEntryDetailPage({
               <p className="text-sm font-medium text-muted-foreground">
                 {t("checklist.answeredBy")}
               </p>
-              <p className="text-base">{entry.memberId}</p>
+              <p className="text-base">{entry.memberName ?? entry.memberId}</p>
             </div>
 
             {/* Status Badge */}
@@ -314,34 +302,31 @@ export default function ChecklistEntryDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedItems.map((item) => {
-                  const answer = answerMap.get(item.id);
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.label}
-                        {item.required && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{t(`checklist.itemTypes.${item.type}`)}</TableCell>
-                      <TableCell>
-                        {item.type === "PHOTO" && answer?.photoUrl ? (
-                          <a
-                            href={answer.photoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline break-all"
-                          >
-                            {t("common.view")}
-                          </a>
-                        ) : (
-                          formatAnswerValue(answer, item.type)
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {sortedAnswers.map((answer) => (
+                  <TableRow key={answer.id}>
+                    <TableCell className="font-medium">
+                      {answer.itemLabel ?? "—"}
+                      {answer.itemRequired && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{answer.itemType ? t(`checklist.itemTypes.${answer.itemType}`) : "—"}</TableCell>
+                    <TableCell>
+                      {answer.itemType === "PHOTO" && answer.photoUrl ? (
+                        <a
+                          href={answer.photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {t("common.view")}
+                        </a>
+                      ) : (
+                        formatAnswerValue(answer, answer.itemType ?? "")
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: t("pageTitle.login"),
-    description: "Entre na sua conta RS Frotas para gerenciar sua frota com inteligência artificial, rastrear veículos em tempo real e otimizar sua operação logística.",
+    description: "Entre na sua conta Rotera para gerenciar sua frota com inteligência artificial, rastrear veículos em tempo real e otimizar sua operação logística.",
   };
 }
 
