@@ -66,6 +66,17 @@ const TRACKER_MODELS = [
   { value: "X22_NT20", label: "X22 NT20" },
 ] as const;
 
+/** Placa BR (padrão antigo ou Mercosul): até 7 caracteres alfanuméricos + hífen após a 3ª posição. */
+function maskPlate(value: string): string {
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+  if (cleaned.length <= 3) return cleaned;
+  return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+}
+
+function plateToApi(value: string): string {
+  return value.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+}
+
 type DeviceOption = "none" | "existing" | "new";
 
 interface VehicleFormDialogProps {
@@ -131,7 +142,7 @@ function defaultValues(
 ): VehicleFormValues {
   return {
     name: vehicle?.name ?? "",
-    plate: vehicle?.plate ?? "",
+    plate: vehicle?.plate ? maskPlate(vehicle.plate) : "",
     serial: vehicle?.serial ?? "",
     color: vehicle?.color ?? "",
     year: vehicle?.year ?? "",
@@ -223,7 +234,7 @@ export function VehicleFormDialog({
   const handleSubmit = async (values: VehicleFormValues) => {
     const base = {
       name: values.name?.trim() || undefined,
-      plate: values.plate.trim(),
+      plate: plateToApi(values.plate),
       serial: values.serial?.trim() || undefined,
       color: values.color?.trim() || undefined,
       year: values.year?.trim() || undefined,
@@ -342,7 +353,20 @@ export function VehicleFormDialog({
                       <FormItem>
                         <FormLabel>{t("vehicles.plate")} *</FormLabel>
                         <FormControl>
-                          <Input placeholder={t("vehicles.plate")} {...field} />
+                          <Input
+                            placeholder={t("vehicles.platePlaceholder")}
+                            className="font-mono uppercase"
+                            maxLength={8}
+                            autoCapitalize="characters"
+                            inputMode="text"
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(maskPlate(e.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

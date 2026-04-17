@@ -96,6 +96,7 @@
     "viewDetails": "Ver detalhes",
     "plate": "Placa",
     "plateRequired": "Informe a placa do veículo.",
+    "platePlaceholder": "Ex.: ABC-1234 ou ABC1D23",
     "device": "Rastreador",
     "noDevice": "Sem rastreador",
     "customer": "Empresa",
