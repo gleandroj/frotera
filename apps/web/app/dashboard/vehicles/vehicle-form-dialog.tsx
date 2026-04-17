@@ -318,7 +318,7 @@ export function VehicleFormDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         hideOverlay={hideOverlay}
-        className="sm:max-w-[640px] flex flex-col p-0"
+        className="sm:max-w-lg flex flex-col p-0"
       >
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle>
