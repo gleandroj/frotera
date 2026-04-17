@@ -302,17 +302,18 @@ export default function ChecklistPage() {
         </TabsContent>
 
         <TabsContent value="entries" className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               placeholder={t("checklist.filterByVehicle")}
               value={vehicleFilter}
               onChange={(e) => setVehicleFilter(e.target.value)}
+              className="w-48"
             />
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as EntryStatus | typeof STATUS_ALL)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder={t("checklist.filterByStatus")} />
               </SelectTrigger>
               <SelectContent>
@@ -326,11 +327,13 @@ export default function ChecklistPage() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
+              className="w-36"
             />
             <Input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
+              className="w-36"
             />
           </div>
 
