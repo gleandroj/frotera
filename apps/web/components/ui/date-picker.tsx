@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format, parse, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { dateFnsLocaleFor } from "@/lib/date-fns-locale";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ export interface DatePickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  /** Mostra um controlo para apagar a data sem abrir o calendário. */
+  allowClear?: boolean;
 }
 
 /** `value` / `onChange` use `yyyy-MM-dd` (same as native `input type="date"`). */
@@ -32,6 +34,7 @@ export function DatePicker({
   disabled,
   className,
   id,
+  allowClear,
 }: DatePickerProps) {
   const { t, currentLanguage } = useTranslation();
   const [open, setOpen] = React.useState(false);
@@ -42,27 +45,51 @@ export function DatePicker({
     return Number.isNaN(d.getTime()) ? undefined : d;
   }, [value]);
 
+  const showClear = Boolean(allowClear && value && !disabled);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          className={cn(
-            "h-10 w-full min-w-0 justify-start gap-2 text-left font-normal",
-            !value && "text-muted-foreground",
-            className
-          )}
-        >
-          <CalendarIcon className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate sm:overflow-visible sm:whitespace-normal sm:text-clip">
-            {selected
-              ? format(selected, "P", { locale })
-              : placeholder ?? t("common.calendar.pickDate")}
-          </span>
-        </Button>
+        <div className="relative w-full min-w-0">
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              "h-10 w-full min-w-0 justify-start gap-2 text-left font-normal",
+              showClear && "pr-9",
+              !value && "text-muted-foreground",
+              className
+            )}
+          >
+            <CalendarIcon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+              {selected
+                ? format(selected, "P", { locale })
+                : placeholder ?? t("common.calendar.pickDate")}
+            </span>
+          </Button>
+          {showClear ? (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded-sm p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={t("common.clear")}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onChange("");
+                setOpen(false);
+              }}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
@@ -125,14 +152,16 @@ export function DateTimePicker({
   };
 
   return (
-    <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-stretch", className)}>
-      <DatePicker
-        value={datePart}
-        onChange={(d) => setParts(d, timePart)}
-        disabled={disabled}
-        className="min-w-0 w-full flex-1 sm:min-w-[min(100%,17rem)]"
-      />
-      <div className="flex w-full shrink-0 items-center gap-2 sm:w-44">
+    <div className={cn("flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch", className)}>
+      <div className="w-full min-w-[13rem] flex-1 sm:min-w-[15rem]">
+        <DatePicker
+          value={datePart}
+          onChange={(d) => setParts(d, timePart)}
+          disabled={disabled}
+          className="w-full"
+        />
+      </div>
+      <div className="flex w-full min-w-0 shrink-0 items-center gap-2 sm:w-[9.5rem]">
         <span className="text-muted-foreground whitespace-nowrap text-sm sm:sr-only">
           {t("common.calendar.time")}
         </span>
@@ -142,7 +171,7 @@ export function DateTimePicker({
           value={timePart}
           onChange={(e) => setParts(datePart || format(new Date(), "yyyy-MM-dd"), e.target.value)}
           disabled={disabled}
-          className="h-10"
+          className="h-10 w-full min-w-0"
           aria-label={t("common.calendar.time")}
         />
       </div>

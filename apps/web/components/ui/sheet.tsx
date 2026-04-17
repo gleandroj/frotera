@@ -6,16 +6,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { Z_SHEET_STACKED } from "@/lib/z-layers"
 
-/** Radix Select portals outside the sheet; modal Dialog treats those clicks as "outside". */
-function pointerEventTargetIsInsideRadixSelectMenu(event: {
+/** Radix portaled pickers; modal Dialog/Sheet treats those clicks as "outside" otherwise. */
+function pointerEventTargetIsInsideRadixPortaledPicker(event: {
   target: EventTarget | null
   detail?: { originalEvent?: Event }
 }): boolean {
   const candidates = [event.target, event.detail?.originalEvent?.target]
-  return candidates.some(
-    (t) => t instanceof Element && !!t.closest("[data-radix-select-viewport]"),
-  )
+  return candidates.some((t) => {
+    if (!(t instanceof Element)) return false
+    return !!(
+      t.closest("[data-radix-select-viewport]") ||
+      t.closest("[data-radix-popper-content-wrapper]")
+    )
+  })
 }
 
 const Sheet = SheetPrimitive.Root
@@ -100,7 +105,7 @@ const hasTitleInChildren = (children: React.ReactNode): boolean => {
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, hideOverlay, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
+>(({ side = "right", className, children, hideOverlay, onPointerDownOutside, onInteractOutside, style, ...props }, ref) => {
   // Check if children contains a Title
   const hasTitle = hasTitleInChildren(children)
 
@@ -111,20 +116,24 @@ const SheetContent = React.forwardRef<
         ref={ref}
         className={cn(
           sheetVariants({ side }),
-          hideOverlay && "z-[70]",
+          hideOverlay && "z-[1400]",
           className,
           // Keep panel fixed: a trailing `relative` in className would override `fixed` from variants.
           "!fixed"
         )}
         {...props}
+        style={{
+          ...(hideOverlay ? { zIndex: Z_SHEET_STACKED } : {}),
+          ...style,
+        }}
         onPointerDownOutside={(event) => {
-          if (pointerEventTargetIsInsideRadixSelectMenu(event)) {
+          if (pointerEventTargetIsInsideRadixPortaledPicker(event)) {
             event.preventDefault()
           }
           onPointerDownOutside?.(event)
         }}
         onInteractOutside={(event) => {
-          if (pointerEventTargetIsInsideRadixSelectMenu(event)) {
+          if (pointerEventTargetIsInsideRadixPortaledPicker(event)) {
             event.preventDefault()
           }
           onInteractOutside?.(event)
