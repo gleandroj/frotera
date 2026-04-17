@@ -97,6 +97,7 @@ export class FuelService {
         vehicle: {
           select: { id: true, name: true, plate: true },
         },
+        driver: { select: { id: true, name: true } },
       },
       orderBy: { date: 'desc' },
     });
@@ -140,6 +141,15 @@ export class FuelService {
       !allowedCustomerIds.includes(vehicle.customerId)
     ) {
       throw new ForbiddenException('No access to this vehicle');
+    }
+
+    if (dto.driverId) {
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: dto.driverId, organizationId },
+      });
+      if (!driver) {
+        throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+      }
     }
 
     // Calculate totalCost
@@ -203,6 +213,7 @@ export class FuelService {
         vehicle: {
           select: { id: true, name: true, plate: true },
         },
+        driver: { select: { id: true, name: true } },
       },
     });
 
@@ -235,6 +246,7 @@ export class FuelService {
         vehicle: {
           select: { id: true, name: true, plate: true, customerId: true },
         },
+        driver: { select: { id: true, name: true } },
       },
     });
 
@@ -323,10 +335,22 @@ export class FuelService {
         ? parseFloat((kmDriven / liters).toFixed(2))
         : null;
 
+    if (dto.driverId) {
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: dto.driverId, organizationId },
+      });
+      if (!driver) {
+        throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+      }
+    }
+
+    const nextDriverId =
+      dto.driverId === undefined ? currentLog.driverId : dto.driverId;
+
     const updated = await this.prisma.fuelLog.update({
       where: { id },
       data: {
-        driverId: dto.driverId ?? currentLog.driverId,
+        driverId: nextDriverId,
         date,
         odometer,
         liters,
@@ -345,6 +369,7 @@ export class FuelService {
         vehicle: {
           select: { id: true, name: true, plate: true },
         },
+        driver: { select: { id: true, name: true } },
       },
     });
 
@@ -616,6 +641,9 @@ export class FuelService {
       createdAt: log.createdAt.toISOString(),
       updatedAt: log.updatedAt.toISOString(),
       vehicle: log.vehicle,
+      driver: log.driver
+        ? { id: log.driver.id, name: log.driver.name }
+        : null,
     };
   }
 }

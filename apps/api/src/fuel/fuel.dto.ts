@@ -11,6 +11,7 @@ import {
   IsPositive,
   IsString,
   Max,
+  ValidateIf,
 } from 'class-validator';
 
 const BRAZIL_UF_LIST = [...BRAZIL_UF_SIGLAS] as [string, ...string[]];
@@ -94,10 +95,12 @@ export class CreateFuelLogDto {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 export class UpdateFuelLogDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true, description: 'Motorista; null remove o vínculo' })
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsString()
-  driverId?: string;
+  driverId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -237,6 +240,7 @@ export class FuelLogResponseDto {
 
   // Joined fields
   @ApiPropertyOptional() vehicle?: { id: string; name: string | null; plate: string | null };
+  @ApiPropertyOptional() driver?: { id: string; name: string } | null;
 }
 
 // ── Stats response ────────────────────────────────────────────────────────────

@@ -744,6 +744,7 @@ export interface FuelLog {
   createdAt: string;
   updatedAt: string;
   vehicle?: { id: string; name: string | null; plate: string | null } | null;
+  driver?: { id: string; name: string } | null;
 }
 
 export interface FuelStats {
@@ -772,7 +773,7 @@ export interface CreateFuelLogPayload {
 }
 
 export interface UpdateFuelLogPayload {
-  driverId?: string;
+  driverId?: string | null;
   date?: string;
   odometer?: number;
   liters?: number;

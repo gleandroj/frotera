@@ -375,6 +375,7 @@ model Driver {
   organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customer           Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
   vehicleAssignments DriverVehicleAssignment[]
+  fuelLogs           FuelLog[]
 
   @@unique([organizationId, cpf]) // CPF único por organização (null não viola unique)
   @@index([organizationId])
@@ -476,10 +477,12 @@ model FuelLog {
 
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vehicle        Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver         Driver?            @relation(fields: [driverId], references: [id], onDelete: SetNull)
   createdBy      OrganizationMember @relation(fields: [createdById], references: [id])
 
   @@index([organizationId])
   @@index([vehicleId])
+  @@index([driverId])
   @@index([organizationId, date])
   @@index([vehicleId, date])
   @@map("fuel_logs")

@@ -65,6 +65,13 @@ describe('FuelService', () => {
     customer: null,
   };
 
+  const fuelLogListInclude = {
+    vehicle: {
+      select: { id: true, name: true, plate: true },
+    },
+    driver: { select: { id: true, name: true } },
+  };
+
   const mockFuelLog = {
     id: 'log-1',
     organizationId: orgId,
@@ -151,11 +158,7 @@ describe('FuelService', () => {
           organizationId: orgId,
           vehicleId: { in: [vehicleId, 'vehicle-2'] },
         },
-        include: {
-          vehicle: {
-            select: { id: true, name: true, plate: true },
-          },
-        },
+        include: fuelLogListInclude,
         orderBy: { date: 'desc' },
       });
     });
@@ -191,11 +194,7 @@ describe('FuelService', () => {
           vehicleId: { in: [vehicleId] },
           driverId,
         },
-        include: {
-          vehicle: {
-            select: { id: true, name: true, plate: true },
-          },
-        },
+        include: fuelLogListInclude,
         orderBy: { date: 'desc' },
       });
     });
@@ -233,11 +232,7 @@ describe('FuelService', () => {
           vehicleId: { in: [vehicleId] },
           fuelType: FuelTypeEnum.DIESEL,
         },
-        include: {
-          vehicle: {
-            select: { id: true, name: true, plate: true },
-          },
-        },
+        include: fuelLogListInclude,
         orderBy: { date: 'desc' },
       });
     });
