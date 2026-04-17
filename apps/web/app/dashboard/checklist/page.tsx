@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { ChecklistTemplateFormDialog } from "./checklist-template-form-dialog";
 import {
   checklistAPI,
   ChecklistTemplate,
@@ -69,6 +70,8 @@ export default function ChecklistPage() {
   const [statusFilter, setStatusFilter] = useState<EntryStatus | typeof STATUS_ALL>(STATUS_ALL);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [editTemplate, setEditTemplate] = useState<ChecklistTemplate | null>(null);
 
   const orgId = currentOrganization?.id;
 
@@ -175,7 +178,7 @@ export default function ChecklistPage() {
               <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => router.push(`/dashboard/checklist/templates/${template.id}`)}
+                onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
               >
                 {t("common.edit")}
               </DropdownMenuItem>
@@ -272,7 +275,7 @@ export default function ChecklistPage() {
           <p className="text-muted-foreground">{t("checklist.title")}</p>
         </div>
         {activeTab === "templates" && can(Module.CHECKLIST, Action.CREATE) && (
-          <Button onClick={() => router.push("/dashboard/checklist/templates/new")} className="gap-2">
+          <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
             <Plus className="h-4 w-4" />
             {t("checklist.newTemplate")}
           </Button>
@@ -371,6 +374,14 @@ export default function ChecklistPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChecklistTemplateFormDialog
+        open={templateFormOpen}
+        onOpenChange={(o) => { if (!o) { setTemplateFormOpen(false); setEditTemplate(null); } else { setTemplateFormOpen(true); } }}
+        template={editTemplate}
+        organizationId={orgId}
+        onSuccess={loadTemplates}
+      />
     </div>
   );
 }
