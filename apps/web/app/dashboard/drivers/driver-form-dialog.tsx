@@ -94,6 +94,8 @@ interface DriverFormDialogProps {
   organizationId: string;
   onSuccess: (created?: Driver) => void;
   defaultCustomerId?: string | null;
+  /** Avoid stacking a second dimming overlay when this sheet opens over another modal/sheet. */
+  hideOverlay?: boolean;
 }
 
 const buildSchema = (t: (k: string) => string) =>
@@ -141,6 +143,7 @@ export function DriverFormDialog({
   organizationId,
   onSuccess,
   defaultCustomerId,
+  hideOverlay = false,
 }: DriverFormDialogProps) {
   const { t } = useTranslation();
   const { can } = usePermissions();
@@ -224,7 +227,10 @@ export function DriverFormDialog({
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[560px] flex flex-col p-0">
+      <SheetContent
+        hideOverlay={hideOverlay}
+        className="sm:max-w-[560px] flex flex-col p-0"
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle>
             {isEdit ? t("drivers.editDriver") : t("drivers.createDriver")}
@@ -579,6 +585,7 @@ export function DriverFormDialog({
       organizationId={organizationId}
       customers={customers}
       defaultParentId={null}
+      hideOverlay
       onSuccess={(created) => {
         refreshCustomersList();
         if (created?.id) {

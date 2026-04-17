@@ -478,6 +478,7 @@ export function FuelFormDrawer({
       vehicle={null}
       organizationId={organizationId}
       defaultCustomerId={selectedCustomerId}
+      hideOverlay
       onSuccess={(created) => {
         refreshVehiclesSilently();
         if (created?.id) {

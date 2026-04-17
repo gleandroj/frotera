@@ -52,7 +52,10 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** When true, no dimming overlay is rendered (use when opening over another dialog/sheet). */
+  hideOverlay?: boolean
+}
 
 // Helper function to recursively check if children contain a Title
 const hasTitleInChildren = (children: React.ReactNode): boolean => {
@@ -87,16 +90,20 @@ const hasTitleInChildren = (children: React.ReactNode): boolean => {
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => {
+>(({ side = "right", className, children, hideOverlay, ...props }, ref) => {
   // Check if children contains a Title
   const hasTitle = hasTitleInChildren(children)
 
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {!hideOverlay && <SheetOverlay />}
       <SheetPrimitive.Content
         ref={ref}
-        className={cn(sheetVariants({ side }), className)}
+        className={cn(
+          sheetVariants({ side }),
+          hideOverlay && "z-[60]",
+          className
+        )}
         {...props}
       >
         {!hasTitle && (

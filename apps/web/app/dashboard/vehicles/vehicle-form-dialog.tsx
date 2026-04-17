@@ -74,6 +74,8 @@ interface VehicleFormDialogProps {
   organizationId: string;
   onSuccess: (created?: Vehicle) => void;
   defaultCustomerId?: string | null;
+  /** Avoid stacking a second dimming overlay when this sheet opens over another modal/sheet. */
+  hideOverlay?: boolean;
 }
 
 interface TrackerDeviceOption {
@@ -159,6 +161,7 @@ export function VehicleFormDialog({
   organizationId,
   onSuccess,
   defaultCustomerId,
+  hideOverlay = false,
 }: VehicleFormDialogProps) {
   const { t } = useTranslation();
   const { can } = usePermissions();
@@ -296,7 +299,10 @@ export function VehicleFormDialog({
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[640px] flex flex-col p-0">
+      <SheetContent
+        hideOverlay={hideOverlay}
+        className="sm:max-w-[640px] flex flex-col p-0"
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle>
             {isEdit ? t("vehicles.editVehicle") : t("vehicles.createVehicle")}
@@ -868,6 +874,7 @@ export function VehicleFormDialog({
       organizationId={organizationId}
       customers={customers}
       defaultParentId={null}
+      hideOverlay
       onSuccess={(created) => {
         refreshCustomersList();
         if (created?.id) {

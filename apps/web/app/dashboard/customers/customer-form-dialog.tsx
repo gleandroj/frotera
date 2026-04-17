@@ -47,6 +47,8 @@ interface CustomerFormDialogProps {
   customers: Customer[];
   onSuccess: (created?: Customer) => void;
   defaultParentId?: string | null;
+  /** Avoid stacking a second dimming overlay when this sheet opens over another modal/sheet. */
+  hideOverlay?: boolean;
 }
 
 const buildSchema = (t: (k: string) => string) =>
@@ -65,6 +67,7 @@ export function CustomerFormDialog({
   customers,
   onSuccess,
   defaultParentId,
+  hideOverlay = false,
 }: CustomerFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!customer;
@@ -131,7 +134,10 @@ export function CustomerFormDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[440px]">
+      <SheetContent
+        hideOverlay={hideOverlay}
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-[440px]"
+      >
         <SheetHeader className="border-b px-6 pb-4 pt-6">
           <SheetTitle>
             {isEdit ? t("customers.editCustomer") : t("customers.createCustomer")}
