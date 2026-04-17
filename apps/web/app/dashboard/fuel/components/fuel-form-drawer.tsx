@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isBrazilUfSigla } from "@gleandroj/shared";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -58,11 +58,13 @@ import {
 import {
   fuelAPI,
   vehiclesAPI,
+  driversAPI,
   type FuelLog,
   type FuelType,
   type CreateFuelLogPayload,
   type IbgeEstadoOption,
   type IbgeMunicipioOption,
+  type Driver,
 } from "@/lib/frontend/api-client";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -73,6 +75,31 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 
 const FUEL_TYPES: FuelType[] = ["GASOLINE", "ETHANOL", "DIESEL", "ELECTRIC", "GNV"];
+
+/** Valor do Select quando não há motorista (Radix não aceita `value=""` em SelectItem). */
+const DRIVER_NONE = "__none__";
+
+function requiredPositiveNumber(
+  t: (k: string) => string,
+  emptyKey: string,
+  posKey: string,
+  max: number,
+) {
+  return z.preprocess(
+    (raw) => {
+      if (raw === "" || raw === undefined || raw === null) return undefined;
+      if (typeof raw === "number" && (Number.isNaN(raw) || raw === 0)) return undefined;
+      return raw;
+    },
+    z
+      .number({
+        required_error: t(emptyKey),
+        invalid_type_error: t(emptyKey),
+      })
+      .positive(t(posKey))
+      .max(max),
+  );
+}
 
 interface FuelFormDrawerProps {
   open: boolean;
@@ -85,17 +112,26 @@ interface FuelFormDrawerProps {
 const buildSchema = (t: (k: string) => string) =>
   z.object({
     vehicleId: z.string().min(1, t("fuel.form.vehicleRequired")),
+    driverId: z.string(),
     date: z.string().min(1, t("fuel.form.dateRequired")),
-    odometer: z
-      .number({ required_error: t("fuel.form.odometerRequired") })
-      .positive(t("fuel.form.odometerPositive"))
-      .max(9_999_999_999, t("fuel.form.odometerMaxDigits")),
-    liters: z
-      .number({ required_error: t("fuel.form.litersRequired") })
-      .positive(t("fuel.form.litersPositive")),
-    pricePerLiter: z
-      .number({ required_error: t("fuel.form.priceRequired") })
-      .positive(t("fuel.form.pricePositive")),
+    odometer: requiredPositiveNumber(
+      t,
+      "fuel.form.odometerRequired",
+      "fuel.form.odometerPositive",
+      9_999_999_999,
+    ),
+    liters: requiredPositiveNumber(
+      t,
+      "fuel.form.litersRequired",
+      "fuel.form.litersPositive",
+      999_999,
+    ),
+    pricePerLiter: requiredPositiveNumber(
+      t,
+      "fuel.form.priceRequired",
+      "fuel.form.pricePositive",
+      9_999_999,
+    ),
     fuelType: z.enum(["GASOLINE", "ETHANOL", "DIESEL", "ELECTRIC", "GNV"], {
       required_error: t("fuel.form.fuelTypeRequired"),
     }),
@@ -131,10 +167,13 @@ export function FuelFormDrawer({
   const intlLocale = i18nLanguageToIntlLocale(currentLanguage);
   const currencyCode = currentOrganization?.currency ?? "BRL";
   const [vehicles, setVehicles] = useState<Array<{ id: string; name?: string; plate?: string }>>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [pricePerLiterInput, setPricePerLiterInput] = useState("");
+  const [litersInput, setLitersInput] = useState("");
   const [estados, setEstados] = useState<IbgeEstadoOption[]>([]);
   const [municipios, setMunicipios] = useState<IbgeMunicipioOption[]>([]);
   const [loadingEstados, setLoadingEstados] = useState(false);
@@ -148,16 +187,30 @@ export function FuelFormDrawer({
   const isEditing = !!log;
 
   const schema = buildSchema(t);
-  type FormData = z.infer<typeof schema>;
+  type FormData = {
+    vehicleId: string;
+    driverId: string;
+    date: string;
+    odometer: number;
+    liters: number;
+    pricePerLiter: number;
+    fuelType: FuelType;
+    station?: string;
+    state?: string;
+    city?: string;
+    receipt?: string;
+    notes?: string;
+  };
 
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<FormData>,
     defaultValues: {
       vehicleId: "",
+      driverId: DRIVER_NONE,
       date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      odometer: 0,
-      liters: 0,
-      pricePerLiter: 0,
+      odometer: undefined as unknown as number,
+      liters: undefined as unknown as number,
+      pricePerLiter: undefined as unknown as number,
       fuelType: "GASOLINE",
       station: "",
       state: "",
@@ -172,6 +225,7 @@ export function FuelFormDrawer({
     const nextValues = log
       ? {
           vehicleId: log.vehicleId,
+          driverId: log.driverId ?? DRIVER_NONE,
           date: log.date,
           odometer: log.odometer,
           liters: log.liters,
@@ -185,10 +239,11 @@ export function FuelFormDrawer({
         }
       : {
           vehicleId: "",
+          driverId: DRIVER_NONE,
           date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-          odometer: 0,
-          liters: 0,
-          pricePerLiter: 0,
+          odometer: undefined as unknown as number,
+          liters: undefined as unknown as number,
+          pricePerLiter: undefined as unknown as number,
           fuelType: "GASOLINE" as FuelType,
           station: "",
           state: "",
@@ -198,10 +253,19 @@ export function FuelFormDrawer({
         };
     form.reset(nextValues);
     prevStateUfRef.current = (nextValues as { state?: string }).state ?? "";
+    setLitersInput(
+      log && nextValues.liters != null && !Number.isNaN(Number(nextValues.liters))
+        ? formatLocaleDecimal(Number(nextValues.liters), intlLocale, {
+            maxFractionDigits: 3,
+          })
+        : "",
+    );
     setPricePerLiterInput(
-      formatLocaleDecimal(nextValues.pricePerLiter, intlLocale, {
-        maxFractionDigits: 3,
-      })
+      log && nextValues.pricePerLiter != null && !Number.isNaN(Number(nextValues.pricePerLiter))
+        ? formatLocaleDecimal(Number(nextValues.pricePerLiter), intlLocale, {
+            maxFractionDigits: 3,
+          })
+        : "",
     );
   }, [open, log, intlLocale]);
 
@@ -214,6 +278,16 @@ export function FuelFormDrawer({
       .catch(() => setVehicles([]))
       .finally(() => setLoadingVehicles(false));
   }, [organizationId]);
+
+  useEffect(() => {
+    if (!open || !organizationId) return;
+    setLoadingDrivers(true);
+    driversAPI
+      .list(organizationId, selectedCustomerId ? { customerId: selectedCustomerId } : undefined)
+      .then((res) => setDrivers(Array.isArray(res.data?.drivers) ? res.data.drivers : []))
+      .catch(() => setDrivers([]))
+      .finally(() => setLoadingDrivers(false));
+  }, [open, organizationId, selectedCustomerId]);
 
   useEffect(() => {
     if (!open || !organizationId) return;
@@ -260,9 +334,17 @@ export function FuelFormDrawer({
       .finally(() => setLoadingMunicipios(false));
   }, [open, organizationId, stateUf]);
 
-  const liters = form.watch("liters") || 0;
-  const pricePerLiter = form.watch("pricePerLiter") || 0;
-  const totalCost = liters * pricePerLiter;
+  const litersVal = form.watch("liters");
+  const priceVal = form.watch("pricePerLiter");
+  const totalCost =
+    litersVal != null &&
+    priceVal != null &&
+    !Number.isNaN(litersVal) &&
+    !Number.isNaN(priceVal) &&
+    litersVal > 0 &&
+    priceVal > 0
+      ? litersVal * priceVal
+      : null;
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
 
   const refreshVehiclesSilently = () => {
@@ -277,10 +359,38 @@ export function FuelFormDrawer({
     try {
       setSubmitting(true);
       if (isEditing) {
-        await fuelAPI.update(organizationId, log.id, data);
+        await fuelAPI.update(organizationId, log.id, {
+          driverId: data.driverId === DRIVER_NONE ? null : data.driverId,
+          date: data.date,
+          odometer: data.odometer,
+          liters: data.liters,
+          pricePerLiter: data.pricePerLiter,
+          fuelType: data.fuelType,
+          station: data.station?.trim() || undefined,
+          state: data.state,
+          city: data.city,
+          receipt: data.receipt?.trim() || undefined,
+          notes: data.notes?.trim() || undefined,
+        });
         toast.success(t("fuel.toastUpdated"));
       } else {
-        await fuelAPI.create(organizationId, data as CreateFuelLogPayload);
+        const payload: CreateFuelLogPayload = {
+          vehicleId: data.vehicleId,
+          date: data.date,
+          odometer: data.odometer,
+          liters: data.liters,
+          pricePerLiter: data.pricePerLiter,
+          fuelType: data.fuelType,
+          station: data.station?.trim() || undefined,
+          state: data.state,
+          city: data.city,
+          receipt: data.receipt?.trim() || undefined,
+          notes: data.notes?.trim() || undefined,
+        };
+        if (data.driverId !== DRIVER_NONE) {
+          payload.driverId = data.driverId;
+        }
+        await fuelAPI.create(organizationId, payload);
         toast.success(t("fuel.toastCreated"));
       }
       onSuccess();
@@ -346,15 +456,50 @@ export function FuelFormDrawer({
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="driverId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t("fuel.fields.driver")}{" "}
+                      <span className="font-normal text-muted-foreground">
+                        ({t("common.optional")})
+                      </span>
+                    </FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={submitting || loadingDrivers}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={t("fuel.form.selectDriver")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={DRIVER_NONE}>{t("fuel.form.noDriver")}</SelectItem>
+                        {drivers.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Separator />
 
-              {/* Data e Odômetro */}
-              <div className="grid gap-4 sm:grid-cols-[minmax(0,2.1fr)_minmax(0,0.95fr)] sm:items-start">
+              {/* Data e Odômetro: flex evita colunas que comprimem data+hora contra o hodômetro */}
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
                 <FormField
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem className="min-w-0">
+                    <FormItem className="min-w-0 w-full flex-1">
                       <FormLabel>{t("fuel.fields.date")}</FormLabel>
                       <FormControl>
                         <DateTimePicker
@@ -372,7 +517,7 @@ export function FuelFormDrawer({
                   control={form.control}
                   name="odometer"
                   render={({ field }) => (
-                    <FormItem className="min-w-0">
+                    <FormItem className="w-full shrink-0 sm:w-44 md:w-48">
                       <FormLabel>{t("fuel.fields.odometer")}</FormLabel>
                       <FormControl>
                         <Input
@@ -381,12 +526,14 @@ export function FuelFormDrawer({
                           pattern="[0-9]*"
                           maxLength={10}
                           autoComplete="off"
-                          placeholder="0"
+                          placeholder=""
                           name={field.name}
                           onBlur={field.onBlur}
                           ref={field.ref}
                           value={
-                            field.value === 0 || field.value === undefined
+                            field.value === undefined ||
+                            field.value === null ||
+                            Number.isNaN(field.value)
                               ? ""
                               : String(Math.min(field.value, 9_999_999_999))
                           }
@@ -395,7 +542,7 @@ export function FuelFormDrawer({
                               .replace(/\D/g, "")
                               .slice(0, 10);
                             if (digits === "") {
-                              field.onChange(0);
+                              field.onChange(undefined);
                               return;
                             }
                             field.onChange(parseInt(digits, 10));
@@ -450,12 +597,39 @@ export function FuelFormDrawer({
                       <FormLabel>{t("fuel.fields.liters")}</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.001"
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder=""
+                          name={field.name}
+                          ref={field.ref}
+                          value={litersInput}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setLitersInput(next);
+                            const n = parseLocalizedDecimalInput(next, intlLocale);
+                            field.onChange(
+                              n !== null && Number.isFinite(n) && n > 0 ? n : undefined,
+                            );
+                          }}
+                          onBlur={() => {
+                            const n = parseLocalizedDecimalInput(litersInput, intlLocale);
+                            const clamped =
+                              n !== null && Number.isFinite(n) && n > 0
+                                ? Math.round(n * 1000) / 1000
+                                : undefined;
+                            field.onChange(clamped);
+                            setLitersInput(
+                              clamped === undefined
+                                ? ""
+                                : formatLocaleDecimal(clamped, intlLocale, {
+                                    maxFractionDigits: 3,
+                                  }),
+                            );
+                            field.onBlur();
+                          }}
                           disabled={submitting}
+                          className="font-mono tabular-nums"
                         />
                       </FormControl>
                       <FormMessage />
@@ -469,26 +643,31 @@ export function FuelFormDrawer({
                     <FormItem>
                       <FormLabel>{t("fuel.fields.pricePerLiter")}</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none tabular-nums">
+                        <div className="flex rounded-md border border-input bg-background shadow-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                          <span className="inline-flex min-w-[2.75rem] shrink-0 items-center justify-center border-r border-input bg-muted/50 px-2 text-sm font-medium text-muted-foreground tabular-nums">
                             {getCurrencyNarrowSymbol(intlLocale, currencyCode)}
                           </span>
                           <Input
-                            className="pl-12 font-mono tabular-nums"
+                            className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent py-2 font-mono tabular-nums shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                             inputMode="decimal"
                             autoComplete="off"
-                            placeholder={formatLocaleDecimal(0, intlLocale, {
-                              maxFractionDigits: 3,
-                            })}
+                            placeholder={
+                              intlLocale.startsWith("pt")
+                                ? "0,000"
+                                : formatLocaleDecimal(0, intlLocale, {
+                                    maxFractionDigits: 3,
+                                  })
+                            }
                             name={field.name}
                             ref={field.ref}
                             value={pricePerLiterInput}
                             onChange={(e) => {
-                              const next = e.target.value;
+                              let next = e.target.value;
+                              next = next.replace(/[^\d.,\-]/g, "");
                               setPricePerLiterInput(next);
                               const n = parseLocalizedDecimalInput(next, intlLocale);
                               field.onChange(
-                                n !== null && Number.isFinite(n) ? n : 0
+                                n !== null && Number.isFinite(n) && n > 0 ? n : undefined,
                               );
                             }}
                             onBlur={() => {
@@ -497,14 +676,16 @@ export function FuelFormDrawer({
                                 intlLocale
                               );
                               const clamped =
-                                n !== null && Number.isFinite(n)
+                                n !== null && Number.isFinite(n) && n > 0
                                   ? Math.round(n * 1000) / 1000
-                                  : 0;
+                                  : undefined;
                               field.onChange(clamped);
                               setPricePerLiterInput(
-                                formatLocaleDecimal(clamped, intlLocale, {
-                                  maxFractionDigits: 3,
-                                })
+                                clamped === undefined
+                                  ? ""
+                                  : formatLocaleDecimal(clamped, intlLocale, {
+                                      maxFractionDigits: 3,
+                                    }),
                               );
                               field.onBlur();
                             }}
@@ -524,7 +705,9 @@ export function FuelFormDrawer({
                   {t("fuel.fields.totalCost")}
                 </span>
                 <span className="text-lg font-semibold">
-                  {formatLocaleCurrency(totalCost, intlLocale, currencyCode)}
+                  {totalCost != null
+                    ? formatLocaleCurrency(totalCost, intlLocale, currencyCode)
+                    : "—"}
                 </span>
               </div>
 

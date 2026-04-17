@@ -1,21 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
-import { fuelAPI, type FuelLog, type FuelStats } from "@/lib/frontend/api-client";
+import {
+  fuelAPI,
+  type FuelListParams,
+  type FuelLog,
+  type FuelStats,
+} from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { FuelStatsCards } from "./components/fuel-stats-cards";
 import { getFuelColumns } from "./components/fuel-columns";
 import { DeleteFuelDialog } from "./components/delete-fuel-dialog";
 import { FuelFormDrawer } from "./components/fuel-form-drawer";
+import { FuelFiltersBar } from "./components/fuel-filters-bar";
+import { rangeForFuelPreset, type FuelDatePresetKey } from "./components/fuel-date-range";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function FuelPage() {
   const { t } = useTranslation();
-  const { currentOrganization } = useAuth();
+  const intlLocale = useIntlLocale();
+  const { currentOrganization, selectedCustomerId } = useAuth();
 
   const [logs, setLogs] = useState<FuelLog[]>([]);
   const [stats, setStats] = useState<FuelStats | null>(null);
@@ -25,13 +34,33 @@ export default function FuelPage() {
   const [deleteLog, setDeleteLog] = useState<FuelLog | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadData = async () => {
+  const [filterVehicleId, setFilterVehicleId] = useState("");
+  const [filterDriverId, setFilterDriverId] = useState("");
+  const [datePreset, setDatePreset] = useState<FuelDatePresetKey>("thisMonth");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+
+  const listParams = useMemo((): FuelListParams => {
+    const p: FuelListParams = {};
+    if (filterVehicleId) p.vehicleId = filterVehicleId;
+    if (filterDriverId) p.driverId = filterDriverId;
+    const { from, to } = rangeForFuelPreset(
+      datePreset,
+      customDateFrom,
+      customDateTo,
+    );
+    p.dateFrom = from.toISOString();
+    p.dateTo = to.toISOString();
+    return p;
+  }, [filterVehicleId, filterDriverId, datePreset, customDateFrom, customDateTo]);
+
+  const loadData = useCallback(async () => {
     if (!currentOrganization?.id) return;
     try {
       setLoading(true);
       const [logsRes, statsRes] = await Promise.all([
-        fuelAPI.list(currentOrganization.id),
-        fuelAPI.getStats(currentOrganization.id),
+        fuelAPI.list(currentOrganization.id, listParams),
+        fuelAPI.getStats(currentOrganization.id, listParams),
       ]);
       setLogs(logsRes.data);
       setStats(statsRes.data);
@@ -40,11 +69,11 @@ export default function FuelPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id, listParams, t]);
 
   useEffect(() => {
-    loadData();
-  }, [currentOrganization?.id]);
+    void loadData();
+  }, [loadData]);
 
   const handleDelete = async () => {
     if (!deleteLog || !currentOrganization?.id) return;
@@ -61,10 +90,16 @@ export default function FuelPage() {
     }
   };
 
-  const columns = getFuelColumns({
-    onEdit: setEditLog,
-    onDelete: setDeleteLog,
-  });
+  const columns = useMemo(
+    () =>
+      getFuelColumns({
+        onEdit: setEditLog,
+        onDelete: setDeleteLog,
+        t,
+        intlLocale,
+      }),
+    [t, intlLocale],
+  );
 
   if (!currentOrganization?.id) {
     return (
@@ -91,6 +126,21 @@ export default function FuelPage() {
       </div>
 
       <FuelStatsCards stats={stats} />
+
+      <FuelFiltersBar
+        organizationId={currentOrganization.id}
+        selectedCustomerId={selectedCustomerId}
+        filterVehicleId={filterVehicleId}
+        filterDriverId={filterDriverId}
+        preset={datePreset}
+        customFrom={customDateFrom}
+        customTo={customDateTo}
+        onVehicleChange={setFilterVehicleId}
+        onDriverChange={setFilterDriverId}
+        onPresetChange={setDatePreset}
+        onCustomFromChange={setCustomDateFrom}
+        onCustomToChange={setCustomDateTo}
+      />
 
       {loading ? (
         <div className="text-center text-muted-foreground">{t("common.loading")}</div>

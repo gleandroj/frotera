@@ -1,6 +1,11 @@
 import { FuelStats } from "@/lib/frontend/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import {
+  formatLocaleCurrency,
+  formatLocaleDecimal,
+} from "@/lib/locale-decimal";
 
 interface FuelStatsCardsProps {
   stats: FuelStats | null;
@@ -8,6 +13,7 @@ interface FuelStatsCardsProps {
 
 export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
   const { t } = useTranslation();
+  const intlLocale = useIntlLocale();
 
   if (!stats) {
     return (
@@ -47,10 +53,7 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
   }
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    formatLocaleCurrency(value, intlLocale, "BRL");
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -65,7 +68,12 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
             {formatCurrency(stats.currentMonthCost)}
           </div>
           <p className="text-xs text-muted-foreground">
-            {stats.currentMonthCount} abastecimentos
+            {t("fuel.stats.refuelsCountSubtitle", {
+              count: formatLocaleDecimal(stats.currentMonthCount, intlLocale, {
+                minFractionDigits: 0,
+                maxFractionDigits: 0,
+              }),
+            })}
           </p>
         </CardContent>
       </Card>
@@ -79,7 +87,10 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">
             {stats.avgConsumption !== null
-              ? `${stats.avgConsumption.toFixed(2)} km/l`
+              ? `${formatLocaleDecimal(stats.avgConsumption, intlLocale, {
+                  minFractionDigits: 2,
+                  maxFractionDigits: 2,
+                })} km/l`
               : t('fuel.stats.noData')}
           </div>
         </CardContent>
@@ -92,9 +103,19 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.currentMonthCount}</div>
+          <div className="text-2xl font-bold">
+            {formatLocaleDecimal(stats.currentMonthCount, intlLocale, {
+              minFractionDigits: 0,
+              maxFractionDigits: 0,
+            })}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {stats.totalLiters.toFixed(2)} L no período
+            {t("fuel.stats.periodLitersSubtitle", {
+              liters: formatLocaleDecimal(stats.totalLiters, intlLocale, {
+                minFractionDigits: 2,
+                maxFractionDigits: 3,
+              }),
+            })}
           </p>
         </CardContent>
       </Card>
