@@ -1163,6 +1163,8 @@
     "vehicleRequired": "Selecione o veículo.",
     "titleRequired": "Informe o título do documento.",
     "fileUrlInvalid": "Informe uma URL válida.",
+    "fileUploadError": "Falha ao enviar o arquivo. Verifique o tipo e o tamanho (máx. 20 MB) e tente novamente.",
+    "fileClear": "Remover arquivo selecionado",
     "tabs": {
       "all": "Todos",
       "expiring": "A vencer",
@@ -1186,6 +1188,8 @@
       "title": "Título",
       "issueDate": "Data de Emissão",
       "expiryDate": "Data de Vencimento",
+      "file": "Arquivo",
+      "fileHint": "PDF, imagem (JPEG, PNG, WebP) ou Word. Até 20 MB. O envio para o armazenamento ocorre ao salvar o documento.",
       "fileUrl": "URL do Arquivo",
       "fileUrlPlaceholder": "https://...",
       "notes": "Observações",
