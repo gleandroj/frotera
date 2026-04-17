@@ -7,6 +7,10 @@ import { existsSync } from 'fs';
 
 type Locale = 'en' | 'pt' | 'de' | 'es';
 
+function normalizeServerLocale(locale: string): string {
+  return languages.includes(locale) ? locale : fallbackLanguage;
+}
+
 /**
  * Determine the correct path for translation files
  */
@@ -20,17 +24,19 @@ function getTranslationPath(): string {
     path.join(process.cwd(), './i18n/locales/{{lng}}.json'),
   ];
 
-  // Test paths by checking if en.json exists (cross-platform)
+  const probeLng = languages[0] ?? fallbackLanguage;
+
   for (const possiblePath of possiblePaths) {
-    // Replace template with 'en' to check if the actual translation file exists
-    const testPath = possiblePath.replace('{{lng}}', 'en');
+    const testPath = possiblePath.replace('{{lng}}', probeLng);
     if (existsSync(testPath)) {
       return possiblePath;
     }
   }
 
-  // Fallback to the first path if none exist (will show error but won't crash)
-  console.warn('Translation file (en.json) not found, using fallback path:', possiblePaths[0]);
+  console.warn(
+    `Translation file (${probeLng}.json) not found, using fallback path:`,
+    possiblePaths[0],
+  );
   return possiblePaths[0];
 }
 
@@ -39,11 +45,12 @@ function getTranslationPath(): string {
  */
 async function createI18nextServerInstance(locale: Locale) {
   const i18nInstance = createInstance();
+  const lng = normalizeServerLocale(locale);
 
   await i18nInstance
     .use(Backend)
     .init({
-      lng: locale,
+      lng,
       fallbackLng: fallbackLanguage,
       supportedLngs: languages,
       backend: {
@@ -103,7 +110,8 @@ async function detectServerLocale(): Promise<Locale> {
  * Replaces the custom getServerTranslation function
  */
 export async function getServerTranslation(locale?: Locale) {
-  const selectedLocale = locale || (await detectServerLocale());
+  const rawLocale = locale || (await detectServerLocale());
+  const selectedLocale = normalizeServerLocale(rawLocale) as Locale;
   const i18n = await createI18nextServerInstance(selectedLocale);
 
   return {
