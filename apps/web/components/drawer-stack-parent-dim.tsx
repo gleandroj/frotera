@@ -17,7 +17,7 @@ export function DrawerStackParentDim({
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute inset-0 z-40 bg-black/45 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] backdrop-blur-[1px] dark:bg-black/70 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]",
+        "pointer-events-auto absolute inset-[-1px] z-40 bg-black/45 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] backdrop-blur-[0.6px] dark:bg-black/70 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]",
         className
       )}
       aria-hidden
