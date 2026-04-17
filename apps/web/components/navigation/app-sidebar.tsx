@@ -19,6 +19,7 @@ import {
   Building,
   Building2,
   Car,
+  ClipboardList,
   FileText,
   Fuel,
   Home,
@@ -89,6 +90,12 @@ export function AppSidebar() {
           href: "/dashboard/vehicles",
           icon: Car,
           current: pathname.startsWith("/dashboard/vehicles"),
+        },
+        {
+          name: t('navigation.items.checklist'),
+          href: "/dashboard/checklist",
+          icon: ClipboardList,
+          current: pathname.startsWith("/dashboard/checklist"),
         },
         {
           name: t('navigation.items.drivers'),

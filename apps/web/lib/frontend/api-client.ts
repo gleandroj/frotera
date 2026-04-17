@@ -906,3 +906,133 @@ export const fuelReportsAPI = {
       `/api/organizations/${orgId}/fuel/market-prices`, { params }
     ),
 };
+
+// ── CHECKLIST ────────────────────────────────────────────────────────────────
+
+export type ItemType = "YES_NO" | "TEXT" | "NUMBER" | "PHOTO" | "SELECT" | "SIGNATURE";
+export type EntryStatus = "PENDING" | "COMPLETED" | "INCOMPLETE";
+
+export interface ChecklistTemplateItem {
+  id: string;
+  templateId: string;
+  label: string;
+  type: ItemType;
+  required: boolean;
+  options: string[];
+  order: number;
+}
+
+export interface ChecklistTemplate {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  items: ChecklistTemplateItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChecklistAnswer {
+  id: string;
+  entryId: string;
+  itemId: string;
+  value?: string | null;
+  photoUrl?: string | null;
+}
+
+export interface ChecklistEntry {
+  id: string;
+  organizationId: string;
+  templateId: string;
+  vehicleId: string;
+  driverId?: string | null;
+  memberId: string;
+  status: EntryStatus;
+  completedAt?: string | null;
+  answers: ChecklistAnswer[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateChecklistTemplatePayload {
+  name: string;
+  description?: string;
+  active?: boolean;
+  items: {
+    label: string;
+    type: ItemType;
+    required: boolean;
+    options?: string[];
+    order: number;
+  }[];
+}
+
+export interface CreateChecklistEntryPayload {
+  templateId: string;
+  vehicleId: string;
+  driverId?: string;
+  answers: { itemId: string; value?: string; photoUrl?: string }[];
+}
+
+export interface ChecklistEntryFilters {
+  vehicleId?: string;
+  driverId?: string;
+  memberId?: string;
+  templateId?: string;
+  status?: EntryStatus;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export const checklistAPI = {
+  listTemplates: (organizationId: string) =>
+    externalApi.get<ChecklistTemplate[]>(
+      `/api/organizations/${organizationId}/checklist/templates`,
+    ),
+  createTemplate: (organizationId: string, payload: CreateChecklistTemplatePayload) =>
+    externalApi.post<ChecklistTemplate>(
+      `/api/organizations/${organizationId}/checklist/templates`,
+      payload,
+    ),
+  getTemplate: (organizationId: string, templateId: string) =>
+    externalApi.get<ChecklistTemplate>(
+      `/api/organizations/${organizationId}/checklist/templates/${templateId}`,
+    ),
+  updateTemplate: (
+    organizationId: string,
+    templateId: string,
+    payload: Partial<CreateChecklistTemplatePayload>,
+  ) =>
+    externalApi.patch<ChecklistTemplate>(
+      `/api/organizations/${organizationId}/checklist/templates/${templateId}`,
+      payload,
+    ),
+  deleteTemplate: (organizationId: string, templateId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/checklist/templates/${templateId}`,
+    ),
+  listEntries: (organizationId: string, filters?: ChecklistEntryFilters) =>
+    externalApi.get<ChecklistEntry[]>(
+      `/api/organizations/${organizationId}/checklist/entries`,
+      { params: filters },
+    ),
+  createEntry: (organizationId: string, payload: CreateChecklistEntryPayload) =>
+    externalApi.post<ChecklistEntry>(
+      `/api/organizations/${organizationId}/checklist/entries`,
+      payload,
+    ),
+  getEntry: (organizationId: string, entryId: string) =>
+    externalApi.get<ChecklistEntry>(
+      `/api/organizations/${organizationId}/checklist/entries/${entryId}`,
+    ),
+  updateEntryStatus: (
+    organizationId: string,
+    entryId: string,
+    status: EntryStatus,
+  ) =>
+    externalApi.patch<ChecklistEntry>(
+      `/api/organizations/${organizationId}/checklist/entries/${entryId}`,
+      { status },
+    ),
+};
