@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/hooks/use-auth";
+import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
 import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -13,6 +14,9 @@ import { DeleteCustomerDialog } from "./delete-customer-dialog";
 export default function CustomersPage() {
   const { t } = useTranslation();
   const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canEditCustomer = can(Module.COMPANIES, Action.EDIT);
+  const canDeleteCustomer = can(Module.COMPANIES, Action.DELETE);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +56,10 @@ export default function CustomersPage() {
         customers,
         onEdit: setEditCustomer,
         onDelete: setDeleteCustomer,
+        canEditCustomer,
+        canDeleteCustomer,
       }),
-    [t, customers],
+    [t, customers, canEditCustomer, canDeleteCustomer],
   );
 
   if (!currentOrganization) {

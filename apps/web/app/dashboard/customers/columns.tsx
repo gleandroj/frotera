@@ -20,6 +20,8 @@ export interface CustomerColumnsOptions {
   customers: Customer[];
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
+  canEditCustomer: boolean;
+  canDeleteCustomer: boolean;
 }
 
 function getParentName(customers: Customer[], parentId: string | null | undefined): string {
@@ -32,9 +34,9 @@ export function getCustomerColumns(
   t: TFunction,
   options: CustomerColumnsOptions,
 ): ColumnDef<Customer>[] {
-  const { customers, onEdit, onDelete } = options;
+  const { customers, onEdit, onDelete, canEditCustomer, canDeleteCustomer } = options;
 
-  return [
+  const columns: ColumnDef<Customer>[] = [
     {
       accessorKey: "name",
       meta: { labelKey: "common.name" },
@@ -91,7 +93,10 @@ export function getCustomerColumns(
         </span>
       ),
     },
-    {
+  ];
+
+  if (canEditCustomer || canDeleteCustomer) {
+    columns.push({
       id: "actions",
       header: () => <div className="text-right">{t("common.actions")}</div>,
       cell: ({ row }) => {
@@ -110,17 +115,21 @@ export function getCustomerColumns(
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(customer)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  {t("common.edit")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(customer)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
+                {canEditCustomer && (
+                  <DropdownMenuItem onClick={() => onEdit(customer)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {t("common.edit")}
+                  </DropdownMenuItem>
+                )}
+                {canDeleteCustomer && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(customer)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("common.delete")}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -128,6 +137,8 @@ export function getCustomerColumns(
       },
       enableSorting: false,
       enableHiding: false,
-    },
-  ];
+    });
+  }
+
+  return columns;
 }
