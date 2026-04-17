@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
   Dialog,
@@ -11,7 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Popover,
   PopoverContent,
@@ -26,10 +36,9 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { customersAPI, type Customer } from "@/lib/frontend/api-client";
-import { useFormik } from "formik";
-import { toast } from "sonner";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface CustomerFormDialogProps {
   open: boolean;
@@ -38,9 +47,16 @@ interface CustomerFormDialogProps {
   organizationId: string;
   customers: Customer[];
   onSuccess: () => void;
-  /** When creating, pre-select this parent when provided and present in the list. */
   defaultParentId?: string | null;
 }
+
+const buildSchema = (t: (k: string) => string) =>
+  z.object({
+    name: z.string().min(1, t("common.required")),
+    parentId: z.string().default(""),
+  });
+
+type CustomerFormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 export function CustomerFormDialog({
   open,
@@ -54,11 +70,13 @@ export function CustomerFormDialog({
   const { t } = useTranslation();
   const isEdit = !!customer;
 
+  const [parentComboboxOpen, setParentComboboxOpen] = useState(false);
+
   const parentOptions = customers.filter(
     (c) => !isEdit || c.id !== customer?.id
   );
 
-  const getInitialParentId = () => {
+  const getDefaultParentId = () => {
     if (isEdit) return customer?.parentId ?? "";
     if (defaultParentId && parentOptions.some((c) => c.id === defaultParentId)) {
       return defaultParentId;
@@ -66,181 +84,201 @@ export function CustomerFormDialog({
     return "";
   };
 
-  const [parentComboboxOpen, setParentComboboxOpen] = useState(false);
-
-  const formik = useFormik({
-    initialValues: {
+  const form = useForm<CustomerFormValues>({
+    resolver: zodResolver(buildSchema(t)),
+    defaultValues: {
       name: customer?.name ?? "",
-      parentId: getInitialParentId(),
-    },
-    enableReinitialize: true,
-    onSubmit: async (values) => {
-      try {
-        if (isEdit) {
-          await customersAPI.update(organizationId, customer.id, {
-            name: values.name,
-            parentId: values.parentId || null,
-          });
-          toast.success(t("customers.updated"));
-        } else {
-          await customersAPI.create(organizationId, {
-            name: values.name,
-            parentId: values.parentId || undefined,
-          });
-          toast.success(t("customers.created"));
-        }
-        onSuccess();
-        onOpenChange(false);
-      } catch (err: unknown) {
-        const msg =
-          (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message ?? t("common.error");
-        toast.error(msg);
-      }
+      parentId: getDefaultParentId(),
     },
   });
 
+  const { isSubmitting } = form.formState;
+  const parentId = form.watch("parentId");
+  const selectedParent = parentOptions.find((c) => c.id === parentId);
+
   useEffect(() => {
     if (!open) return;
-    formik.resetForm();
-    formik.setValues({
+    form.reset({
       name: customer?.name ?? "",
-      parentId: getInitialParentId(),
+      parentId: getDefaultParentId(),
     });
   }, [open, customer?.id, defaultParentId]);
 
-  const selectedParent = parentOptions.find(
-    (c) => c.id === formik.values.parentId
-  );
+  const handleSubmit = async (values: CustomerFormValues) => {
+    try {
+      if (isEdit) {
+        await customersAPI.update(organizationId, customer.id, {
+          name: values.name,
+          parentId: values.parentId || null,
+        });
+        toast.success(t("customers.updated"));
+      } else {
+        await customersAPI.create(organizationId, {
+          name: values.name,
+          parentId: values.parentId || undefined,
+        });
+        toast.success(t("customers.created"));
+      }
+      onSuccess();
+      onOpenChange(false);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? t("common.error");
+      toast.error(msg);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? t("customers.editCustomer") : t("customers.createCustomer")}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={formik.handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">{t("common.name")}</Label>
-            <Input
-              id="name"
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
+            <FormField
+              control={form.control}
               name="name"
-              value={formik.values.name}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              placeholder={t("customers.namePlaceholder")}
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("common.name")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t("customers.namePlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="parentId">{t("customers.parent")}</Label>
-            <Popover
-              open={parentComboboxOpen}
-              onOpenChange={setParentComboboxOpen}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  id="parentId"
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={parentComboboxOpen}
-                  className={cn(
-                    "w-full justify-between font-normal h-10",
-                    !formik.values.parentId && "text-muted-foreground"
-                  )}
-                >
-                  <span className="truncate">
-                    {formik.values.parentId && selectedParent ? (
-                      <span
-                        style={{
-                          paddingLeft: (selectedParent.depth ?? 0) * 12,
-                        }}
-                        className="inline-block"
-                      >
-                        {selectedParent.name}
-                      </span>
-                    ) : (
-                      t("customers.noParent")
-                    )}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-0"
-                align="start"
-              >
-                <Command
-                  filter={(value, search) =>
-                    !search
-                      ? 1
-                      : (value ?? "")
-                          .toLowerCase()
-                          .includes(search.toLowerCase())
-                        ? 1
-                        : 0
-                  }
-                >
-                  <CommandInput
-                    placeholder={t("customers.filterParent")}
-                    className="h-9"
-                  />
-                  <CommandList>
-                    <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        value={t("customers.noParent")}
-                        onSelect={() => {
-                          formik.setFieldValue("parentId", "");
-                          setParentComboboxOpen(false);
-                        }}
-                      >
-                        {t("customers.noParent")}
-                      </CommandItem>
-                      {parentOptions.map((c) => (
-                        <CommandItem
-                          key={c.id}
-                          value={c.name}
-                          onSelect={() => {
-                            formik.setFieldValue("parentId", c.id);
-                            setParentComboboxOpen(false);
-                          }}
+
+            <FormField
+              control={form.control}
+              name="parentId"
+              render={() => (
+                <FormItem>
+                  <FormLabel>{t("customers.parent")}</FormLabel>
+                  <Popover
+                    open={parentComboboxOpen}
+                    onOpenChange={setParentComboboxOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between font-normal h-10",
+                            !parentId && "text-muted-foreground"
+                          )}
                         >
-                          <span
-                            style={{
-                              paddingLeft: (c.depth ?? 0) * 12,
-                            }}
-                            className="inline-block"
-                          >
-                            {c.name}
+                          <span className="truncate">
+                            {parentId && selectedParent ? (
+                              <span
+                                style={{
+                                  paddingLeft: (selectedParent.depth ?? 0) * 12,
+                                }}
+                                className="inline-block"
+                              >
+                                {selectedParent.name}
+                              </span>
+                            ) : (
+                              t("customers.noParent")
+                            )}
                           </span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" disabled={formik.isSubmitting}>
-              {formik.isSubmitting
-                ? t("common.loading")
-                : isEdit
-                  ? t("common.save")
-                  : t("customers.createCustomer")}
-            </Button>
-          </DialogFooter>
-        </form>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                    >
+                      <Command
+                        filter={(value, search) =>
+                          !search
+                            ? 1
+                            : value.toLowerCase().includes(search.toLowerCase())
+                              ? 1
+                              : 0
+                        }
+                      >
+                        <CommandInput
+                          placeholder={t("customers.filterParent")}
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value={t("customers.noParent")}
+                              onSelect={() => {
+                                form.setValue("parentId", "", {
+                                  shouldValidate: true,
+                                });
+                                setParentComboboxOpen(false);
+                              }}
+                            >
+                              {t("customers.noParent")}
+                            </CommandItem>
+                            {parentOptions.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={c.name}
+                                onSelect={() => {
+                                  form.setValue("parentId", c.id, {
+                                    shouldValidate: true,
+                                  });
+                                  setParentComboboxOpen(false);
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    paddingLeft: (c.depth ?? 0) * 12,
+                                  }}
+                                  className="inline-block"
+                                >
+                                  {c.name}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? t("common.loading")
+                  : isEdit
+                    ? t("common.save")
+                    : t("customers.createCustomer")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -21,6 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Popover,
   PopoverContent,
@@ -34,6 +43,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Separator } from "@/components/ui/separator";
 import {
   vehiclesAPI,
   trackerDevicesAPI,
@@ -45,9 +55,6 @@ import {
 } from "@/lib/frontend/api-client";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ErrorMessage, Field, Form, Formik, type FormikHelpers } from "formik";
-import { z } from "zod";
-import { toFormikValidationSchema } from "zod-formik-adapter";
 import { toast } from "sonner";
 
 const TRACKER_MODELS = [
@@ -63,7 +70,6 @@ interface VehicleFormDialogProps {
   vehicle: Vehicle | null;
   organizationId: string;
   onSuccess: () => void;
-  /** When creating, pre-select this client when provided and present in the list. */
   defaultCustomerId?: string | null;
 }
 
@@ -75,56 +81,62 @@ interface TrackerDeviceOption {
   vehicleId?: string | null;
 }
 
-function emptyStr(s: string | null | undefined): string {
-  return s ?? "";
+type VehicleFormValues = z.infer<ReturnType<typeof buildSchema>>;
+
+function buildSchema(t: (k: string) => string, isEdit: boolean) {
+  return z
+    .object({
+      name: z.string().default(""),
+      plate: z.string().min(1, t("vehicles.plateRequired")),
+      serial: z.string().default(""),
+      color: z.string().default(""),
+      year: z.string().default(""),
+      renavam: z.string().default(""),
+      chassis: z.string().default(""),
+      vehicleType: z.string().default(""),
+      inactive: z.boolean().default(false),
+      notes: z.string().default(""),
+      customerId: isEdit
+        ? z.string().default("")
+        : z.string().min(1, t("vehicles.customerRequired")),
+      trackerDeviceId: z.string().default(""),
+      deviceOption: z.enum(["none", "existing", "new"]).default("none"),
+      newImei: z.string().default(""),
+      newModel: z.string().default("X12_GT06"),
+      newDeviceName: z.string().default(""),
+      newSerialSat: z.string().default(""),
+      newEquipmentModel: z.string().default(""),
+      newIndividualPassword: z.string().default(""),
+      newCarrier: z.string().default(""),
+      newSimCardNumber: z.string().default(""),
+      newCellNumber: z.string().default(""),
+    })
+    .refine(
+      (data) =>
+        data.deviceOption !== "new" || (data.newImei?.trim() ?? "") !== "",
+      { message: t("vehicles.imeiRequired"), path: ["newImei"] }
+    );
 }
 
-export interface VehicleFormValues {
-  name: string;
-  plate: string;
-  serial: string;
-  color: string;
-  year: string;
-  renavam: string;
-  chassis: string;
-  vehicleType: string;
-  inactive: boolean;
-  notes: string;
-  customerId: string;
-  trackerDeviceId: string;
-  deviceOption: DeviceOption;
-  newImei: string;
-  newModel: string;
-  newDeviceName: string;
-  newSerialSat: string;
-  newEquipmentModel: string;
-  newIndividualPassword: string;
-  newCarrier: string;
-  newSimCardNumber: string;
-  newCellNumber: string;
-}
-
-function getInitialValues(
+function defaultValues(
   vehicle: Vehicle | null,
   isEdit: boolean,
   defaultCustomerId?: string | null
 ): VehicleFormValues {
-  const base = {
-    name: emptyStr(vehicle?.name),
-    plate: emptyStr(vehicle?.plate),
-    serial: emptyStr(vehicle?.serial),
-    color: emptyStr(vehicle?.color),
-    year: emptyStr(vehicle?.year),
-    renavam: emptyStr(vehicle?.renavam),
-    chassis: emptyStr(vehicle?.chassis),
-    vehicleType: emptyStr(vehicle?.vehicleType),
+  return {
+    name: vehicle?.name ?? "",
+    plate: vehicle?.plate ?? "",
+    serial: vehicle?.serial ?? "",
+    color: vehicle?.color ?? "",
+    year: vehicle?.year ?? "",
+    renavam: vehicle?.renavam ?? "",
+    chassis: vehicle?.chassis ?? "",
+    vehicleType: vehicle?.vehicleType ?? "",
     inactive: vehicle?.inactive ?? false,
-    notes: emptyStr(vehicle?.notes),
-    customerId: isEdit
-      ? emptyStr(vehicle?.customerId)
-      : (defaultCustomerId && defaultCustomerId.trim() ? defaultCustomerId : ""),
-    trackerDeviceId: emptyStr(vehicle?.trackerDeviceId),
-    deviceOption: "none" as DeviceOption,
+    notes: vehicle?.notes ?? "",
+    customerId: isEdit ? (vehicle?.customerId ?? "") : (defaultCustomerId ?? ""),
+    trackerDeviceId: vehicle?.trackerDeviceId ?? "",
+    deviceOption: "none",
     newImei: "",
     newModel: "X12_GT06",
     newDeviceName: "",
@@ -135,59 +147,6 @@ function getInitialValues(
     newSimCardNumber: "",
     newCellNumber: "",
   };
-  return base;
-}
-
-function buildVehicleFormSchema(
-  t: (key: string) => string,
-  isEdit: boolean
-) {
-  return z
-    .object({
-      name: z.string().optional(),
-      plate: z
-        .string()
-        .min(1, t("vehicles.plateRequired"))
-        .refine((v) => (v?.trim() ?? "").length > 0, {
-          message: t("vehicles.plateRequired"),
-        }),
-      serial: z.string().optional(),
-      color: z.string().optional(),
-      year: z.string().optional(),
-      renavam: z.string().optional(),
-      chassis: z.string().optional(),
-      vehicleType: z.string().optional(),
-      inactive: z.boolean().optional(),
-      notes: z.string().optional(),
-      customerId: isEdit
-        ? z.string().optional()
-        : z
-            .string()
-            .min(1, t("vehicles.customerRequired"))
-            .refine((v) => (v?.trim() ?? "").length > 0, {
-              message: t("vehicles.customerRequired"),
-            }),
-      trackerDeviceId: z.string().optional(),
-      deviceOption: z.enum(["none", "existing", "new"]).optional(),
-      newImei: z.string().optional(),
-      newModel: z.string().optional(),
-      newDeviceName: z.string().optional(),
-      newSerialSat: z.string().optional(),
-      newEquipmentModel: z.string().optional(),
-      newIndividualPassword: z.string().optional(),
-      newCarrier: z.string().optional(),
-      newSimCardNumber: z.string().optional(),
-      newCellNumber: z.string().optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.deviceOption === "new") {
-          return (data.newImei?.trim() ?? "") !== "";
-        }
-        return true;
-      },
-      { message: t("vehicles.imeiRequired"), path: ["newImei"] }
-    );
 }
 
 export function VehicleFormDialog({
@@ -207,31 +166,34 @@ export function VehicleFormDialog({
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
 
-  const validationSchema = buildVehicleFormSchema(t, isEdit);
-  const effectiveDefaultCustomerId =
-    !isEdit && customers.length > 0
-      ? defaultCustomerId && customers.some((c) => c.id === defaultCustomerId)
-        ? defaultCustomerId
-        : customers.length === 1
-          ? customers[0].id
-          : ""
-      : undefined;
-  const initialValues = getInitialValues(
-    vehicle,
-    isEdit,
-    effectiveDefaultCustomerId !== undefined
-      ? effectiveDefaultCustomerId
-      : defaultCustomerId
-  );
+  const form = useForm<VehicleFormValues>({
+    resolver: zodResolver(buildSchema(t, isEdit)),
+    defaultValues: defaultValues(vehicle, isEdit, defaultCustomerId),
+  });
+
+  const { isSubmitting } = form.formState;
+  const deviceOption = form.watch("deviceOption");
+  const customerId = form.watch("customerId");
+
+  useEffect(() => {
+    if (!open) return;
+    const effectiveDefault =
+      !isEdit && customers.length > 0
+        ? defaultCustomerId && customers.some((c) => c.id === defaultCustomerId)
+          ? defaultCustomerId
+          : customers.length === 1
+            ? customers[0].id
+            : defaultCustomerId
+        : defaultCustomerId;
+    form.reset(defaultValues(vehicle, isEdit, effectiveDefault));
+  }, [open, vehicle?.id]);
 
   useEffect(() => {
     if (!open || !organizationId) return;
     setLoadingDevices(true);
     trackerDevicesAPI
       .list(organizationId)
-      .then((res) => {
-        setDevices(Array.isArray(res.data) ? res.data : []);
-      })
+      .then((res) => setDevices(Array.isArray(res.data) ? res.data : []))
       .catch(() => setDevices([]))
       .finally(() => setLoadingDevices(false));
   }, [open, organizationId]);
@@ -249,548 +211,624 @@ export function VehicleFormDialog({
       .finally(() => setLoadingCustomers(false));
   }, [open, organizationId]);
 
-  const handleSubmit = (
-    values: VehicleFormValues,
-    { setStatus }: FormikHelpers<VehicleFormValues>
-  ) => {
-    setStatus(undefined);
-    const vehiclePayload = {
-      name: values.name.trim() || undefined,
-      plate: values.plate.trim() || undefined,
-      serial: values.serial.trim() || undefined,
-      color: values.color.trim() || undefined,
-      year: values.year.trim() || undefined,
-      renavam: values.renavam.trim() || undefined,
-      chassis: values.chassis.trim() || undefined,
-      vehicleType: values.vehicleType.trim() || undefined,
+  const handleSubmit = async (values: VehicleFormValues) => {
+    const base = {
+      name: values.name?.trim() || undefined,
+      plate: values.plate.trim(),
+      serial: values.serial?.trim() || undefined,
+      color: values.color?.trim() || undefined,
+      year: values.year?.trim() || undefined,
+      renavam: values.renavam?.trim() || undefined,
+      chassis: values.chassis?.trim() || undefined,
+      vehicleType: values.vehicleType?.trim() || undefined,
       inactive: values.inactive,
-      notes: values.notes.trim() || undefined,
-      customerId: values.customerId.trim() || undefined,
+      notes: values.notes?.trim() || undefined,
+      customerId: values.customerId?.trim() || undefined,
     };
 
     let payload: CreateVehiclePayload | UpdateVehiclePayload;
     if (isEdit) {
+      payload = { ...base, trackerDeviceId: values.trackerDeviceId || undefined };
+    } else if (values.deviceOption === "new" && values.newImei?.trim()) {
       payload = {
-        ...vehiclePayload,
-        trackerDeviceId: values.trackerDeviceId || undefined,
+        ...base,
+        newDevice: {
+          imei: values.newImei.trim(),
+          model: values.newModel ?? "X12_GT06",
+          name: values.newDeviceName?.trim() || undefined,
+          serialSat: values.newSerialSat?.trim() || undefined,
+          equipmentModel: values.newEquipmentModel?.trim() || undefined,
+          individualPassword: values.newIndividualPassword?.trim() || undefined,
+          carrier: values.newCarrier?.trim() || undefined,
+          simCardNumber: values.newSimCardNumber?.trim() || undefined,
+          cellNumber: values.newCellNumber?.trim() || undefined,
+        },
       };
+    } else if (values.deviceOption === "existing" && values.trackerDeviceId) {
+      payload = { ...base, trackerDeviceId: values.trackerDeviceId };
     } else {
-      if (values.deviceOption === "new" && values.newImei.trim()) {
-        payload = {
-          ...vehiclePayload,
-          newDevice: {
-            imei: values.newImei.trim(),
-            model: values.newModel,
-            name: values.newDeviceName.trim() || undefined,
-            serialSat: values.newSerialSat.trim() || undefined,
-            equipmentModel: values.newEquipmentModel.trim() || undefined,
-            individualPassword: values.newIndividualPassword.trim() || undefined,
-            carrier: values.newCarrier.trim() || undefined,
-            simCardNumber: values.newSimCardNumber.trim() || undefined,
-            cellNumber: values.newCellNumber.trim() || undefined,
-          },
-        };
-      } else if (values.deviceOption === "existing" && values.trackerDeviceId) {
-        payload = { ...vehiclePayload, trackerDeviceId: values.trackerDeviceId };
-      } else {
-        payload = vehiclePayload;
-      }
+      payload = base;
     }
 
-    const promise = isEdit
-      ? vehiclesAPI.update(organizationId, vehicle!.id, payload as UpdateVehiclePayload)
-      : vehiclesAPI.create(organizationId, payload as CreateVehiclePayload);
-
-    return promise
-      .then(() => {
-        toast.success(
-          isEdit ? t("vehicles.toastUpdated") : t("vehicles.toastCreated")
-        );
-        onSuccess();
-        onOpenChange(false);
-      })
-      .catch((err) => {
-        const message = err?.response?.data?.message ?? t("vehicles.toastError");
-        setStatus(message);
-        toast.error(message);
-      });
+    try {
+      if (isEdit) {
+        await vehiclesAPI.update(organizationId, vehicle!.id, payload as UpdateVehiclePayload);
+      } else {
+        await vehiclesAPI.create(organizationId, payload as CreateVehiclePayload);
+      }
+      toast.success(isEdit ? t("vehicles.toastUpdated") : t("vehicles.toastCreated"));
+      onSuccess();
+      onOpenChange(false);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t("vehicles.toastError");
+      toast.error(message);
+    }
   };
 
+  const customerRequired = !isEdit;
+  const customerPlaceholder = customerRequired ? t("vehicles.selectClient") : t("customers.noParent");
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-[640px] flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b">
+          <SheetTitle>
             {isEdit ? t("vehicles.editVehicle") : t("vehicles.createVehicle")}
-          </DialogTitle>
-        </DialogHeader>
-        <Formik<VehicleFormValues>
-          initialValues={initialValues}
-          validationSchema={toFormikValidationSchema(validationSchema)}
-          onSubmit={handleSubmit}
-          enableReinitialize
-          validateOnChange
-          validateOnBlur
-        >
-          {({ values, setFieldValue, isSubmitting, errors, touched, status }) => {
-            const customerRequired = !isEdit;
-            const customerPlaceholder = customerRequired
-              ? t("vehicles.selectClient")
-              : t("customers.noParent");
+          </SheetTitle>
+        </SheetHeader>
 
-            return (
-            <Form className="space-y-6" noValidate>
-              {status && (
-                <p className="text-destructive text-sm" role="alert">
-                  {status}
-                </p>
-              )}
-
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Dados Gerais */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium border-b pb-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                   {t("vehicles.sectionGeneral")}
-                </h3>
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-name">{t("common.name")}</Label>
-                    <Field
-                      as={Input}
-                      id="vehicle-name"
-                      name="name"
-                      placeholder="Ex: FIAT/PALIO FIRE"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-plate">{t("vehicles.plate")}</Label>
-                    <Field
-                      as={Input}
-                      id="vehicle-plate"
-                      name="plate"
-                      placeholder={t("vehicles.plate")}
-                      className={errors.plate ? "border-destructive" : ""}
-                    />
-                    <ErrorMessage
-                      name="plate"
-                      component="div"
-                      className="text-destructive text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-serial">{t("vehicles.serial")}</Label>
-                    <Field
-                      as={Input}
-                      id="vehicle-serial"
-                      name="serial"
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-color">{t("vehicles.color")}</Label>
-                    <Field as={Input} id="vehicle-color" name="color" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-year">{t("vehicles.year")}</Label>
-                    <Field
-                      as={Input}
-                      id="vehicle-year"
-                      name="year"
-                      placeholder="Ex: 2015"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-vehicleType">
-                      {t("vehicles.vehicleType")}
-                    </Label>
-                    <Field
-                      as={Input}
-                      id="vehicle-vehicleType"
-                      name="vehicleType"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-renavam">{t("vehicles.renavam")}</Label>
-                    <Field as={Input} id="vehicle-renavam" name="renavam" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-chassis">{t("vehicles.chassis")}</Label>
-                    <Field as={Input} id="vehicle-chassis" name="chassis" />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="vehicle-inactive"
-                    checked={values.inactive}
-                    onCheckedChange={(v) => setFieldValue("inactive", v === true)}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("common.name")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: FIAT/PALIO FIRE" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor="vehicle-inactive" className="font-normal">
-                    {t("vehicles.inactive")}
-                  </Label>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicle-notes">{t("vehicles.notes")}</Label>
-                  <Field
-                    as={Textarea}
-                    id="vehicle-notes"
-                    name="notes"
-                    placeholder={t("vehicles.notesPlaceholder")}
-                    rows={3}
+                  <FormField
+                    control={form.control}
+                    name="plate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.plate")} *</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t("vehicles.plate")} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="serial"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.serial")}</FormLabel>
+                        <FormControl>
+                          <Input className="font-mono" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.color")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="year"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.year")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: 2015" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.vehicleType")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="renavam"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.renavam")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="chassis"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.chassis")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicle-customer">{t("vehicles.customer")}</Label>
-                  <Popover
-                    open={customerComboboxOpen}
-                    onOpenChange={setCustomerComboboxOpen}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="vehicle-customer"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={customerComboboxOpen}
-                        disabled={loadingCustomers}
-                        className={cn(
-                          "w-full justify-between font-normal h-10",
-                          !values.customerId && "text-muted-foreground"
-                        )}
+
+                <FormField
+                  control={form.control}
+                  name="inactive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        {t("vehicles.inactive")}
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("vehicles.notes")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder={t("vehicles.notesPlaceholder")}
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("vehicles.customer")}
+                        {customerRequired && " *"}
+                      </FormLabel>
+                      <Popover
+                        open={customerComboboxOpen}
+                        onOpenChange={setCustomerComboboxOpen}
                       >
-                        <span className="truncate">
-                          {values.customerId
-                            ? (() => {
-                                const c = customers.find(
-                                  (x) => x.id === values.customerId
-                                );
-                                return c ? (
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={loadingCustomers}
+                              className={cn(
+                                "w-full justify-between font-normal h-10",
+                                !customerId && "text-muted-foreground"
+                              )}
+                            >
+                              <span className="truncate">
+                                {customerId && selectedCustomer ? (
                                   <span
                                     style={{
-                                      paddingLeft: (c.depth ?? 0) * 12,
+                                      paddingLeft: (selectedCustomer.depth ?? 0) * 12,
                                     }}
                                     className="inline-block"
                                   >
-                                    {c.name}
+                                    {selectedCustomer.name}
                                   </span>
                                 ) : (
                                   customerPlaceholder
-                                );
-                              })()
-                            : customerPlaceholder}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[var(--radix-popover-trigger-width)] p-0"
-                      align="start"
-                    >
-                      <Command
-                        filter={(value, search) =>
-                          !search
-                            ? 1
-                            : (value ?? "")
-                                .toLowerCase()
-                                .includes(search.toLowerCase())
+                                )}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[var(--radix-popover-trigger-width)] p-0"
+                          align="start"
+                        >
+                          <Command
+                            filter={(value, search) =>
+                              !search
                                 ? 1
-                                : 0
-                        }
-                      >
-                        <CommandInput
-                          placeholder={t("vehicles.filterClient")}
-                          className="h-9"
-                        />
-                        <CommandList>
-                          <CommandEmpty>
-                            {t("common.noResults")}
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {!customerRequired && (
-                              <CommandItem
-                                value={t("customers.noParent")}
-                                onSelect={() => {
-                                  setFieldValue("customerId", "");
-                                  setCustomerComboboxOpen(false);
-                                }}
-                              >
-                                {t("customers.noParent")}
-                              </CommandItem>
-                            )}
-                            {customers.map((c) => (
-                              <CommandItem
-                                key={c.id}
-                                value={c.name}
-                                onSelect={() => {
-                                  setFieldValue("customerId", c.id);
-                                  setCustomerComboboxOpen(false);
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    paddingLeft: (c.depth ?? 0) * 12,
-                                  }}
-                                  className="inline-block"
-                                >
-                                  {c.name}
-                                </span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {customerRequired && errors.customerId && touched.customerId && (
-                    <p className="text-destructive text-sm">
-                      {errors.customerId}
-                    </p>
+                                : value.toLowerCase().includes(search.toLowerCase())
+                                  ? 1
+                                  : 0
+                            }
+                          >
+                            <CommandInput
+                              placeholder={t("vehicles.filterClient")}
+                              className="h-9"
+                            />
+                            <CommandList>
+                              <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                              <CommandGroup>
+                                {!customerRequired && (
+                                  <CommandItem
+                                    value={t("customers.noParent")}
+                                    onSelect={() => {
+                                      form.setValue("customerId", "", {
+                                        shouldValidate: true,
+                                      });
+                                      setCustomerComboboxOpen(false);
+                                    }}
+                                  >
+                                    {t("customers.noParent")}
+                                  </CommandItem>
+                                )}
+                                {customers.map((c) => (
+                                  <CommandItem
+                                    key={c.id}
+                                    value={c.name}
+                                    onSelect={() => {
+                                      form.setValue("customerId", c.id, {
+                                        shouldValidate: true,
+                                      });
+                                      setCustomerComboboxOpen(false);
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        paddingLeft: (c.depth ?? 0) * 12,
+                                      }}
+                                      className="inline-block"
+                                    >
+                                      {c.name}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
               </div>
 
+              <Separator />
+
+              {/* Dispositivo */}
               {isEdit ? (
-                <div className="space-y-2">
-                  <Label htmlFor="vehicle-device">{t("vehicles.device")}</Label>
-                  <Select
-                    value={values.trackerDeviceId || "none"}
-                    onValueChange={(v) =>
-                      setFieldValue("trackerDeviceId", v === "none" ? "" : v)
-                    }
-                    disabled={loadingDevices}
-                  >
-                    <SelectTrigger id="vehicle-device">
-                      <SelectValue placeholder={t("vehicles.noDevice")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
-                      {devices.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          <span className="font-mono text-xs">{d.imei}</span>
-                          <span className="text-muted-foreground ml-1">
-                            ({d.model})
-                            {d.name ? ` · ${d.name}` : ""}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                    {t("vehicles.device")}
+                  </p>
+                  <FormField
+                    control={form.control}
+                    name="trackerDeviceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("vehicles.device")}</FormLabel>
+                        <Select
+                          value={field.value || "none"}
+                          onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                          disabled={loadingDevices}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("vehicles.noDevice")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
+                            {devices.map((d) => (
+                              <SelectItem key={d.id} value={d.id}>
+                                <span className="font-mono text-xs">{d.imei}</span>
+                                <span className="text-muted-foreground ml-1">
+                                  ({d.model}){d.name ? ` · ${d.name}` : ""}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>{t("vehicles.deviceAssociation")}</Label>
-                    <Select
-                      value={values.deviceOption}
-                      onValueChange={(v) =>
-                        setFieldValue("deviceOption", v as DeviceOption)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          {t("vehicles.deviceOptionNone")}
-                        </SelectItem>
-                        <SelectItem value="existing">
-                          {t("vehicles.deviceOptionExisting")}
-                        </SelectItem>
-                        <SelectItem value="new">
-                          {t("vehicles.deviceOptionNew")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                    {t("vehicles.deviceAssociation")}
+                  </p>
 
-                  {values.deviceOption === "existing" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="vehicle-device">{t("vehicles.device")}</Label>
-                      <Select
-                        value={values.trackerDeviceId || "none"}
-                        onValueChange={(v) =>
-                          setFieldValue(
-                            "trackerDeviceId",
-                            v === "none" ? "" : v
-                          )
-                        }
-                        disabled={loadingDevices}
-                      >
-                        <SelectTrigger id="vehicle-device">
-                          <SelectValue placeholder={t("vehicles.noDevice")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            {t("vehicles.noDevice")}
-                          </SelectItem>
-                          {devices.map((d) => (
-                            <SelectItem key={d.id} value={d.id}>
-                              <span className="font-mono text-xs">{d.imei}</span>
-                              <span className="text-muted-foreground ml-1">
-                                ({d.model})
-                                {d.name ? ` · ${d.name}` : ""}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {values.deviceOption === "new" && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <h3 className="text-sm font-medium">
-                        {t("vehicles.sectionDevice")}
-                      </h3>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-imei">
-                            {t("vehicles.imei")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-imei"
-                            name="newImei"
-                            placeholder={t("vehicles.imeiPlaceholder")}
-                            className={`font-mono ${
-                              errors.newImei ? "border-destructive" : ""
-                            }`}
-                          />
-                          <ErrorMessage
-                            name="newImei"
-                            component="div"
-                            className="text-destructive text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-model">
-                            {t("vehicles.trackerModel")}
-                          </Label>
-                          <Select
-                            value={values.newModel}
-                            onValueChange={(v) => setFieldValue("newModel", v)}
-                          >
-                            <SelectTrigger id="new-device-model">
+                  <FormField
+                    control={form.control}
+                    name="deviceOption"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              {t("vehicles.deviceOptionNone")}
+                            </SelectItem>
+                            <SelectItem value="existing">
+                              {t("vehicles.deviceOptionExisting")}
+                            </SelectItem>
+                            <SelectItem value="new">
+                              {t("vehicles.deviceOptionNew")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {deviceOption === "existing" && (
+                    <FormField
+                      control={form.control}
+                      name="trackerDeviceId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("vehicles.device")}</FormLabel>
+                          <Select
+                            value={field.value || "none"}
+                            onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                            disabled={loadingDevices}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("vehicles.noDevice")} />
+                              </SelectTrigger>
+                            </FormControl>
                             <SelectContent>
-                              {TRACKER_MODELS.map((m) => (
-                                <SelectItem key={m.value} value={m.value}>
-                                  {m.label}
+                              <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
+                              {devices.map((d) => (
+                                <SelectItem key={d.id} value={d.id}>
+                                  <span className="font-mono text-xs">{d.imei}</span>
+                                  <span className="text-muted-foreground ml-1">
+                                    ({d.model}){d.name ? ` · ${d.name}` : ""}
+                                  </span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="new-device-name">
-                            {t("vehicles.deviceNameOptional")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-name"
-                            name="newDeviceName"
-                            placeholder={t("common.name")}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-equipmentModel">
-                            {t("vehicles.equipmentModel")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-equipmentModel"
-                            name="newEquipmentModel"
-                            placeholder="Ex: SUNT CH"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-serialSat">
-                            {t("vehicles.serialSat")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-serialSat"
-                            name="newSerialSat"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="new-device-individualPassword">
-                            {t("vehicles.individualPassword")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-individualPassword"
-                            name="newIndividualPassword"
-                            type="password"
-                            autoComplete="off"
-                          />
-                        </div>
-                      </div>
-                      <h3 className="text-sm font-medium pt-2">
-                        {t("vehicles.sectionSimData")}
-                      </h3>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {deviceOption === "new" && (
+                    <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                      <p className="text-sm font-medium">{t("vehicles.sectionDevice")}</p>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-carrier">
-                            {t("vehicles.carrier")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-carrier"
-                            name="newCarrier"
-                            placeholder="Ex: SMARTSIM"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-simCardNumber">
-                            {t("vehicles.simCardNumber")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-simCardNumber"
-                            name="newSimCardNumber"
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new-device-cellNumber">
-                            {t("vehicles.cellNumber")}
-                          </Label>
-                          <Field
-                            as={Input}
-                            id="new-device-cellNumber"
-                            name="newCellNumber"
-                            placeholder="Ex: 16995636896"
-                          />
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="newImei"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.imei")} *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t("vehicles.imeiPlaceholder")}
+                                  className="font-mono"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newModel"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.trackerModel")}</FormLabel>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {TRACKER_MODELS.map((m) => (
+                                    <SelectItem key={m.value} value={m.value}>
+                                      {m.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newDeviceName"
+                          render={({ field }) => (
+                            <FormItem className="sm:col-span-2">
+                              <FormLabel>{t("vehicles.deviceNameOptional")}</FormLabel>
+                              <FormControl>
+                                <Input placeholder={t("common.name")} {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newEquipmentModel"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.equipmentModel")}</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: SUNT CH" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newSerialSat"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.serialSat")}</FormLabel>
+                              <FormControl>
+                                <Input className="font-mono" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newIndividualPassword"
+                          render={({ field }) => (
+                            <FormItem className="sm:col-span-2">
+                              <FormLabel>{t("vehicles.individualPassword")}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="password"
+                                  autoComplete="off"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <p className="text-sm font-medium pt-2">
+                        {t("vehicles.sectionSimData")}
+                      </p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="newCarrier"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.carrier")}</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: SMARTSIM" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newSimCardNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.simCardNumber")}</FormLabel>
+                              <FormControl>
+                                <Input className="font-mono" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newCellNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("vehicles.cellNumber")}</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: 16995636896" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
                   )}
-                </>
+                </div>
               )}
+            </div>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? isEdit
-                      ? t("common.updating")
-                      : t("common.creating")
-                    : isEdit
-                      ? t("common.update")
-                      : t("common.create")}
-                </Button>
-              </DialogFooter>
-            </Form>
-          );
-          }}
-        </Formik>
-      </DialogContent>
-    </Dialog>
+            <div className="px-6 py-4 border-t flex justify-end gap-2 bg-background">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? isEdit
+                    ? t("common.updating")
+                    : t("common.creating")
+                  : isEdit
+                    ? t("common.update")
+                    : t("common.create")}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </SheetContent>
+    </Sheet>
   );
 }

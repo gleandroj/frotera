@@ -1,34 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useTranslation } from "@/i18n/useTranslation";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover, PopoverContent, PopoverTrigger,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from "@/components/ui/command";
+import { Separator } from "@/components/ui/separator";
+import {
+  driversAPI,
+  customersAPI,
+  type Driver,
+  type Customer,
+  type CreateDriverPayload,
+  type UpdateDriverPayload,
+} from "@/lib/frontend/api-client";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ErrorMessage, Field, Form, Formik } from "formik";
-import { z } from "zod";
-import { toFormikValidationSchema } from "zod-formik-adapter";
 import { toast } from "sonner";
-import {
-  driversAPI, customersAPI,
-  type Driver, type Customer,
-  type CreateDriverPayload, type UpdateDriverPayload,
-} from "@/lib/frontend/api-client";
 
 const CNH_CATEGORIES = ["A", "B", "C", "D", "E", "AB", "AC", "AD", "AE"] as const;
 
@@ -41,21 +66,29 @@ interface DriverFormDialogProps {
   defaultCustomerId?: string | null;
 }
 
-interface DriverFormValues {
-  name: string;
-  customerId: string;
-  cpf: string;
-  cnh: string;
-  cnhCategory: string;
-  cnhExpiry: string;   // YYYY-MM-DD
-  phone: string;
-  email: string;
-  photo: string;
-  notes: string;
-  active: boolean;
-}
+const buildSchema = (t: (k: string) => string) =>
+  z.object({
+    name: z.string().min(1, t("drivers.nameRequired")),
+    customerId: z.string().default(""),
+    cpf: z.string().default(""),
+    cnh: z.string().default(""),
+    cnhCategory: z.string().default(""),
+    cnhExpiry: z.string().default(""),
+    phone: z.string().default(""),
+    email: z
+      .union([z.string().email(t("drivers.emailInvalid")), z.literal("")])
+      .default(""),
+    photo: z.string().default(""),
+    notes: z.string().default(""),
+    active: z.boolean().default(true),
+  });
 
-function getInitialValues(driver: Driver | null, defaultCustomerId?: string | null): DriverFormValues {
+type DriverFormValues = z.infer<ReturnType<typeof buildSchema>>;
+
+function getDefaultValues(
+  driver: Driver | null,
+  defaultCustomerId?: string | null
+): DriverFormValues {
   return {
     name: driver?.name ?? "",
     customerId: driver?.customerId ?? defaultCustomerId ?? "",
@@ -71,30 +104,33 @@ function getInitialValues(driver: Driver | null, defaultCustomerId?: string | nu
   };
 }
 
-function buildSchema(t: (k: string) => string) {
-  return z.object({
-    name: z.string().min(1, t("drivers.nameRequired")),
-    customerId: z.string().optional(),
-    cpf: z.string().optional(),
-    cnh: z.string().optional(),
-    cnhCategory: z.string().optional(),
-    cnhExpiry: z.string().optional(),
-    phone: z.string().optional(),
-    email: z.union([z.string().email(t("drivers.emailInvalid")), z.literal("")]).optional(),
-    photo: z.string().optional(),
-    notes: z.string().optional(),
-    active: z.boolean().optional(),
-  });
-}
-
 export function DriverFormDialog({
-  open, onOpenChange, driver, organizationId, onSuccess, defaultCustomerId,
+  open,
+  onOpenChange,
+  driver,
+  organizationId,
+  onSuccess,
+  defaultCustomerId,
 }: DriverFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!driver;
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
+
+  const form = useForm<DriverFormValues>({
+    resolver: zodResolver(buildSchema(t)),
+    defaultValues: getDefaultValues(driver, defaultCustomerId),
+  });
+
+  const { isSubmitting } = form.formState;
+  const customerId = form.watch("customerId");
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset(getDefaultValues(driver, defaultCustomerId));
+  }, [open, driver?.id]);
 
   useEffect(() => {
     if (!open || !organizationId) return;
@@ -106,9 +142,7 @@ export function DriverFormDialog({
       .finally(() => setLoadingCustomers(false));
   }, [open, organizationId]);
 
-  const handleSubmit = (values: DriverFormValues, { setStatus }: any) => {
-    setStatus(undefined);
-
+  const handleSubmit = async (values: DriverFormValues) => {
     const payload = {
       name: values.name.trim(),
       customerId: values.customerId || undefined,
@@ -122,213 +156,308 @@ export function DriverFormDialog({
       notes: values.notes.trim() || undefined,
     };
 
-    const promise = isEdit
-      ? driversAPI.update(organizationId, driver!.id, payload as UpdateDriverPayload)
-      : driversAPI.create(organizationId, payload as CreateDriverPayload);
-
-    return promise
-      .then(() => {
-        toast.success(isEdit ? t("drivers.toastUpdated") : t("drivers.toastCreated"));
-        onSuccess();
-        onOpenChange(false);
-      })
-      .catch((err: any) => {
-        const message = err?.response?.data?.message ?? t("drivers.toastError");
-        setStatus(message);
-        toast.error(message);
-      });
+    try {
+      if (isEdit) {
+        await driversAPI.update(organizationId, driver!.id, payload as UpdateDriverPayload);
+      } else {
+        await driversAPI.create(organizationId, payload as CreateDriverPayload);
+      }
+      toast.success(isEdit ? t("drivers.toastUpdated") : t("drivers.toastCreated"));
+      onSuccess();
+      onOpenChange(false);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t("drivers.toastError");
+      toast.error(message);
+    }
   };
 
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-[560px] flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b">
+          <SheetTitle>
             {isEdit ? t("drivers.editDriver") : t("drivers.createDriver")}
-          </DialogTitle>
-        </DialogHeader>
-        <Formik
-          initialValues={getInitialValues(driver, defaultCustomerId)}
-          validationSchema={toFormikValidationSchema(buildSchema(t))}
-          onSubmit={handleSubmit}
-          enableReinitialize
-        >
-          {({ values, setFieldValue, isSubmitting, errors, touched, status }) => (
-            <Form className="space-y-6" noValidate>
-              {status && (
-                <p className="text-destructive text-sm" role="alert">{status}</p>
-              )}
+          </SheetTitle>
+        </SheetHeader>
 
-              {/* Seção: Dados Pessoais */}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Dados Pessoais */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium border-b pb-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                   {t("drivers.sectionPersonal")}
-                </h3>
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="driver-name">{t("common.name")} *</Label>
-                    <Field
-                      as={Input}
-                      id="driver-name"
-                      name="name"
-                      placeholder={t("drivers.namePlaceholder")}
-                      className={errors.name && touched.name ? "border-destructive" : ""}
-                    />
-                    <ErrorMessage name="name" component="div" className="text-destructive text-sm" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver-cpf">{t("drivers.cpf")}</Label>
-                    <Field
-                      as={Input}
-                      id="driver-cpf"
-                      name="cpf"
-                      placeholder="000.000.000-00"
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver-phone">{t("common.phone")}</Label>
-                    <Field as={Input} id="driver-phone" name="phone" />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="driver-email">{t("common.email")}</Label>
-                    <Field
-                      as={Input}
-                      id="driver-email"
-                      name="email"
-                      type="email"
-                      className={errors.email && touched.email ? "border-destructive" : ""}
-                    />
-                    <ErrorMessage name="email" component="div" className="text-destructive text-sm" />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-2">
+                        <FormLabel>{t("common.name")} *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={t("drivers.namePlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("drivers.cpf")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="000.000.000-00"
+                            className="font-mono"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("common.phone")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-2">
+                        <FormLabel>{t("common.email")}</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                {/* Empresa vinculada */}
-                <div className="space-y-2">
-                  <Label>{t("drivers.customer")}</Label>
-                  <Popover open={customerComboboxOpen} onOpenChange={setCustomerComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        disabled={loadingCustomers}
-                        className={cn(
-                          "w-full justify-between font-normal h-10",
-                          !values.customerId && "text-muted-foreground"
-                        )}
+                {/* Customer combobox */}
+                <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>{t("drivers.customer")}</FormLabel>
+                      <Popover
+                        open={customerComboboxOpen}
+                        onOpenChange={setCustomerComboboxOpen}
                       >
-                        <span className="truncate">
-                          {values.customerId
-                            ? customers.find((c) => c.id === values.customerId)?.name
-                              ?? t("drivers.selectCustomer")
-                            : t("drivers.selectCustomer")}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder={t("drivers.filterCustomer")} className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem
-                              value=""
-                              onSelect={() => {
-                                setFieldValue("customerId", "");
-                                setCustomerComboboxOpen(false);
-                              }}
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={loadingCustomers}
+                              className={cn(
+                                "w-full justify-between font-normal h-10",
+                                !customerId && "text-muted-foreground"
+                              )}
                             >
-                              {t("drivers.noCustomer")}
-                            </CommandItem>
-                            {customers.map((c) => (
-                              <CommandItem
-                                key={c.id}
-                                value={c.name}
-                                onSelect={() => {
-                                  setFieldValue("customerId", c.id);
-                                  setCustomerComboboxOpen(false);
-                                }}
-                              >
-                                <span
-                                  style={{ paddingLeft: (c.depth ?? 0) * 12 }}
-                                  className="inline-block"
+                              <span className="truncate">
+                                {customerId && selectedCustomer
+                                  ? selectedCustomer.name
+                                  : t("drivers.selectCustomer")}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[var(--radix-popover-trigger-width)] p-0"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput
+                              placeholder={t("drivers.filterCustomer")}
+                              className="h-9"
+                            />
+                            <CommandList>
+                              <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value=""
+                                  onSelect={() => {
+                                    form.setValue("customerId", "", {
+                                      shouldValidate: true,
+                                    });
+                                    setCustomerComboboxOpen(false);
+                                  }}
                                 >
-                                  {c.name}
-                                </span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              {/* Seção: CNH */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium border-b pb-1">{t("drivers.sectionCnh")}</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="driver-cnh">{t("drivers.cnh")}</Label>
-                    <Field as={Input} id="driver-cnh" name="cnh" className="font-mono" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver-cnhCategory">{t("drivers.cnhCategory")}</Label>
-                    <Select
-                      value={values.cnhCategory || "__none__"}
-                      onValueChange={(v) => setFieldValue("cnhCategory", v === "__none__" ? "" : v)}
-                    >
-                      <SelectTrigger id="driver-cnhCategory">
-                        <SelectValue placeholder={t("drivers.selectCnhCategory")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">{t("drivers.noCnhCategory")}</SelectItem>
-                        {CNH_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver-cnhExpiry">{t("drivers.cnhExpiry")}</Label>
-                    <Field
-                      as={Input}
-                      id="driver-cnhExpiry"
-                      name="cnhExpiry"
-                      type="date"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Notas */}
-              <div className="space-y-2">
-                <Label htmlFor="driver-notes">{t("drivers.notes")}</Label>
-                <Field
-                  as={Textarea}
-                  id="driver-notes"
-                  name="notes"
-                  placeholder={t("drivers.notesPlaceholder")}
-                  rows={3}
+                                  {t("drivers.noCustomer")}
+                                </CommandItem>
+                                {customers.map((c) => (
+                                  <CommandItem
+                                    key={c.id}
+                                    value={c.name}
+                                    onSelect={() => {
+                                      form.setValue("customerId", c.id, {
+                                        shouldValidate: true,
+                                      });
+                                      setCustomerComboboxOpen(false);
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        paddingLeft: (c.depth ?? 0) * 12,
+                                      }}
+                                      className="inline-block"
+                                    >
+                                      {c.name}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                  {t("common.cancel")}
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? isEdit ? t("common.updating") : t("common.creating")
-                    : isEdit ? t("common.update") : t("common.create")}
-                </Button>
-              </DialogFooter>
-            </Form>
-          )}
-        </Formik>
-      </DialogContent>
-    </Dialog>
+              <Separator />
+
+              {/* CNH */}
+              <div className="space-y-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  {t("drivers.sectionCnh")}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="cnh"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("drivers.cnh")}</FormLabel>
+                        <FormControl>
+                          <Input className="font-mono" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="cnhCategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("drivers.cnhCategory")}</FormLabel>
+                        <Select
+                          value={field.value || "__none__"}
+                          onValueChange={(v) =>
+                            field.onChange(v === "__none__" ? "" : v)
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={t("drivers.selectCnhCategory")}
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">
+                              {t("drivers.noCnhCategory")}
+                            </SelectItem>
+                            {CNH_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat} value={cat}>
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="cnhExpiry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("drivers.cnhExpiry")}</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Observações */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("drivers.notes")}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t("drivers.notesPlaceholder")}
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="px-6 py-4 border-t flex justify-end gap-2 bg-background">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? isEdit
+                    ? t("common.updating")
+                    : t("common.creating")
+                  : isEdit
+                    ? t("common.update")
+                    : t("common.create")}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </SheetContent>
+    </Sheet>
   );
 }
