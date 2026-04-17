@@ -113,6 +113,22 @@ export default function ChecklistPage() {
     return templates.find((tpl) => tpl.id === fillTemplateId)?.name ?? t("checklist.fillChecklist");
   }, [fillTemplateId, templates, t]);
 
+  const hasActiveEntryFilters = useMemo(
+    () =>
+      vehicleFilter.trim() !== "" ||
+      statusFilter !== STATUS_ALL ||
+      dateFrom !== "" ||
+      dateTo !== "",
+    [vehicleFilter, statusFilter, dateFrom, dateTo],
+  );
+
+  const resetEntryFilters = () => {
+    setVehicleFilter("");
+    setStatusFilter(STATUS_ALL);
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const loadTemplates = async () => {
     if (!orgId) return;
     try {
@@ -186,10 +202,12 @@ export default function ChecklistPage() {
   const templateColumns: ColumnDef<ChecklistTemplate>[] = [
     {
       accessorKey: "name",
+      meta: { labelKey: "checklist.columns.name" },
       header: t("checklist.columns.name"),
     },
     {
       accessorKey: "active",
+      meta: { labelKey: "checklist.columns.active" },
       header: t("checklist.columns.active"),
       cell: ({ row }) => {
         const active = row.getValue("active") as boolean;
@@ -202,16 +220,19 @@ export default function ChecklistPage() {
     },
     {
       accessorKey: "items",
+      meta: { labelKey: "checklist.columns.itemCount" },
       header: t("checklist.columns.itemCount"),
       cell: ({ row }) => (row.getValue("items") as any[])?.length ?? 0,
     },
     {
       accessorKey: "createdAt",
+      meta: { labelKey: "checklist.columns.createdAt" },
       header: t("checklist.columns.createdAt"),
       cell: ({ row }) => format(new Date(row.getValue("createdAt") as string), "dd/MM/yyyy"),
     },
     {
       id: "actions",
+      enableHiding: false,
       cell: ({ row }) => {
         const template = row.original;
         return (
@@ -284,6 +305,7 @@ export default function ChecklistPage() {
     {
       id: "template",
       accessorKey: "templateName",
+      meta: { labelKey: "checklist.columns.template" },
       header: t("checklist.columns.template"),
       cell: ({ row }) => {
         const e = row.original;
@@ -294,6 +316,7 @@ export default function ChecklistPage() {
       id: "vehicle",
       accessorFn: (row) =>
         [row.vehicleName, row.vehiclePlate].filter(Boolean).join(" ") || row.vehicleId,
+      meta: { labelKey: "checklist.columns.vehicle" },
       header: t("checklist.columns.vehicle"),
       cell: ({ row }) => {
         const e = row.original;
@@ -306,6 +329,7 @@ export default function ChecklistPage() {
     {
       id: "member",
       accessorKey: "memberName",
+      meta: { labelKey: "checklist.columns.member" },
       header: t("checklist.columns.member"),
       cell: ({ row }) => {
         const e = row.original;
@@ -314,6 +338,7 @@ export default function ChecklistPage() {
     },
     {
       accessorKey: "status",
+      meta: { labelKey: "checklist.columns.status" },
       header: t("checklist.columns.status"),
       cell: ({ row }) => {
         const status = row.getValue("status") as EntryStatus;
@@ -326,11 +351,13 @@ export default function ChecklistPage() {
     },
     {
       accessorKey: "createdAt",
+      meta: { labelKey: "checklist.columns.date" },
       header: t("checklist.columns.date"),
       cell: ({ row }) => format(new Date(row.getValue("createdAt") as string), "dd/MM/yyyy"),
     },
     {
       id: "actions",
+      enableHiding: false,
       cell: ({ row }) => (
         <Button
           variant="ghost"
@@ -420,7 +447,7 @@ export default function ChecklistPage() {
         </TabsContent>
 
         <TabsContent value="entries" className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <Input
               placeholder={t("checklist.filterByVehicle")}
               value={vehicleFilter}
@@ -441,24 +468,40 @@ export default function ChecklistPage() {
                 <SelectItem value="INCOMPLETE">{t("checklist.entryStatus.INCOMPLETE")}</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">{t("common.from")}</span>
+            <div className="flex min-w-[10.5rem] flex-col gap-1">
+              <span className="text-xs font-medium leading-none text-muted-foreground">
+                {t("common.from")}
+              </span>
               <DatePicker
                 value={dateFrom || undefined}
                 onChange={(v) => setDateFrom(v)}
-                className="w-40"
+                className="w-full min-w-0"
                 placeholder={t("common.calendar.pickDate")}
+                allowClear
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">{t("common.to")}</span>
+            <div className="flex min-w-[10.5rem] flex-col gap-1">
+              <span className="text-xs font-medium leading-none text-muted-foreground">
+                {t("common.to")}
+              </span>
               <DatePicker
                 value={dateTo || undefined}
                 onChange={(v) => setDateTo(v)}
-                className="w-40"
+                className="w-full min-w-0"
                 placeholder={t("common.calendar.pickDate")}
+                allowClear
               />
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={!hasActiveEntryFilters}
+              onClick={resetEntryFilters}
+            >
+              {t("checklist.clearFilters")}
+            </Button>
           </div>
 
           {loading ? (
