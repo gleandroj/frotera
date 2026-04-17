@@ -50,7 +50,7 @@
     "tip": "Dica",
     "showing": "Mostrando",
     "from": "De",
-    "to": "até",
+    "to": "Até",
     "all": "Todos",
     "clear": "Limpar",
     "calendar": {
@@ -915,6 +915,7 @@
     "toastEntryUpdated": "Status da entrada atualizado.",
     "toastError": "Erro ao processar operação. Tente novamente.",
     "filterByVehicle": "Filtrar por veículo...",
+    "clearFilters": "Limpar filtros",
     "filterByStatus": "Filtrar por status",
     "filterByDate": "Filtrar por data",
     "allStatuses": "Todos os status",
@@ -1276,6 +1277,17 @@
     "filterByVehicle": "Filtrar por veículo...",
     "noResults": "Nenhum resultado.",
     "openActionsMenu": "Abrir menu de ações",
+    "filters": {
+      "today": "Hoje",
+      "yesterday": "Ontem",
+      "thisMonth": "Este mês",
+      "thisYear": "Este ano",
+      "customRange": "Período…",
+      "vehicle": "Veículo",
+      "driver": "Motorista",
+      "allVehicles": "Todos os veículos",
+      "allDrivers": "Todos os motoristas"
+    },
     "fields": {
       "vehicle": "Veículo",
       "driver": "Motorista",
@@ -1306,9 +1318,13 @@
       "avgConsumption": "Consumo Médio (km/l)",
       "avgCostPerKm": "Custo Médio por km",
       "logsMonth": "Abastecimentos (Mês)",
-      "noData": "Sem dados suficientes"
+      "noData": "Sem dados suficientes",
+      "refuelsCountSubtitle": "{{count}} abastecimentos",
+      "periodLitersSubtitle": "{{liters}} L no período"
     },
     "form": {
+      "selectDriver": "Selecione o motorista",
+      "noDriver": "Sem motorista",
       "selectVehicle": "Selecione o veículo",
       "filterVehicle": "Buscar veículo...",
       "vehicleRequired": "Selecione um veículo.",
