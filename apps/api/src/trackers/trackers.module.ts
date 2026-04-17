@@ -9,7 +9,6 @@ import { createClient } from "redis";
 import type { RedisClientType } from "redis";
 import { CustomersModule } from "@/customers/customers.module";
 import { PrismaModule } from "@/prisma/prisma.module";
-import { AuthModule } from "@/auth/auth.module";
 import { TRACKER_REDIS, TrackerRedisWriterService } from "./ingress/tracker-redis-writer.service";
 import { TrackerDevicesService } from "./devices/tracker-devices.service";
 import { TrackerDevicesController } from "./devices/tracker-devices.controller";
@@ -22,7 +21,7 @@ import {
 import { TrackerPositionsGateway } from "./positions/tracker-positions.gateway";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule, CustomersModule],
+  imports: [ConfigModule, PrismaModule, CustomersModule],
   controllers: [TrackerDevicesController, VehiclesController],
   providers: [
     {

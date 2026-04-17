@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Global, Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { EmailModule } from '../email/email.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 
+@Global()
 @Module({
   imports: [
     PrismaModule,

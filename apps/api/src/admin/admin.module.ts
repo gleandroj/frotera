@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { AuthModule } from "../auth/auth.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -68,7 +67,6 @@ const modelNavigationGroups: Record<string, string> = {
   imports: [
     PrismaModule,
     ConfigModule,
-    AuthModule,
     import("@adminjs/nestjs").then(async ({ AdminModule }) => {
       return AdminModule.createAdminAsync({
         imports: [PrismaModule, ConfigModule],
