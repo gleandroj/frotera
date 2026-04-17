@@ -595,6 +595,16 @@ export const documentsAPI = {
     externalApi.delete(
       `/api/organizations/${organizationId}/documents/${id}`
     ),
+
+  uploadAttachment: (organizationId: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return externalApi.post<{ fileUrl: string }>(
+      `/api/organizations/${organizationId}/documents/upload`,
+      body,
+      { timeout: 120_000 }
+    );
+  },
 };
 
 // ── DRIVERS ──────────────────────────────────────────────────────────────────

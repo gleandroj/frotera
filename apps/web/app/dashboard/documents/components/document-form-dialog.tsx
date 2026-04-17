@@ -43,7 +43,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Separator } from '@/components/ui/separator';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ResourceSelectCreateRow } from '@/components/resource-select-create-row';
@@ -85,13 +85,6 @@ const buildSchema = (t: (k: string) => string) =>
     title: z.string().min(1, t('documents.titleRequired')),
     issueDate: z.string().default(''),
     expiryDate: z.string().default(''),
-    fileUrl: z
-      .string()
-      .refine(
-        (val) => !val || /^https?:\/\/.+/.test(val),
-        t('documents.fileUrlInvalid'),
-      )
-      .default(''),
     notes: z.string().default(''),
   });
 
@@ -114,6 +107,7 @@ export function DocumentFormDialog({
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleComboboxOpen, setVehicleComboboxOpen] = useState(false);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const form = useForm<DocumentFormValues>({
     resolver: zodResolver(buildSchema(t)),
@@ -125,7 +119,6 @@ export function DocumentFormDialog({
       expiryDate: document?.expiryDate
         ? document.expiryDate.substring(0, 10)
         : '',
-      fileUrl: document?.fileUrl ?? '',
       notes: document?.notes ?? '',
     },
   });
@@ -136,6 +129,7 @@ export function DocumentFormDialog({
 
   useEffect(() => {
     if (!open) return;
+    setPendingFile(null);
     form.reset({
       vehicleId: document?.vehicleId ?? defaultVehicleId ?? '',
       type: (document?.type as DocumentType) ?? 'CRLV',
@@ -146,7 +140,6 @@ export function DocumentFormDialog({
       expiryDate: document?.expiryDate
         ? document.expiryDate.substring(0, 10)
         : '',
-      fileUrl: document?.fileUrl ?? '',
       notes: document?.notes ?? '',
     });
   }, [open, document?.id]);
@@ -172,6 +165,22 @@ export function DocumentFormDialog({
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
 
   const handleSubmit = async (values: DocumentFormValues) => {
+    let fileUrl: string | null = null;
+    if (pendingFile) {
+      try {
+        const { data } = await documentsAPI.uploadAttachment(
+          organizationId,
+          pendingFile,
+        );
+        fileUrl = data.fileUrl;
+      } catch {
+        toast.error(t('documents.fileUploadError'));
+        return;
+      }
+    } else if (isEdit) {
+      fileUrl = document!.fileUrl ?? null;
+    }
+
     try {
       if (isEdit) {
         await documentsAPI.update(organizationId, document!.id, {
@@ -179,7 +188,7 @@ export function DocumentFormDialog({
           title: values.title,
           issueDate: values.issueDate || null,
           expiryDate: values.expiryDate || null,
-          fileUrl: values.fileUrl || null,
+          fileUrl,
           notes: values.notes || null,
         } as UpdateDocumentPayload);
         toast.success(t('documents.toastUpdated'));
@@ -190,7 +199,7 @@ export function DocumentFormDialog({
           title: values.title,
           issueDate: values.issueDate,
           expiryDate: values.expiryDate,
-          fileUrl: values.fileUrl,
+          ...(fileUrl != null ? { fileUrl } : {}),
           notes: values.notes,
         } as CreateDocumentPayload);
         toast.success(t('documents.toastCreated'));
@@ -377,24 +386,54 @@ export function DocumentFormDialog({
               />
             </div>
 
-            {/* URL do Arquivo */}
-            <FormField
-              control={form.control}
-              name="fileUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('documents.fields.fileUrl')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder={t('documents.fields.fileUrlPlaceholder')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            {/* Arquivo (upload S3 / MinIO ao salvar) */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium leading-none">
+                  {t('documents.fields.file')}
+                </p>
+                <p className="text-muted-foreground mt-1.5 text-sm">
+                  {t('documents.fields.fileHint')}
+                </p>
+              </div>
+              {isEdit && document?.fileUrl && !pendingFile && (
+                <a
+                  href={document.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary inline-block text-sm underline-offset-4 hover:underline"
+                >
+                  {t('documents.viewFile')}
+                </a>
               )}
-            />
+              {pendingFile && (
+                <div className="bg-muted/50 flex items-center gap-2 rounded-md border px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {pendingFile.name}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setPendingFile(null)}
+                    aria-label={t('documents.fileClear')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
+                className="cursor-pointer text-sm file:mr-3 file:cursor-pointer"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  setPendingFile(f ?? null);
+                  e.target.value = '';
+                }}
+              />
+            </div>
 
             {/* Observações */}
             <FormField
