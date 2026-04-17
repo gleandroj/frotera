@@ -55,25 +55,40 @@ export class ChecklistService {
     const existing = await this.prisma.checklistTemplate.findFirst({ where: { id: templateId, organizationId } });
     if (!existing) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
 
-    const template = await this.prisma.checklistTemplate.update({
-      where: { id: templateId },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.active !== undefined && { active: dto.active }),
-        ...(dto.items !== undefined && {
-          items: {
-            deleteMany: {},
-            create: dto.items.map((item) => ({
-              label: item.label, type: item.type, required: item.required,
-              options: item.options ?? [], order: item.order,
-            })),
-          },
-        }),
-      },
-      include: { items: { orderBy: { order: "asc" } } },
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.items !== undefined) {
+        // Delete answers referencing current items before deleting items (FK constraint)
+        const currentItems = await tx.checklistTemplateItem.findMany({
+          where: { templateId },
+          select: { id: true },
+        });
+        if (currentItems.length > 0) {
+          await tx.checklistAnswer.deleteMany({
+            where: { itemId: { in: currentItems.map((i) => i.id) } },
+          });
+        }
+      }
+
+      const template = await tx.checklistTemplate.update({
+        where: { id: templateId },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.active !== undefined && { active: dto.active }),
+          ...(dto.items !== undefined && {
+            items: {
+              deleteMany: {},
+              create: dto.items.map((item) => ({
+                label: item.label, type: item.type, required: item.required,
+                options: item.options ?? [], order: item.order,
+              })),
+            },
+          }),
+        },
+        include: { items: { orderBy: { order: "asc" } } },
+      });
+      return this.toTemplateResponse(template);
     });
-    return this.toTemplateResponse(template);
   }
 
   async deleteTemplate(templateId: string, organizationId: string): Promise<{ message: string }> {

@@ -509,6 +509,7 @@ enum ItemType {
   PHOTO
   SELECT
   SIGNATURE
+  FILE
 
   @@map("item_type")
 }
