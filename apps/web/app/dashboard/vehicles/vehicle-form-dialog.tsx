@@ -57,6 +57,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
+import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 
@@ -864,6 +865,7 @@ export function VehicleFormDialog({
             </div>
           </form>
         </Form>
+        <DrawerStackParentDim show={customerFormOpen} />
       </SheetContent>
     </Sheet>
 

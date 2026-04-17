@@ -48,6 +48,7 @@ import { ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ResourceSelectCreateRow } from '@/components/resource-select-create-row';
+import { DrawerStackParentDim } from '@/components/drawer-stack-parent-dim';
 import { VehicleFormDialog } from '@/app/dashboard/vehicles/vehicle-form-dialog';
 import { usePermissions, Module, Action } from '@/lib/hooks/use-permissions';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -206,13 +207,14 @@ export function DocumentFormDialog({
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? t('documents.editDocument') : t('documents.createDocument')}
-          </DialogTitle>
-        </DialogHeader>
+        <div className="relative">
+          <DialogHeader>
+            <DialogTitle>
+              {isEdit ? t('documents.editDocument') : t('documents.createDocument')}
+            </DialogTitle>
+          </DialogHeader>
 
-        <Form {...form}>
+          <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-5"
@@ -429,6 +431,8 @@ export function DocumentFormDialog({
             </DialogFooter>
           </form>
         </Form>
+          <DrawerStackParentDim show={vehicleFormOpen} />
+        </div>
       </DialogContent>
     </Dialog>
 

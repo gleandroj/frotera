@@ -44,6 +44,7 @@ import { ResourceSelectCreateRow } from "@/components/resource-select-create-row
 import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 
 const FUEL_TYPES: FuelType[] = ["GASOLINE", "ETHANOL", "DIESEL", "ELECTRIC", "GNV"];
 
@@ -469,6 +470,7 @@ export function FuelFormDrawer({
             {submitting ? t("common.saving") : t("common.save")}
           </Button>
         </SheetFooter>
+        <DrawerStackParentDim show={vehicleFormOpen} />
       </SheetContent>
     </Sheet>
 
