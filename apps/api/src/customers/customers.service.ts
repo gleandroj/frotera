@@ -84,6 +84,42 @@ export class CustomersService {
   }
 
   /** Get all descendant IDs for given customer IDs in the same org (recursive). */
+  /**
+   * Customer IDs used to filter resources (vehicles, templates, etc.) by empresa.
+   * Returns null = sem filtro adicional (membro com acesso a toda a org).
+   * Com `filterCustomerId`, restringe à subárvore desse nó (intersecção com `allowedCustomerIds`).
+   */
+  async resolveResourceCustomerFilter(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string | null,
+  ): Promise<string[] | null> {
+    const f = filterCustomerId?.trim() || undefined;
+    if (allowedCustomerIds === null && !f) {
+      return null;
+    }
+    if (allowedCustomerIds === null && f) {
+      const descendants = await this.getDescendantCustomerIds(
+        [f],
+        organizationId,
+      );
+      return [f, ...descendants];
+    }
+    if (!f) {
+      return [...allowedCustomerIds!];
+    }
+    const descendants = await this.getDescendantCustomerIds(
+      [f],
+      organizationId,
+    );
+    const inSubtree = new Set([f, ...descendants]);
+    const scoped = allowedCustomerIds!.filter((id) => inSubtree.has(id));
+    if (scoped.length === 0) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+    return scoped;
+  }
+
   async getDescendantCustomerIds(
     customerIds: string[],
     organizationId: string,
@@ -295,6 +331,7 @@ export class CustomersService {
     customerId: string,
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    isSuperAdmin?: boolean,
   ): Promise<void> {
     const customer = await this.prisma.customer.findFirst({
       where: { id: customerId, organizationId },
@@ -302,6 +339,9 @@ export class CustomersService {
     });
     if (!customer) {
       throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+    }
+    if (customer.parentId === null && isSuperAdmin !== true) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
     if (allowedCustomerIds !== null && !allowedCustomerIds.includes(customerId)) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);

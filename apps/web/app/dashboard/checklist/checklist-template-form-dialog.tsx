@@ -54,6 +54,8 @@ interface ChecklistTemplateFormDialogProps {
   onOpenChange: (open: boolean) => void;
   template: ChecklistTemplate | null;
   organizationId: string;
+  /** Empresa dona do template ao criar (cabeçalho do dashboard). */
+  defaultCustomerId?: string | null;
   onSuccess: () => void;
 }
 
@@ -184,6 +186,7 @@ export function ChecklistTemplateFormDialog({
   onOpenChange,
   template,
   organizationId,
+  defaultCustomerId = null,
   onSuccess,
 }: ChecklistTemplateFormDialogProps) {
   const { t } = useTranslation();
@@ -265,9 +268,16 @@ export function ChecklistTemplateFormDialog({
 
   async function handleSubmit() {
     if (!name.trim()) return;
+    if (!isEdit && !defaultCustomerId) {
+      toast.error(t("checklist.templateCustomerRequired"));
+      return;
+    }
 
     const payload: CreateChecklistTemplatePayload = {
       name: name.trim(),
+      ...(!isEdit && defaultCustomerId
+        ? { customerId: defaultCustomerId }
+        : {}),
       description: description.trim() || undefined,
       active,
       vehicleRequired,

@@ -88,27 +88,31 @@ model Customer {
   vehicles       Vehicle[]
   memberAccess   OrganizationMemberCustomer[]
   invitationAccess InvitationCustomer[]
-  drivers        Driver[]
-  fleetSettings  CustomerFleetSetting[]
+  drivers             Driver[]
+  fleetSettings       CustomerFleetSetting[]
+  geofenceZones       GeofenceZone[]
+  incidents           Incident[]
+  checklistTemplates  ChecklistTemplate[]
 
   @@index([organizationId])
   @@index([parentId])
   @@map("customers")
 }
 
-/// Telemetria / frota por organização. `customerId` null = padrão de toda a organização (apenas superadmin grava).
+/// Telemetria / frota por empresa (Customer). Valores efetivos podem herdar do pai na árvore na leitura.
 model CustomerFleetSetting {
   id                            String   @id @default(cuid())
   organizationId                String
-  customerId                    String?
+  customerId                    String
   deviceOfflineThresholdMinutes Int?
   defaultSpeedLimitKmh          Float?
   createdAt                     DateTime @default(now())
   updatedAt                     DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, customerId])
   @@index([organizationId])
   @@map("customer_fleet_settings")
 }
@@ -165,13 +169,13 @@ model Vehicle {
   speedLimit       Float?
   notes            String?        // Informações / histórico
   trackerDeviceId  String?        @unique
-  customerId       String?
+  customerId       String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   trackerDevice  TrackerDevice? @relation(fields: [trackerDeviceId], references: [id], onDelete: SetNull)
-  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
   driverAssignments DriverVehicleAssignment[]
   documents         VehicleDocument[]
   fuelLogs          FuelLog[]
@@ -287,6 +291,7 @@ model TelemetryAlert {
 model GeofenceZone {
   id             String       @id @default(cuid())
   organizationId String
+  customerId     String
   name           String
   description    String?
   type           GeofenceType
@@ -299,8 +304,10 @@ model GeofenceZone {
   updatedAt      DateTime     @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+  @@index([customerId])
   @@index([active])
   @@map("geofence_zones")
 }
@@ -507,6 +514,7 @@ model Notification {
 model Incident {
   id              String           @id @default(cuid())
   organizationId  String
+  customerId      String
   vehicleId       String?
   driverId        String?
   createdById     String
@@ -526,11 +534,13 @@ model Incident {
   updatedAt       DateTime         @updatedAt
 
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicle      Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   createdBy    OrganizationMember    @relation("IncidentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   attachments  IncidentAttachment[]
 
   @@index([organizationId])
+  @@index([customerId])
   @@index([vehicleId])
   @@index([driverId])
   @@index([status])
@@ -567,7 +577,7 @@ model AppSettings {
 model Driver {
   id             String    @id @default(cuid())
   organizationId String
-  customerId     String?   // FK para Customer (Empresa/Filial) — opcional
+  customerId     String
   name           String
   cpf            String?   // CPF — unique por organização (ver @@unique abaixo)
   cnh            String?   // Número da CNH
@@ -582,7 +592,7 @@ model Driver {
   updatedAt      DateTime  @updatedAt
 
   organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customer           Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer           Customer                 @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicleAssignments DriverVehicleAssignment[]
   fuelLogs           FuelLog[]
 
@@ -765,6 +775,7 @@ enum ChecklistDriverRequirement {
 model ChecklistTemplate {
   id             String   @id @default(cuid())
   organizationId String
+  customerId     String
   name           String
   description    String?
   active         Boolean  @default(true)
@@ -775,10 +786,12 @@ model ChecklistTemplate {
   updatedAt      DateTime @updatedAt
 
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items        ChecklistTemplateItem[]
   entries      ChecklistEntry[]
 
   @@index([organizationId])
+  @@index([customerId])
   @@map("checklist_templates")
 }
 

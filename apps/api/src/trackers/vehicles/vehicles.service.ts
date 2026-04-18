@@ -94,8 +94,15 @@ export class VehiclesService {
     dto: UpdateVehicleDto,
     allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
+    if (dto.customerId !== undefined) {
+      const cid = typeof dto.customerId === "string" ? dto.customerId.trim() : "";
+      if (!cid) {
+        throw new BadRequestException(ApiCode.VEHICLE_CUSTOMER_REQUIRED);
+      }
+      (dto as { customerId?: string }).customerId = cid;
+    }
     if (dto.customerId !== undefined && allowedCustomerIds !== null) {
-      if (dto.customerId !== null && !allowedCustomerIds.includes(dto.customerId)) {
+      if (!allowedCustomerIds.includes(dto.customerId as string)) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
     }
@@ -135,9 +142,9 @@ export class VehiclesService {
     });
     if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
     if (allowedCustomerIds !== null) {
-      const allowed =
-        vehicle.customerId === null ? false : allowedCustomerIds.includes(vehicle.customerId);
-      if (!allowed) throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      if (!allowedCustomerIds.includes(vehicle.customerId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
     }
     return this.toResponse(vehicle as VehicleWithDeviceAndCustomer);
   }
@@ -172,11 +179,9 @@ export class VehiclesService {
         select: { customerId: true },
       });
       if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
-      const allowed =
-        vehicle.customerId === null
-          ? false
-          : allowedCustomerIds.includes(vehicle.customerId);
-      if (!allowed) throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      if (!allowedCustomerIds.includes(vehicle.customerId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
     }
     await this.prisma.vehicle.delete({ where: { id } });
   }

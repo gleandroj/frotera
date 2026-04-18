@@ -136,6 +136,7 @@ export class CustomersController {
       customerId,
       organizationId,
       req.allowedCustomerIds,
+      req.user.isSuperAdmin === true,
     );
   }
 }

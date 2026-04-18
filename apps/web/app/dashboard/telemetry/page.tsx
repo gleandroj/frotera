@@ -94,6 +94,7 @@ export default function TelemetryPage() {
         ...(filterVehicleId && filterVehicleId !== "__all__"
           ? { vehicleId: filterVehicleId }
           : {}),
+        ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
         ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
         ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {}),
         limit,
@@ -115,6 +116,7 @@ export default function TelemetryPage() {
     dateTo,
     limit,
     offset,
+    selectedCustomerId,
     t,
   ]);
 

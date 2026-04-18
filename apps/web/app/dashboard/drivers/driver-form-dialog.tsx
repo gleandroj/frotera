@@ -59,6 +59,7 @@ import { ResourceSelectCreateRow } from "@/components/resource-select-create-row
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 function maskCpf(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -145,6 +146,7 @@ export function DriverFormDialog({
   hideOverlay = false,
 }: DriverFormDialogProps) {
   const { t } = useTranslation();
+  const { user, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!driver;
 
@@ -549,7 +551,12 @@ export function DriverFormDialog({
       customer={null}
       organizationId={organizationId}
       customers={customers}
-      defaultParentId={null}
+      defaultParentId={
+        selectedCustomerId ??
+        (customerId?.trim() ? customerId.trim() : null) ??
+        undefined
+      }
+      allowRootCreation={user?.isSuperAdmin ?? false}
       hideOverlay
       onSuccess={(created) => {
         refreshCustomersList();

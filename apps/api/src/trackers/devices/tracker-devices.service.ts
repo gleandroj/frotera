@@ -88,9 +88,27 @@ export class TrackerDevicesService {
     const device = await this.prisma.trackerDevice.create({
       data: { organizationId, imei, model },
     });
+    const defaultCustomer =
+      (await this.prisma.customer.findFirst({
+        where: { organizationId, parentId: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })) ??
+      (await this.prisma.customer.findFirst({
+        where: { organizationId },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      }));
+    if (!defaultCustomer) {
+      await this.prisma.trackerDevice.delete({ where: { id: device.id } });
+      throw new Error(
+        `Cannot auto-create vehicle for org ${organizationId}: no customer exists`,
+      );
+    }
     const vehicle = await this.prisma.vehicle.create({
       data: {
         organizationId,
+        customerId: defaultCustomer.id,
         trackerDeviceId: device.id,
       },
     });

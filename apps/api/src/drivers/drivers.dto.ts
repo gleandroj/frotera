@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsBoolean, IsEmail,
-  IsDateString, MaxLength,
+  IsDateString, MaxLength, IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -9,10 +9,10 @@ export class CreateDriverDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'Empresa (customer) à qual o motorista pertence' })
   @IsString()
-  customerId?: string;
+  @IsNotEmpty()
+  customerId!: string;
 
   @ApiPropertyOptional({ description: 'CPF do motorista (único por organização)' })
   @IsOptional()
@@ -65,7 +65,7 @@ export class UpdateDriverDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  customerId?: string | null; // null = desvincula da empresa
+  customerId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

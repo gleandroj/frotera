@@ -7,7 +7,6 @@ import {
 import { PrismaService } from "@/prisma/prisma.service";
 import type {
   ListCustomerFleetSettingsResponseDto,
-  OrganizationFleetDefaultDto,
   UpdateCustomerFleetSettingsDto,
 } from "./customer-fleet-settings.dto";
 
@@ -43,14 +42,8 @@ export class CustomerFleetSettingsService {
     return actor.allowedCustomerIds.filter(Boolean);
   }
 
-  private async getOrgWideRow(organizationId: string) {
-    return this.prisma.customerFleetSetting.findFirst({
-      where: { organizationId, customerId: null },
-    });
-  }
-
   /**
-   * Efetivo: linha da empresa (customer) ou, em falta, padrão org-wide (customerId null).
+   * Efetivo por empresa: valores da própria linha ou, em falta, do primeiro ancestral com valor.
    */
   async resolveEffective(
     organizationId: string,
@@ -59,33 +52,53 @@ export class CustomerFleetSettingsService {
     deviceOfflineThresholdMinutes: number | null;
     defaultSpeedLimitKmh: number | null;
   }> {
-    const orgWide = await this.getOrgWideRow(organizationId);
     if (!customerId) {
       return {
-        deviceOfflineThresholdMinutes: orgWide?.deviceOfflineThresholdMinutes ?? null,
-        defaultSpeedLimitKmh: orgWide?.defaultSpeedLimitKmh ?? null,
+        deviceOfflineThresholdMinutes: null,
+        defaultSpeedLimitKmh: null,
       };
     }
-    const row = await this.prisma.customerFleetSetting.findFirst({
-      where: { organizationId, customerId },
-    });
-    return {
-      deviceOfflineThresholdMinutes:
-        row != null
-          ? (row.deviceOfflineThresholdMinutes ??
-            orgWide?.deviceOfflineThresholdMinutes ??
-            null)
-          : (orgWide?.deviceOfflineThresholdMinutes ?? null),
-      defaultSpeedLimitKmh:
-        row != null
-          ? (row.defaultSpeedLimitKmh ?? orgWide?.defaultSpeedLimitKmh ?? null)
-          : (orgWide?.defaultSpeedLimitKmh ?? null),
-    };
-  }
 
-  /** Apenas superadmin vê/edita o padrão organization-wide (customerId null). */
-  private showOrganizationDefaultPanel(actor: FleetRequestActor): boolean {
-    return actor.isSuperAdmin === true;
+    const [customers, settings] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: { organizationId },
+        select: { id: true, parentId: true },
+      }),
+      this.prisma.customerFleetSetting.findMany({
+        where: { organizationId },
+      }),
+    ]);
+
+    const parentOf = new Map(
+      customers.map((c) => [c.id, c.parentId] as const),
+    );
+    const settingByCustomer = new Map(
+      settings.map((s) => [s.customerId, s] as const),
+    );
+
+    let deviceOfflineThresholdMinutes: number | null = null;
+    let defaultSpeedLimitKmh: number | null = null;
+    let cur: string | null = customerId;
+    while (
+      cur &&
+      (deviceOfflineThresholdMinutes === null || defaultSpeedLimitKmh === null)
+    ) {
+      const row = settingByCustomer.get(cur);
+      if (row) {
+        if (
+          deviceOfflineThresholdMinutes === null &&
+          row.deviceOfflineThresholdMinutes != null
+        ) {
+          deviceOfflineThresholdMinutes = row.deviceOfflineThresholdMinutes;
+        }
+        if (defaultSpeedLimitKmh === null && row.defaultSpeedLimitKmh != null) {
+          defaultSpeedLimitKmh = row.defaultSpeedLimitKmh;
+        }
+      }
+      cur = parentOf.get(cur) ?? null;
+    }
+
+    return { deviceOfflineThresholdMinutes, defaultSpeedLimitKmh };
   }
 
   async getList(
@@ -98,31 +111,10 @@ export class CustomerFleetSettingsService {
     });
     if (!org) throw new NotFoundException("Organization not found");
 
-    const orgWide = await this.getOrgWideRow(organizationId);
-    const orgDefaultDto: OrganizationFleetDefaultDto | null =
-      this.showOrganizationDefaultPanel(actor) && orgWide
-        ? {
-            deviceOfflineThresholdMinutes: orgWide.deviceOfflineThresholdMinutes,
-            defaultSpeedLimitKmh: orgWide.defaultSpeedLimitKmh,
-          }
-        : this.showOrganizationDefaultPanel(actor)
-          ? {
-              deviceOfflineThresholdMinutes: null,
-              defaultSpeedLimitKmh: null,
-            }
-          : null;
-
     const customerIds = await this.listAccessibleCustomerIds(organizationId, actor);
     if (customerIds.length === 0) {
-      return { organizationDefault: orgDefaultDto, customers: [] };
+      return { customers: [] };
     }
-
-    const perCustomerRows = await this.prisma.customerFleetSetting.findMany({
-      where: { organizationId, customerId: { in: customerIds } },
-    });
-    const byCustomer = new Map(
-      perCustomerRows.filter((r) => r.customerId != null).map((r) => [r.customerId!, r]),
-    );
 
     const customers = await this.prisma.customer.findMany({
       where: { organizationId, id: { in: customerIds } },
@@ -130,28 +122,54 @@ export class CustomerFleetSettingsService {
       orderBy: { name: "asc" },
     });
 
+    const [allCust, allSettings] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: { organizationId },
+        select: { id: true, parentId: true },
+      }),
+      this.prisma.customerFleetSetting.findMany({ where: { organizationId } }),
+    ]);
+    const parentOf = new Map(allCust.map((c) => [c.id, c.parentId] as const));
+    const settingByCustomer = new Map(
+      allSettings.map((s) => [s.customerId, s] as const),
+    );
+
+    const effectiveFor = (customerId: string) => {
+      let deviceOfflineThresholdMinutes: number | null = null;
+      let defaultSpeedLimitKmh: number | null = null;
+      let cur: string | null = customerId;
+      while (
+        cur &&
+        (deviceOfflineThresholdMinutes === null || defaultSpeedLimitKmh === null)
+      ) {
+        const row = settingByCustomer.get(cur);
+        if (row) {
+          if (
+            deviceOfflineThresholdMinutes === null &&
+            row.deviceOfflineThresholdMinutes != null
+          ) {
+            deviceOfflineThresholdMinutes = row.deviceOfflineThresholdMinutes;
+          }
+          if (defaultSpeedLimitKmh === null && row.defaultSpeedLimitKmh != null) {
+            defaultSpeedLimitKmh = row.defaultSpeedLimitKmh;
+          }
+        }
+        cur = parentOf.get(cur) ?? null;
+      }
+      return { deviceOfflineThresholdMinutes, defaultSpeedLimitKmh };
+    };
+
     const customersResolved = customers.map((c) => {
-      const row = byCustomer.get(c.id);
+      const eff = effectiveFor(c.id);
       return {
         customerId: c.id,
         customerName: c.name,
-        deviceOfflineThresholdMinutes:
-          row != null
-            ? (row.deviceOfflineThresholdMinutes ??
-              orgWide?.deviceOfflineThresholdMinutes ??
-              null)
-            : (orgWide?.deviceOfflineThresholdMinutes ?? null),
-        defaultSpeedLimitKmh:
-          row != null
-            ? (row.defaultSpeedLimitKmh ?? orgWide?.defaultSpeedLimitKmh ?? null)
-            : (orgWide?.defaultSpeedLimitKmh ?? null),
+        deviceOfflineThresholdMinutes: eff.deviceOfflineThresholdMinutes,
+        defaultSpeedLimitKmh: eff.defaultSpeedLimitKmh,
       };
     });
 
-    return {
-      organizationDefault: orgDefaultDto,
-      customers: customersResolved,
-    };
+    return { customers: customersResolved };
   }
 
   private normalizeSpeed(
@@ -190,17 +208,14 @@ export class CustomerFleetSettingsService {
 
   private async upsertRow(
     organizationId: string,
-    customerId: string | null,
+    customerId: string,
     patch: {
       deviceOfflineThresholdMinutes?: number | null;
       defaultSpeedLimitKmh?: number | null;
     },
   ): Promise<void> {
     const existing = await this.prisma.customerFleetSetting.findFirst({
-      where: {
-        organizationId,
-        customerId: customerId === null ? { equals: null } : customerId,
-      },
+      where: { organizationId, customerId },
     });
     const data: {
       deviceOfflineThresholdMinutes?: number | null;
@@ -266,14 +281,6 @@ export class CustomerFleetSettingsService {
       );
     }
 
-    if (dto.applyMode === "organization_default") {
-      if (actor.isSuperAdmin !== true) {
-        throw new ForbiddenException("Only superadmin can set organization-wide defaults");
-      }
-      await this.upsertRow(organizationId, null, patch);
-      return this.getList(organizationId, actor);
-    }
-
     if (dto.applyMode === "all_accessible") {
       const ids = await this.listAccessibleCustomerIds(organizationId, actor);
       for (const cid of ids) {
@@ -286,7 +293,9 @@ export class CustomerFleetSettingsService {
     if (dto.applyMode === "single") {
       const cid = dto.customerId;
       if (!cid) {
-        throw new BadRequestException("customerId is required when applyMode is single");
+        throw new BadRequestException(
+          "customerId is required when applyMode is single",
+        );
       }
       await this.assertCustomerInOrg(organizationId, cid);
       this.assertCustomerAccess(organizationId, cid, actor);

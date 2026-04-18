@@ -53,14 +53,16 @@ export default function GeofencesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await telemetryAPI.listGeofences(orgId);
+      const res = await telemetryAPI.listGeofences(orgId, {
+        customerId: selectedCustomerId ?? undefined,
+      });
       setZones(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       setError(getApiErrorMessage(e, t, "common.error"));
     } finally {
       setLoading(false);
     }
-  }, [orgId, t]);
+  }, [orgId, selectedCustomerId, t]);
 
   useEffect(() => {
     void load();

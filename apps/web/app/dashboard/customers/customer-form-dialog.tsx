@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -57,7 +57,7 @@ const buildSchema = (t: (k: string) => string, requireParent: boolean) =>
   z.object({
     name: z.string().min(1, t("common.required")),
     parentId: requireParent
-      ? z.string().min(1, t("common.required"))
+      ? z.string().min(1, t("customers.parentRequired"))
       : z.string().default(""),
   });
 
@@ -82,6 +82,11 @@ export function CustomerFormDialog({
 
   const parentOptions = customers.filter(
     (c) => !isEdit || c.id !== customer?.id
+  );
+
+  const customersSyncKey = useMemo(
+    () => parentOptions.map((c) => c.id).join("|"),
+    [customers, isEdit, customer?.id]
   );
 
   const getDefaultParentId = () => {
@@ -113,7 +118,16 @@ export function CustomerFormDialog({
       name: customer?.name ?? "",
       parentId: getDefaultParentId(),
     });
-  }, [open, customer?.id, defaultParentId, allowRootCreation]);
+  }, [
+    open,
+    customer?.id,
+    customer?.parentId,
+    customer?.name,
+    defaultParentId,
+    allowRootCreation,
+    customersSyncKey,
+    isEdit,
+  ]);
 
   const handleSubmit = async (values: CustomerFormValues) => {
     try {
@@ -206,6 +220,8 @@ export function CustomerFormDialog({
                                 >
                                   {selectedParent.name}
                                 </span>
+                              ) : requireParent ? (
+                                t("customers.selectParent")
                               ) : (
                                 t("customers.noParent")
                               )}

@@ -49,6 +49,11 @@ export class CreateIncidentDto {
   @IsString()
   driverId?: string;
 
+  /** Obrigatório quando não há veículo nem motorista. */
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -112,6 +117,10 @@ export class UpdateIncidentDto {
   driverId?: string;
 
   @IsOptional()
+  @IsString()
+  customerId?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
@@ -168,6 +177,10 @@ export class IncidentFiltersDto {
   @IsOptional()
   @IsString()
   driverId?: string;
+
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 
   @IsOptional()
   @IsDateString()

@@ -3,6 +3,8 @@ import { ChecklistService } from "./checklist.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { S3Service } from "../utils/s3.service";
 
+const fullOrgAccess = { allowedCustomerIds: null as string[] | null, isSuperAdmin: false };
+
 describe("ChecklistService", () => {
   let service: ChecklistService;
   let prisma: {
@@ -15,7 +17,15 @@ describe("ChecklistService", () => {
       checklistEntry: { groupBy: jest.fn() },
       checklistTemplate: { findMany: jest.fn() },
     };
-    service = new ChecklistService(prisma as unknown as PrismaService, {} as S3Service);
+    service = new ChecklistService(
+      prisma as unknown as PrismaService,
+      {} as S3Service,
+      {
+        getCustomerIdAndAncestorIds: jest.fn().mockResolvedValue([]),
+        getDescendantCustomerIds: jest.fn().mockResolvedValue([]),
+        resolveResourceCustomerFilter: jest.fn().mockResolvedValue(null),
+      } as never,
+    );
   });
 
   describe("getEntriesSummary", () => {
@@ -31,7 +41,7 @@ describe("ChecklistService", () => {
         ]);
       prisma.checklistTemplate.findMany.mockResolvedValue([{ id: "tpl1", name: "Pré-viagem" }]);
 
-      const result = await service.getEntriesSummary("org1", {});
+      const result = await service.getEntriesSummary("org1", {}, fullOrgAccess);
 
       expect(result.totals.total).toBe(3);
       expect(result.totals.completed).toBe(2);
@@ -58,12 +68,16 @@ describe("ChecklistService", () => {
       prisma.checklistEntry.groupBy.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
       prisma.checklistTemplate.findMany.mockResolvedValue([]);
 
-      await service.getEntriesSummary("org1", {
-        dateFrom: "2026-01-01T00:00:00.000Z",
-        dateTo: "2026-01-31T23:59:59.000Z",
-        templateId: "tpl-x",
-        vehicleId: "veh-y",
-      });
+      await service.getEntriesSummary(
+        "org1",
+        {
+          dateFrom: "2026-01-01T00:00:00.000Z",
+          dateTo: "2026-01-31T23:59:59.000Z",
+          templateId: "tpl-x",
+          vehicleId: "veh-y",
+        },
+        fullOrgAccess,
+      );
 
       const where = prisma.checklistEntry.groupBy.mock.calls[0][0].where;
       expect(where).toMatchObject({
@@ -81,7 +95,7 @@ describe("ChecklistService", () => {
       prisma.checklistEntry.groupBy.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
       prisma.checklistTemplate.findMany.mockResolvedValue([]);
 
-      const result = await service.getEntriesSummary("org1", {});
+      const result = await service.getEntriesSummary("org1", {}, fullOrgAccess);
 
       expect(result.totals.total).toBe(0);
       expect(result.totals.completionRate).toBe(0);

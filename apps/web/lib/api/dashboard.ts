@@ -15,10 +15,12 @@ export interface DashboardResponse {
 }
 
 export async function getDashboardStats(
-  organizationId: string
+  organizationId: string,
+  params?: { customerId?: string },
 ): Promise<DashboardResponse> {
   const res = await apiClient.get<DashboardResponse>(
-    `/api/organizations/${organizationId}/dashboard`
+    `/api/organizations/${organizationId}/dashboard`,
+    { params },
   );
   return res.data;
 }

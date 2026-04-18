@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { ChecklistDriverRequirement, EntryStatus, ItemType } from "@prisma/client";
+import { CustomersService } from "../customers/customers.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { S3Service } from "../utils/s3.service";
 import { ApiCode } from "../common/api-codes.enum";
@@ -17,11 +19,18 @@ import {
 
 export type CreateEntryOptions = { clientIp?: string | null };
 
+/** Escopo de empresa do membro (OrganizationMemberGuard). */
+export type ChecklistOrgAccess = {
+  allowedCustomerIds: string[] | null;
+  isSuperAdmin: boolean;
+};
+
 @Injectable()
 export class ChecklistService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3: S3Service,
+    private readonly customersService: CustomersService,
   ) {}
 
   /** Exposto para validação em controllers (ParseFilePipe não cobre MIME por purpose). */
@@ -104,19 +113,153 @@ export class ChecklistService {
     return member.id;
   }
 
-  async listTemplates(organizationId: string): Promise<ChecklistTemplateResponseDto[]> {
+  /** IDs de empresa dona de template visíveis (inclui ancestrais para templates “da matriz”). */
+  private async templateCustomerIdsForScope(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string | null,
+  ): Promise<string[] | null> {
+    if (allowedCustomerIds === null && !filterCustomerId) {
+      return null;
+    }
+    const leaves = await this.customersService.resolveResourceCustomerFilter(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId ?? undefined,
+    );
+    if (leaves === null) {
+      return null;
+    }
+    if (leaves.length === 0) {
+      return [];
+    }
+    const out = new Set<string>();
+    for (const leaf of leaves) {
+      const chain = await this.customersService.getCustomerIdAndAncestorIds(
+        leaf,
+        organizationId,
+      );
+      for (const id of chain) {
+        out.add(id);
+      }
+    }
+    return [...out];
+  }
+
+  private async assertTemplateCustomerReadable(
+    organizationId: string,
+    templateCustomerId: string,
+    access: ChecklistOrgAccess,
+  ): Promise<void> {
+    if (access.isSuperAdmin) {
+      return;
+    }
+    const ids = await this.templateCustomerIdsForScope(
+      organizationId,
+      access.allowedCustomerIds,
+      undefined,
+    );
+    if (ids === null) {
+      return;
+    }
+    if (!ids.includes(templateCustomerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  private async assertVehicleUnderTemplateCustomer(
+    organizationId: string,
+    templateCustomerId: string,
+    vehicleCustomerId: string | null,
+  ): Promise<void> {
+    if (!vehicleCustomerId) {
+      return;
+    }
+    const descendants = await this.customersService.getDescendantCustomerIds(
+      [templateCustomerId],
+      organizationId,
+    );
+    const ok = new Set([templateCustomerId, ...descendants]);
+    if (!ok.has(vehicleCustomerId)) {
+      throw new BadRequestException(ApiCode.CHECKLIST_VEHICLE_NOT_FOUND);
+    }
+  }
+
+  private async assertDriverUnderTemplateCustomer(
+    organizationId: string,
+    templateCustomerId: string,
+    driverCustomerId: string | null,
+  ): Promise<void> {
+    if (!driverCustomerId) {
+      return;
+    }
+    const descendants = await this.customersService.getDescendantCustomerIds(
+      [templateCustomerId],
+      organizationId,
+    );
+    const ok = new Set([templateCustomerId, ...descendants]);
+    if (!ok.has(driverCustomerId)) {
+      throw new BadRequestException(ApiCode.DRIVER_NOT_FOUND);
+    }
+  }
+
+  private assertWriteCustomerId(customerId: string, access: ChecklistOrgAccess): void {
+    if (access.isSuperAdmin) {
+      return;
+    }
+    const allowed = access.allowedCustomerIds;
+    if (allowed === null) {
+      return;
+    }
+    if (!allowed.includes(customerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  async listTemplates(
+    organizationId: string,
+    access: ChecklistOrgAccess,
+    filterCustomerId?: string,
+  ): Promise<ChecklistTemplateResponseDto[]> {
+    const ids = await this.templateCustomerIdsForScope(
+      organizationId,
+      access.allowedCustomerIds,
+      filterCustomerId,
+    );
+    let where: Prisma.ChecklistTemplateWhereInput = { organizationId };
+    if (ids !== null) {
+      if (ids.length === 0) {
+        return [];
+      }
+      where = { organizationId, customerId: { in: ids } };
+    }
     const templates = await this.prisma.checklistTemplate.findMany({
-      where: { organizationId },
+      where,
       include: { items: { orderBy: { order: "asc" } } },
       orderBy: { createdAt: "desc" },
     });
     return templates.map(this.toTemplateResponse);
   }
 
-  async createTemplate(organizationId: string, dto: CreateChecklistTemplateDto): Promise<ChecklistTemplateResponseDto> {
+  async createTemplate(
+    organizationId: string,
+    dto: CreateChecklistTemplateDto,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistTemplateResponseDto> {
+    const customerId = dto.customerId?.trim();
+    if (!customerId) {
+      throw new BadRequestException("customerId is required");
+    }
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, organizationId },
+    });
+    if (!customer) throw new NotFoundException("Customer not found");
+    this.assertWriteCustomerId(customerId, access);
+
     const template = await this.prisma.checklistTemplate.create({
       data: {
         organizationId,
+        customerId,
         name: dto.name,
         description: dto.description,
         active: dto.active ?? true,
@@ -137,18 +280,39 @@ export class ChecklistService {
     return this.toTemplateResponse(template);
   }
 
-  async getTemplate(templateId: string, organizationId: string): Promise<ChecklistTemplateResponseDto> {
+  async getTemplate(
+    templateId: string,
+    organizationId: string,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistTemplateResponseDto> {
     const template = await this.prisma.checklistTemplate.findFirst({
       where: { id: templateId, organizationId },
       include: { items: { orderBy: { order: "asc" } } },
     });
     if (!template) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      template.customerId,
+      access,
+    );
     return this.toTemplateResponse(template);
   }
 
-  async updateTemplate(templateId: string, organizationId: string, dto: UpdateChecklistTemplateDto): Promise<ChecklistTemplateResponseDto> {
-    const existing = await this.prisma.checklistTemplate.findFirst({ where: { id: templateId, organizationId } });
+  async updateTemplate(
+    templateId: string,
+    organizationId: string,
+    dto: UpdateChecklistTemplateDto,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistTemplateResponseDto> {
+    const existing = await this.prisma.checklistTemplate.findFirst({
+      where: { id: templateId, organizationId },
+    });
     if (!existing) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      existing.customerId,
+      access,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       const template = await tx.checklistTemplate.update({
@@ -175,12 +339,21 @@ export class ChecklistService {
     });
   }
 
-  async deleteTemplate(templateId: string, organizationId: string): Promise<{ message: string }> {
+  async deleteTemplate(
+    templateId: string,
+    organizationId: string,
+    access: ChecklistOrgAccess,
+  ): Promise<{ message: string }> {
     const existing = await this.prisma.checklistTemplate.findFirst({
       where: { id: templateId, organizationId },
       include: { entries: { take: 1 } },
     });
     if (!existing) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      existing.customerId,
+      access,
+    );
 
     if (existing.entries.length > 0) {
       await this.prisma.checklistTemplate.update({ where: { id: templateId }, data: { active: false } });
@@ -190,8 +363,23 @@ export class ChecklistService {
     return { message: "CHECKLIST_TEMPLATE_DELETED" };
   }
 
-  async listEntries(organizationId: string, filters: ChecklistEntryFilterDto): Promise<ChecklistEntryResponseDto[]> {
-    const where: Record<string, unknown> = { organizationId };
+  async listEntries(
+    organizationId: string,
+    filters: ChecklistEntryFilterDto,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistEntryResponseDto[]> {
+    const templateIds = await this.templateCustomerIdsForScope(
+      organizationId,
+      access.allowedCustomerIds,
+      filters.customerId,
+    );
+    const where: Prisma.ChecklistEntryWhereInput = { organizationId };
+    if (templateIds !== null) {
+      if (templateIds.length === 0) {
+        return [];
+      }
+      where.template = { is: { customerId: { in: templateIds } } };
+    }
     if (filters.vehicleId) where.vehicleId = filters.vehicleId;
     if (filters.driverId) where.driverId = filters.driverId;
     if (filters.memberId) where.memberId = filters.memberId;
@@ -230,6 +418,7 @@ export class ChecklistService {
   async getEntriesSummary(
     organizationId: string,
     query: ChecklistSummaryQueryDto,
+    access: ChecklistOrgAccess,
   ): Promise<ChecklistSummaryResponseDto> {
     const now = new Date();
     let periodFrom: Date;
@@ -249,10 +438,39 @@ export class ChecklistService {
       periodFrom = new Date(periodTo.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const where: Record<string, unknown> = { organizationId };
+    const templateCustomerScopeIds = await this.templateCustomerIdsForScope(
+      organizationId,
+      access.allowedCustomerIds,
+      query.customerId,
+    );
+    if (templateCustomerScopeIds !== null && templateCustomerScopeIds.length === 0) {
+      return {
+        period: {
+          dateFrom: periodFrom.toISOString(),
+          dateTo: periodTo.toISOString(),
+        },
+        totals: {
+          total: 0,
+          pending: 0,
+          completed: 0,
+          incomplete: 0,
+          completionRate: 0,
+        },
+        byTemplate: [],
+      };
+    }
+
+    const where: Prisma.ChecklistEntryWhereInput = {
+      organizationId,
+      createdAt: { gte: periodFrom, lte: periodTo },
+    };
+    if (templateCustomerScopeIds !== null) {
+      where.template = {
+        is: { customerId: { in: templateCustomerScopeIds } },
+      };
+    }
     if (query.templateId) where.templateId = query.templateId;
     if (query.vehicleId) where.vehicleId = query.vehicleId;
-    where.createdAt = { gte: periodFrom, lte: periodTo };
 
     const countByStatus = await this.prisma.checklistEntry.groupBy({
       by: ["status"],
@@ -277,10 +495,10 @@ export class ChecklistService {
     const total = pending + completed + incomplete;
     const completionRate = total === 0 ? 0 : completed / total;
 
-    const templateIds = [...new Set(byTemplateStatus.map((r) => r.templateId))];
-    const templates = templateIds.length
+    const aggregatedTemplateIds = [...new Set(byTemplateStatus.map((r) => r.templateId))];
+    const templates = aggregatedTemplateIds.length
       ? await this.prisma.checklistTemplate.findMany({
-          where: { id: { in: templateIds }, organizationId },
+          where: { id: { in: aggregatedTemplateIds }, organizationId },
           select: { id: true, name: true },
         })
       : [];
@@ -336,6 +554,7 @@ export class ChecklistService {
     organizationId: string,
     memberId: string,
     dto: CreateChecklistEntryDto,
+    access: ChecklistOrgAccess,
     opts?: CreateEntryOptions,
   ): Promise<ChecklistEntryResponseDto> {
     const rawVehicleId = dto.vehicleId?.trim() || undefined;
@@ -346,6 +565,11 @@ export class ChecklistService {
       include: { items: true },
     });
     if (!template) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      template.customerId,
+      access,
+    );
 
     const vehicleRequired = template.vehicleRequired;
     const driverReq = template.driverRequirement;
@@ -353,12 +577,28 @@ export class ChecklistService {
     let resolvedVehicleId: string | null = null;
     if (vehicleRequired) {
       if (!rawVehicleId) throw new BadRequestException(ApiCode.CHECKLIST_VEHICLE_REQUIRED);
-      const vehicle = await this.prisma.vehicle.findFirst({ where: { id: rawVehicleId, organizationId } });
+      const vehicle = await this.prisma.vehicle.findFirst({
+        where: { id: rawVehicleId, organizationId },
+        select: { id: true, customerId: true },
+      });
       if (!vehicle) throw new NotFoundException(ApiCode.CHECKLIST_VEHICLE_NOT_FOUND);
+      await this.assertVehicleUnderTemplateCustomer(
+        organizationId,
+        template.customerId,
+        vehicle.customerId,
+      );
       resolvedVehicleId = vehicle.id;
     } else if (rawVehicleId) {
-      const vehicle = await this.prisma.vehicle.findFirst({ where: { id: rawVehicleId, organizationId } });
+      const vehicle = await this.prisma.vehicle.findFirst({
+        where: { id: rawVehicleId, organizationId },
+        select: { id: true, customerId: true },
+      });
       if (!vehicle) throw new NotFoundException(ApiCode.CHECKLIST_VEHICLE_NOT_FOUND);
+      await this.assertVehicleUnderTemplateCustomer(
+        organizationId,
+        template.customerId,
+        vehicle.customerId,
+      );
       resolvedVehicleId = vehicle.id;
     }
 
@@ -367,12 +607,28 @@ export class ChecklistService {
       resolvedDriverId = null;
     } else if (driverReq === ChecklistDriverRequirement.REQUIRED) {
       if (!rawDriverId) throw new BadRequestException(ApiCode.CHECKLIST_DRIVER_REQUIRED);
-      const driver = await this.prisma.driver.findFirst({ where: { id: rawDriverId, organizationId } });
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: rawDriverId, organizationId },
+        select: { id: true, customerId: true },
+      });
       if (!driver) throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+      await this.assertDriverUnderTemplateCustomer(
+        organizationId,
+        template.customerId,
+        driver.customerId,
+      );
       resolvedDriverId = driver.id;
     } else if (rawDriverId) {
-      const driver = await this.prisma.driver.findFirst({ where: { id: rawDriverId, organizationId } });
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: rawDriverId, organizationId },
+        select: { id: true, customerId: true },
+      });
       if (!driver) throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
+      await this.assertDriverUnderTemplateCustomer(
+        organizationId,
+        template.customerId,
+        driver.customerId,
+      );
       resolvedDriverId = driver.id;
     }
 
@@ -438,17 +694,26 @@ export class ChecklistService {
     return this.toEntryResponse(entry, driverName);
   }
 
-  async getEntry(entryId: string, organizationId: string): Promise<ChecklistEntryResponseDto> {
+  async getEntry(
+    entryId: string,
+    organizationId: string,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistEntryResponseDto> {
     const entry = await this.prisma.checklistEntry.findFirst({
       where: { id: entryId, organizationId },
       include: {
         answers: true,
-        template: { select: { name: true } },
+        template: { select: { name: true, customerId: true } },
         vehicle: { select: { name: true, plate: true } },
         member: { include: { user: { select: { name: true, email: true } } } },
       },
     });
     if (!entry) throw new NotFoundException(ApiCode.CHECKLIST_ENTRY_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      entry.template.customerId,
+      access,
+    );
 
     let driverName: string | null = null;
     if (entry.driverId) {
@@ -461,11 +726,25 @@ export class ChecklistService {
     return this.toEntryResponse(entry, driverName);
   }
 
-  async updateEntryStatus(entryId: string, organizationId: string, dto: UpdateChecklistEntryStatusDto): Promise<ChecklistEntryResponseDto> {
+  async updateEntryStatus(
+    entryId: string,
+    organizationId: string,
+    dto: UpdateChecklistEntryStatusDto,
+    access: ChecklistOrgAccess,
+  ): Promise<ChecklistEntryResponseDto> {
     const existing = await this.prisma.checklistEntry.findFirst({
-      where: { id: entryId, organizationId }, include: { answers: true },
+      where: { id: entryId, organizationId },
+      include: {
+        answers: true,
+        template: { select: { customerId: true } },
+      },
     });
     if (!existing) throw new NotFoundException(ApiCode.CHECKLIST_ENTRY_NOT_FOUND);
+    await this.assertTemplateCustomerReadable(
+      organizationId,
+      existing.template.customerId,
+      access,
+    );
 
     const entry = await this.prisma.checklistEntry.update({
       where: { id: entryId },
@@ -501,6 +780,10 @@ export class ChecklistService {
     });
     if (!fallbackMember) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
 
+    const publicAccess: ChecklistOrgAccess = {
+      allowedCustomerIds: null,
+      isSuperAdmin: true,
+    };
     return this.createEntry(
       dto.organizationId,
       fallbackMember.id,
@@ -510,12 +793,16 @@ export class ChecklistService {
         ...(dto.driverId !== undefined && { driverId: dto.driverId }),
         answers: dto.answers,
       },
+      publicAccess,
       opts,
     );
   }
 
   async getPublicTemplate(organizationId: string, templateId: string): Promise<ChecklistTemplateResponseDto> {
-    return this.getTemplate(templateId, organizationId);
+    return this.getTemplate(templateId, organizationId, {
+      allowedCustomerIds: null,
+      isSuperAdmin: true,
+    });
   }
 
   async listPublicVehicles(organizationId: string) {
@@ -536,7 +823,10 @@ export class ChecklistService {
 
   private toTemplateResponse(t: any): ChecklistTemplateResponseDto {
     return {
-      id: t.id, organizationId: t.organizationId, name: t.name,
+      id: t.id,
+      organizationId: t.organizationId,
+      customerId: t.customerId,
+      name: t.name,
       description: t.description, active: t.active,
       vehicleRequired: t.vehicleRequired,
       driverRequirement: t.driverRequirement,

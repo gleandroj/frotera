@@ -81,6 +81,7 @@ export default function ChecklistReportsPage() {
     const params: ChecklistSummaryQuery = {};
     if (templateFilter !== FILTER_ALL) params.templateId = templateFilter;
     if (vehicleFilter !== FILTER_ALL) params.vehicleId = vehicleFilter;
+    if (selectedCustomerId) params.customerId = selectedCustomerId;
 
     const now = new Date();
     if (preset === "last7") {
@@ -95,7 +96,7 @@ export default function ChecklistReportsPage() {
       }
     }
     return params;
-  }, [preset, customDateFrom, customDateTo, templateFilter, vehicleFilter]);
+  }, [preset, customDateFrom, customDateTo, templateFilter, vehicleFilter, selectedCustomerId]);
 
   const loadFilters = useCallback(async () => {
     if (!orgId) return;
@@ -103,7 +104,7 @@ export default function ChecklistReportsPage() {
       const listParams = selectedCustomerId ? { customerId: selectedCustomerId } : undefined;
       const [vRes, tplRes] = await Promise.all([
         vehiclesAPI.list(orgId, listParams),
-        checklistAPI.listTemplates(orgId),
+        checklistAPI.listTemplates(orgId, listParams),
       ]);
       setVehicles(vRes.data);
       setTemplates(tplRes.data);
@@ -135,7 +136,7 @@ export default function ChecklistReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, canView, buildParams, t, preset]);
+  }, [orgId, canView, buildParams, t, preset, selectedCustomerId]);
 
   useEffect(() => {
     if (!orgId || !canView) return;

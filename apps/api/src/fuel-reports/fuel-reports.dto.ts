@@ -19,6 +19,11 @@ export class FuelReportBaseQueryDto {
   @IsString()
   vehicleId?: string;
 
+  @ApiPropertyOptional({ description: 'Restrict to vehicles under this customer (subtree)' })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
   @ApiPropertyOptional({ description: 'Start date (ISO 8601)' })
   @IsOptional()
   @IsDateString()
@@ -49,7 +54,7 @@ export class BenchmarkReportQueryDto extends FuelReportBaseQueryDto {
   state?: string;
 }
 
-export class EfficiencyReportQueryDto {
+export class EfficiencyReportQueryDto extends FuelReportBaseQueryDto {
   @ApiPropertyOptional({
     description: 'Consumption drop threshold percentage (default: 15)',
   })
@@ -65,6 +70,11 @@ export class SummaryReportQueryDto {
   @IsOptional()
   @IsString()
   vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Restrict to vehicles under this customer (subtree)' })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 
   @ApiProperty({
     enum: ['day', 'month', 'year'],

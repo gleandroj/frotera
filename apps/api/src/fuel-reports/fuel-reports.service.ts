@@ -36,6 +36,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
+      query.customerId,
     );
 
     // Build where clause
@@ -175,6 +176,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
+      query.customerId,
     );
     const groupBy = query.groupBy ?? 'month';
 
@@ -280,6 +282,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
+      query.customerId,
     );
     const state = query.state ?? 'SP'; // TODO: use organization.state when available
 
@@ -399,6 +402,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
+      query.customerId,
     );
 
     const logs = await this.prisma.fuelLog.findMany({
@@ -511,6 +515,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
+      query.customerId,
     );
     const refDate = new Date(query.date);
 
@@ -605,6 +610,7 @@ export class FuelReportsService {
   private async getAllowedVehicleIds(
     organizationId: string,
     memberId: string,
+    filterCustomerId?: string,
   ): Promise<string[]> {
     const member = await this.prisma.organizationMember.findFirst({
       where: { id: memberId, organizationId },
@@ -616,9 +622,17 @@ export class FuelReportsService {
     const allowedCustomerIds =
       await this.customersService.getAllowedCustomerIds(member, organizationId);
 
-    const allowedVehicleFilter = allowedCustomerIds !== null
-      ? { customerId: { in: allowedCustomerIds } }
-      : {};
+    const scopedCustomerIds =
+      await this.customersService.resolveResourceCustomerFilter(
+        organizationId,
+        allowedCustomerIds,
+        filterCustomerId,
+      );
+
+    const allowedVehicleFilter =
+      scopedCustomerIds !== null
+        ? { customerId: { in: scopedCustomerIds } }
+        : {};
 
     const vehicles = await this.prisma.vehicle.findMany({
       where: { organizationId, ...allowedVehicleFilter },

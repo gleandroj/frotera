@@ -27,7 +27,7 @@ export class CustomerFleetSettingsController {
   @Get()
   @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.EDIT)
   @ApiOperation({
-    summary: "List fleet/telemetry settings per customer (empresa) and optional org-wide default",
+    summary: "List fleet/telemetry settings per customer (empresa), com herança na árvore",
   })
   @ApiResponse({ status: 200, type: ListCustomerFleetSettingsResponseDto })
   async list(
@@ -43,7 +43,7 @@ export class CustomerFleetSettingsController {
 
   @Patch()
   @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.EDIT)
-  @ApiOperation({ summary: "Update fleet settings (single customer, all accessible, or org-wide)" })
+  @ApiOperation({ summary: "Update fleet settings (single customer or all accessible)" })
   @ApiResponse({ status: 200, type: ListCustomerFleetSettingsResponseDto })
   async patch(
     @Param("organizationId") organizationId: string,

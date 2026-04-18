@@ -7,7 +7,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { ChecklistService } from "./checklist.service";
+import { OrganizationMemberGuard } from "../organizations/guards/organization-member.guard";
+import { ChecklistService, type ChecklistOrgAccess } from "./checklist.service";
 import { clientIpFromRequest } from "./checklist-client-ip";
 import {
   ChecklistEntryFilterDto, ChecklistSummaryQueryDto, ChecklistSummaryResponseDto,
@@ -16,12 +17,20 @@ import {
 } from "./checklist.dto";
 
 interface RequestWithUser extends ExpressRequest {
-  user: { userId: string };
+  user: { userId: string; isSuperAdmin?: boolean };
+  allowedCustomerIds: string[] | null;
+}
+
+function orgAccess(req: RequestWithUser): ChecklistOrgAccess {
+  return {
+    allowedCustomerIds: req.allowedCustomerIds ?? null,
+    isSuperAdmin: req.user.isSuperAdmin === true,
+  };
 }
 
 @ApiTags("checklist")
 @Controller("organizations/:organizationId/checklist")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
 @ApiBearerAuth()
 export class ChecklistController {
   constructor(private readonly checklistService: ChecklistService) {}
@@ -30,8 +39,16 @@ export class ChecklistController {
 
   @Get("templates")
   @ApiOperation({ summary: "Listar templates de checklist" })
-  listTemplates(@Param("organizationId") organizationId: string) {
-    return this.checklistService.listTemplates(organizationId);
+  listTemplates(
+    @Param("organizationId") organizationId: string,
+    @Query("customerId") filterCustomerId: string | undefined,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.checklistService.listTemplates(
+      organizationId,
+      orgAccess(req),
+      filterCustomerId,
+    );
   }
 
   @Post("templates")
@@ -39,8 +56,9 @@ export class ChecklistController {
   createTemplate(
     @Param("organizationId") organizationId: string,
     @Body() body: CreateChecklistTemplateDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.createTemplate(organizationId, body);
+    return this.checklistService.createTemplate(organizationId, body, orgAccess(req));
   }
 
   @Get("templates/:templateId")
@@ -48,8 +66,9 @@ export class ChecklistController {
   getTemplate(
     @Param("organizationId") organizationId: string,
     @Param("templateId") templateId: string,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.getTemplate(templateId, organizationId);
+    return this.checklistService.getTemplate(templateId, organizationId, orgAccess(req));
   }
 
   @Patch("templates/:templateId")
@@ -58,8 +77,14 @@ export class ChecklistController {
     @Param("organizationId") organizationId: string,
     @Param("templateId") templateId: string,
     @Body() body: UpdateChecklistTemplateDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.updateTemplate(templateId, organizationId, body);
+    return this.checklistService.updateTemplate(
+      templateId,
+      organizationId,
+      body,
+      orgAccess(req),
+    );
   }
 
   @Delete("templates/:templateId")
@@ -67,8 +92,9 @@ export class ChecklistController {
   deleteTemplate(
     @Param("organizationId") organizationId: string,
     @Param("templateId") templateId: string,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.deleteTemplate(templateId, organizationId);
+    return this.checklistService.deleteTemplate(templateId, organizationId, orgAccess(req));
   }
 
   @Post("upload")
@@ -121,8 +147,13 @@ export class ChecklistController {
   getEntriesSummary(
     @Param("organizationId") organizationId: string,
     @Query() query: ChecklistSummaryQueryDto,
+    @Request() req: RequestWithUser,
   ): Promise<ChecklistSummaryResponseDto> {
-    return this.checklistService.getEntriesSummary(organizationId, query);
+    return this.checklistService.getEntriesSummary(
+      organizationId,
+      query,
+      orgAccess(req),
+    );
   }
 
   // ─── Entries ────────────────────────────────────────────────────────────────
@@ -132,8 +163,9 @@ export class ChecklistController {
   listEntries(
     @Param("organizationId") organizationId: string,
     @Query() filters: ChecklistEntryFilterDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.listEntries(organizationId, filters);
+    return this.checklistService.listEntries(organizationId, filters, orgAccess(req));
   }
 
   @Post("entries")
@@ -144,7 +176,7 @@ export class ChecklistController {
     @Request() req: RequestWithUser,
   ) {
     const memberId = await this.checklistService.getMemberIdForUser(organizationId, req.user.userId);
-    return this.checklistService.createEntry(organizationId, memberId, body, {
+    return this.checklistService.createEntry(organizationId, memberId, body, orgAccess(req), {
       clientIp: clientIpFromRequest(req),
     });
   }
@@ -154,8 +186,9 @@ export class ChecklistController {
   getEntry(
     @Param("organizationId") organizationId: string,
     @Param("entryId") entryId: string,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.getEntry(entryId, organizationId);
+    return this.checklistService.getEntry(entryId, organizationId, orgAccess(req));
   }
 
   @Patch("entries/:entryId")
@@ -164,7 +197,13 @@ export class ChecklistController {
     @Param("organizationId") organizationId: string,
     @Param("entryId") entryId: string,
     @Body() body: UpdateChecklistEntryStatusDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.checklistService.updateEntryStatus(entryId, organizationId, body);
+    return this.checklistService.updateEntryStatus(
+      entryId,
+      organizationId,
+      body,
+      orgAccess(req),
+    );
   }
 }

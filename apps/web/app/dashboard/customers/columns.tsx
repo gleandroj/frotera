@@ -22,6 +22,7 @@ export interface CustomerColumnsOptions {
   onDelete: (customer: Customer) => void;
   canEditCustomer: boolean;
   canDeleteCustomer: boolean;
+  isSuperAdmin: boolean;
 }
 
 function getParentName(customers: Customer[], parentId: string | null | undefined): string {
@@ -34,7 +35,14 @@ export function getCustomerColumns(
   t: TFunction,
   options: CustomerColumnsOptions,
 ): ColumnDef<Customer>[] {
-  const { customers, onEdit, onDelete, canEditCustomer, canDeleteCustomer } = options;
+  const {
+    customers,
+    onEdit,
+    onDelete,
+    canEditCustomer,
+    canDeleteCustomer,
+    isSuperAdmin,
+  } = options;
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -121,7 +129,8 @@ export function getCustomerColumns(
                     {t("common.edit")}
                   </DropdownMenuItem>
                 )}
-                {canDeleteCustomer && (
+                {canDeleteCustomer &&
+                  (isSuperAdmin || customer.parentId != null) && (
                   <DropdownMenuItem
                     onClick={() => onDelete(customer)}
                     className="text-destructive focus:text-destructive"

@@ -235,6 +235,23 @@ export function IncidentFormSheet({
     if (location.trim()) payload.location = location.trim();
     if (vehicleId) payload.vehicleId = vehicleId;
     if (driverId && driverId !== DRIVER_NONE) payload.driverId = driverId;
+    if (
+      !vehicleId &&
+      (!driverId || driverId === DRIVER_NONE) &&
+      selectedCustomerId
+    ) {
+      payload.customerId = selectedCustomerId;
+    }
+    if (
+      !vehicleId &&
+      (!driverId || driverId === DRIVER_NONE) &&
+      !selectedCustomerId
+    ) {
+      setSubmitting(false);
+      setError(t("incidents.customerRequiredForNoVehicle"));
+      toast.error(t("incidents.customerRequiredForNoVehicle"));
+      return;
+    }
     if (costNum !== undefined && !Number.isNaN(costNum)) payload.cost = costNum;
     if (insuranceClaim && claimNumber.trim()) payload.claimNumber = claimNumber.trim();
     if (notes.trim()) payload.notes = notes.trim();

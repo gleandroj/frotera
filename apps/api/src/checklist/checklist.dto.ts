@@ -15,6 +15,11 @@ export class ChecklistTemplateItemDto {
 }
 
 export class CreateChecklistTemplateDto {
+  @ApiProperty({ description: "Empresa (customer) dona do template" })
+  @IsString()
+  @IsNotEmpty()
+  customerId!: string;
+
   @ApiProperty() @IsString() @IsNotEmpty() name: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() active?: boolean;
@@ -54,6 +59,7 @@ export class ChecklistTemplateItemResponseDto {
 export class ChecklistTemplateResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() organizationId: string;
+  @ApiProperty() customerId: string;
   @ApiProperty() name: string;
   @ApiPropertyOptional() description?: string | null;
   @ApiProperty() active: boolean;
@@ -101,6 +107,12 @@ export class ChecklistEntryFilterDto {
   @ApiPropertyOptional() @IsOptional() @IsEnum(EntryStatus) status?: EntryStatus;
   @ApiPropertyOptional() @IsOptional() @IsString() dateFrom?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() dateTo?: string;
+  @ApiPropertyOptional({
+    description: "Filtra entradas por empresa (subárvore + templates de ancestrais)",
+  })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 }
 
 /** Query for aggregated checklist entry summary (no status filter). */
@@ -117,6 +129,10 @@ export class ChecklistSummaryQueryDto {
 
   @ApiPropertyOptional() @IsOptional() @IsString() templateId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() vehicleId?: string;
+  @ApiPropertyOptional({ description: "Agrega apenas entradas de templates neste escopo de empresa" })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 }
 
 export class ChecklistSummaryTotalsDto {

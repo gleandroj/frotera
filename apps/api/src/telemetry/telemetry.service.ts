@@ -1,10 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
   Optional,
 } from "@nestjs/common";
+import { ApiCode } from "@/common/api-codes.enum";
+import { CustomersService } from "@/customers/customers.service";
 import type { Prisma } from "@prisma/client";
 import {
   AlertSeverity,
@@ -110,6 +113,7 @@ function parseJsonCoordinates(
 export class TelemetryService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly customersService: CustomersService,
     @Optional() @Inject(TRACKER_REDIS) private readonly redis: RedisClientType | null,
   ) {}
 
@@ -125,11 +129,17 @@ export class TelemetryService {
   private async scopedVehicleIds(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
   ): Promise<string[] | null> {
-    if (allowedCustomerIds === null) return null;
-    if (allowedCustomerIds.length === 0) return [];
+    const leaves = await this.customersService.resolveResourceCustomerFilter(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId,
+    );
+    if (leaves === null) return null;
+    if (leaves.length === 0) return [];
     const vehicles = await this.prisma.vehicle.findMany({
-      where: { organizationId, customerId: { in: allowedCustomerIds } },
+      where: { organizationId, customerId: { in: leaves } },
       select: { id: true },
     });
     return vehicles.map((v) => v.id);
@@ -178,6 +188,7 @@ export class TelemetryService {
   private toGeofenceDto(row: {
     id: string;
     organizationId: string;
+    customerId: string;
     name: string;
     description: string | null;
     type: GeofenceType;
@@ -192,6 +203,7 @@ export class TelemetryService {
     return {
       id: row.id,
       organizationId: row.organizationId,
+      customerId: row.customerId,
       name: row.name,
       description: row.description,
       type: row.type,
@@ -205,12 +217,69 @@ export class TelemetryService {
     };
   }
 
+  private assertCustomerWriteAccess(
+    customerId: string,
+    allowedCustomerIds: string[] | null,
+  ): void {
+    if (allowedCustomerIds === null) return;
+    if (!allowedCustomerIds.includes(customerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  /** Zone owners visible: any ancestor∪{self} of each leaf in scope (shared parent zones). */
+  private async zoneOwnerIdsForLeaves(
+    organizationId: string,
+    leafCustomerIds: string[],
+  ): Promise<string[]> {
+    const owners = new Set<string>();
+    for (const leafId of leafCustomerIds) {
+      const chain = await this.customersService.getCustomerIdAndAncestorIds(
+        leafId,
+        organizationId,
+      );
+      for (const id of chain) owners.add(id);
+    }
+    return [...owners];
+  }
+
+  private async assertVehiclesInZoneSubtree(
+    organizationId: string,
+    zoneOwnerCustomerId: string,
+    vehicleIds: string[],
+  ): Promise<void> {
+    if (vehicleIds.length === 0) return;
+    const descendants = await this.customersService.getDescendantCustomerIds(
+      [zoneOwnerCustomerId],
+      organizationId,
+    );
+    const allowedCustomers = new Set([zoneOwnerCustomerId, ...descendants]);
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: { organizationId, id: { in: vehicleIds } },
+      select: { id: true, customerId: true },
+    });
+    if (vehicles.length !== vehicleIds.length) {
+      throw new BadRequestException("One or more vehicles not found in this organization");
+    }
+    for (const v of vehicles) {
+      if (!v.customerId || !allowedCustomers.has(v.customerId)) {
+        throw new BadRequestException(
+          "All vehicles must belong to the zone owner company or its descendants",
+        );
+      }
+    }
+  }
+
   async listAlerts(
     organizationId: string,
     query: ListAlertsQueryDto,
     allowedCustomerIds: string[] | null,
   ): Promise<{ data: TelemetryAlertResponseDto[]; total: number }> {
-    const scoped = await this.scopedVehicleIds(organizationId, allowedCustomerIds);
+    const scoped = await this.scopedVehicleIds(
+      organizationId,
+      allowedCustomerIds,
+      query.customerId,
+    );
     const vehicleScope = this.alertVehicleScope(scoped);
     if (vehicleScope && "id" in vehicleScope && vehicleScope.id === "__none__") {
       return { data: [], total: 0 };
@@ -268,8 +337,13 @@ export class TelemetryService {
   async getAlertStats(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
   ): Promise<AlertStatsResponseDto> {
-    const scoped = await this.scopedVehicleIds(organizationId, allowedCustomerIds);
+    const scoped = await this.scopedVehicleIds(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId,
+    );
     const vehicleScope = this.alertVehicleScope(scoped);
     if (vehicleScope && "id" in vehicleScope && vehicleScope.id === "__none__") {
       const emptyType = Object.fromEntries(
@@ -356,9 +430,26 @@ export class TelemetryService {
     return this.toAlertDto(updated);
   }
 
-  async listGeofences(organizationId: string): Promise<GeofenceResponseDto[]> {
+  async listGeofences(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
+  ): Promise<GeofenceResponseDto[]> {
+    const leaves = await this.customersService.resolveResourceCustomerFilter(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId,
+    );
+    let where: Prisma.GeofenceZoneWhereInput = { organizationId };
+    if (leaves !== null) {
+      if (leaves.length === 0) {
+        return [];
+      }
+      const ownerIds = await this.zoneOwnerIdsForLeaves(organizationId, leaves);
+      where = { organizationId, customerId: { in: ownerIds } };
+    }
     const rows = await this.prisma.geofenceZone.findMany({
-      where: { organizationId },
+      where,
       orderBy: { name: "asc" },
     });
     return rows.map((r) => this.toGeofenceDto(r));
@@ -367,19 +458,36 @@ export class TelemetryService {
   async createGeofence(
     organizationId: string,
     dto: CreateGeofenceDto,
+    allowedCustomerIds: string[] | null,
   ): Promise<GeofenceResponseDto> {
+    const customerId = dto.customerId?.trim();
+    if (!customerId) {
+      throw new BadRequestException("customerId is required");
+    }
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, organizationId },
+    });
+    if (!customer) {
+      throw new NotFoundException("Customer not found");
+    }
+    this.assertCustomerWriteAccess(customerId, allowedCustomerIds);
+
     const coords = parseJsonCoordinates(
       dto.type,
       dto.coordinates as Record<string, unknown>,
     );
+    const vehicleIds = dto.vehicleIds ?? [];
+    await this.assertVehiclesInZoneSubtree(organizationId, customerId, vehicleIds);
+
     const row = await this.prisma.geofenceZone.create({
       data: {
         organizationId,
+        customerId,
         name: dto.name,
         description: dto.description ?? null,
         type: dto.type,
         coordinates: coords,
-        vehicleIds: dto.vehicleIds ?? [],
+        vehicleIds,
         alertOnEnter: dto.alertOnEnter ?? true,
         alertOnExit: dto.alertOnExit ?? true,
       },
@@ -392,11 +500,13 @@ export class TelemetryService {
     organizationId: string,
     id: string,
     dto: UpdateGeofenceDto,
+    allowedCustomerIds: string[] | null,
   ): Promise<GeofenceResponseDto> {
     const existing = await this.prisma.geofenceZone.findFirst({
       where: { id, organizationId },
     });
     if (!existing) throw new NotFoundException("Geofence not found");
+    this.assertCustomerWriteAccess(existing.customerId, allowedCustomerIds);
 
     let coordinates: Prisma.InputJsonValue | undefined;
     const nextType = dto.type ?? existing.type;
@@ -406,6 +516,14 @@ export class TelemetryService {
         dto.coordinates as Record<string, unknown>,
       );
     }
+
+    const nextVehicleIds =
+      dto.vehicleIds != null ? dto.vehicleIds : existing.vehicleIds;
+    await this.assertVehiclesInZoneSubtree(
+      organizationId,
+      existing.customerId,
+      nextVehicleIds,
+    );
 
     const row = await this.prisma.geofenceZone.update({
       where: { id },
@@ -426,11 +544,16 @@ export class TelemetryService {
     return this.toGeofenceDto(row);
   }
 
-  async deleteGeofence(organizationId: string, id: string): Promise<void> {
+  async deleteGeofence(
+    organizationId: string,
+    id: string,
+    allowedCustomerIds: string[] | null,
+  ): Promise<void> {
     const existing = await this.prisma.geofenceZone.findFirst({
       where: { id, organizationId },
     });
     if (!existing) throw new NotFoundException("Geofence not found");
+    this.assertCustomerWriteAccess(existing.customerId, allowedCustomerIds);
     await this.prisma.geofenceZone.delete({ where: { id } });
     await this.invalidateGeofenceCache(organizationId);
   }

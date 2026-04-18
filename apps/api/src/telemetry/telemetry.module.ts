@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { CustomersModule } from "@/customers/customers.module";
 import { OrganizationsModule } from "@/organizations/organizations.module";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { TrackersModule } from "@/trackers/trackers.module";
@@ -14,6 +15,7 @@ import { TelemetryCoreModule } from "./telemetry-core.module";
   imports: [
     PrismaModule,
     ConfigModule,
+    CustomersModule,
     OrganizationsModule,
     TrackersModule,
     TelemetryCoreModule,

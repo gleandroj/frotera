@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FuelReportsController } from './fuel-reports.controller';
 import { FuelReportsService } from './fuel-reports.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
 import {
   ConsumptionReportQueryDto,
   CostsReportQueryDto,
@@ -32,9 +33,7 @@ describe('FuelReportsController', () => {
   const memberId = 'member-1';
 
   const mockRequest = {
-    user: {
-      organizationMemberId: memberId,
-    },
+    organizationMember: { id: memberId },
   };
 
   const mockConsumptionReport: VehicleConsumptionDto[] = [
@@ -146,6 +145,8 @@ describe('FuelReportsController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(OrganizationMemberGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 

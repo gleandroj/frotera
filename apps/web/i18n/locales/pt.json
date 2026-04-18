@@ -46,6 +46,7 @@
     "currentLanguage": "Idioma atual",
     "notAvailable": "N/D",
     "optional": "Opcional",
+    "required": "Campo obrigatório.",
     "found": "encontrado",
     "tip": "Dica",
     "showing": "Mostrando",
@@ -235,6 +236,7 @@
       "form": {
         "name": "Nome da zona",
         "namePlaceholder": "Ex: Sede principal",
+        "customerRequired": "Selecione uma empresa no contexto do painel para criar a zona.",
         "description": "Descrição",
         "type": "Tipo de zona",
         "typeCircle": "Circular",
@@ -1072,6 +1074,7 @@
     "toastEntryCreated": "Checklist enviado com sucesso.",
     "toastEntryUpdated": "Status da entrada atualizado.",
     "toastError": "Erro ao processar operação. Tente novamente.",
+    "templateCustomerRequired": "Selecione uma empresa no cabeçalho para criar o template.",
     "filterByVehicle": "Veículo",
     "filterByTemplate": "Template",
     "filterByDriver": "Motorista",
@@ -1112,6 +1115,7 @@
     "dateTo": "Data final",
     "openActionsMenu": "Abrir menu de ações",
     "applyFilters": "Aplicar filtros",
+    "customerRequiredForNoVehicle": "Selecione uma empresa no cabeçalho ou associe um veículo ou motorista à ocorrência.",
     "columns": {
       "title": "Título",
       "type": "Tipo",

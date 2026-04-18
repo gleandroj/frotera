@@ -16,7 +16,7 @@ type Period = "day" | "month" | "year";
 export default function SummaryReportPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<PeriodSummary | null>(null);
   const [period, setPeriod] = useState<Period>("month");
   const [date, setDate] = useState(new Date());
@@ -28,11 +28,12 @@ export default function SummaryReportPage() {
     fuelReportsAPI.summary(currentOrganization.id, {
       period,
       date: format(date, "yyyy-MM-dd"),
+      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
     })
       .then((res) => setData(res.data))
       .catch(() => toast.error(t("fuel.toastError")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, period, date]);
+  }, [currentOrganization?.id, period, date, selectedCustomerId, t]);
 
   return (
     <div className="space-y-6">

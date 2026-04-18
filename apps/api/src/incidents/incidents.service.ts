@@ -6,6 +6,8 @@ import {
 } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { IncidentStatus } from "@prisma/client";
+import { ApiCode } from "@/common/api-codes.enum";
+import { CustomersService } from "@/customers/customers.service";
 import { PrismaService } from "@/prisma/prisma.service";
 import { S3Service } from "@/utils/s3.service";
 import {
@@ -24,6 +26,7 @@ export class IncidentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3: S3Service,
+    private readonly customersService: CustomersService,
   ) {}
 
   private async getMember(userId: string, organizationId: string) {
@@ -60,13 +63,87 @@ export class IncidentsService {
     if (!driver) throw new NotFoundException("Driver not found in this organization");
   }
 
-  async list(organizationId: string, filters: IncidentFiltersDto) {
+  private assertIncidentCustomerAccess(
+    customerId: string,
+    allowedCustomerIds: string[] | null,
+  ): void {
+    if (allowedCustomerIds === null) return;
+    if (!allowedCustomerIds.includes(customerId)) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  /** Effective customerId filter: member scope ∩ optional subtree filter. */
+  private async resolveListCustomerIds(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
+  ): Promise<Prisma.StringFilter | undefined> {
+    let scope: string[] | null =
+      allowedCustomerIds === null ? null : [...allowedCustomerIds];
+    if (filterCustomerId) {
+      const desc = await this.customersService.getDescendantCustomerIds(
+        [filterCustomerId],
+        organizationId,
+      );
+      const sub = new Set([filterCustomerId, ...desc]);
+      if (scope === null) {
+        scope = [...sub];
+      } else {
+        scope = scope.filter((id) => sub.has(id));
+      }
+    }
+    if (scope === null) return undefined;
+    if (scope.length === 0) return { in: [] };
+    return { in: scope };
+  }
+
+  private async resolveCustomerIdForCreate(
+    organizationId: string,
+    dto: CreateIncidentDto,
+  ): Promise<string> {
+    if (dto.vehicleId) {
+      const vehicle = await this.prisma.vehicle.findFirst({
+        where: { id: dto.vehicleId, organizationId },
+        select: { customerId: true },
+      });
+      if (!vehicle) throw new NotFoundException("Vehicle not found in this organization");
+      return vehicle.customerId;
+    }
+    const driverIdTrimmed = dto.driverId?.trim();
+    if (driverIdTrimmed) {
+      const driver = await this.prisma.driver.findFirst({
+        where: { id: driverIdTrimmed, organizationId },
+        select: { customerId: true },
+      });
+      if (!driver) throw new NotFoundException("Driver not found in this organization");
+      return driver.customerId;
+    }
+    const explicit = dto.customerId?.trim();
+    if (!explicit) {
+      throw new BadRequestException(
+        "customerId is required when the incident has no vehicle and no driver",
+      );
+    }
+    const c = await this.prisma.customer.findFirst({
+      where: { id: explicit, organizationId },
+    });
+    if (!c) throw new NotFoundException("Customer not found in this organization");
+    return explicit;
+  }
+
+  async list(
+    organizationId: string,
+    filters: IncidentFiltersDto,
+    allowedCustomerIds: string[] | null,
+  ) {
     const {
       type,
       status,
       severity,
       vehicleId,
       driverId,
+      customerId: filterCustomerId,
       dateFrom,
       dateTo,
       page = 1,
@@ -84,6 +161,13 @@ export class IncidentsService {
       if (dateFrom) where.date.gte = new Date(dateFrom);
       if (dateTo) where.date.lte = new Date(dateTo);
     }
+
+    const customerFilter = await this.resolveListCustomerIds(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId,
+    );
+    if (customerFilter) where.customerId = customerFilter;
 
     const skip = (page - 1) * limit;
     const [incidents, total] = await Promise.all([
@@ -109,16 +193,25 @@ export class IncidentsService {
     };
   }
 
-  async create(userId: string, organizationId: string, dto: CreateIncidentDto) {
+  async create(
+    userId: string,
+    organizationId: string,
+    dto: CreateIncidentDto,
+    allowedCustomerIds: string[] | null,
+  ) {
     const member = await this.getMember(userId, organizationId);
 
     if (dto.vehicleId) await this.assertVehicleInOrg(dto.vehicleId, organizationId);
     const driverIdTrimmed = dto.driverId?.trim();
     if (driverIdTrimmed) await this.assertDriverInOrg(driverIdTrimmed, organizationId);
 
+    const customerId = await this.resolveCustomerIdForCreate(organizationId, dto);
+    this.assertIncidentCustomerAccess(customerId, allowedCustomerIds);
+
     return this.prisma.incident.create({
       data: {
         organizationId,
+        customerId,
         createdById: member.id,
         type: dto.type,
         title: dto.title,
@@ -138,12 +231,24 @@ export class IncidentsService {
     });
   }
 
-  async findOne(organizationId: string, id: string) {
-    return this.findOrFail(id, organizationId);
+  async findOne(
+    organizationId: string,
+    id: string,
+    allowedCustomerIds: string[] | null,
+  ) {
+    const incident = await this.findOrFail(id, organizationId);
+    this.assertIncidentCustomerAccess(incident.customerId, allowedCustomerIds);
+    return incident;
   }
 
-  async update(organizationId: string, id: string, dto: UpdateIncidentDto) {
+  async update(
+    organizationId: string,
+    id: string,
+    dto: UpdateIncidentDto,
+    allowedCustomerIds: string[] | null,
+  ) {
     const existing = await this.findOrFail(id, organizationId);
+    this.assertIncidentCustomerAccess(existing.customerId, allowedCustomerIds);
 
     if (dto.vehicleId) await this.assertVehicleInOrg(dto.vehicleId, organizationId);
     if (dto.driverId !== undefined) {
@@ -169,6 +274,47 @@ export class IncidentsService {
       data.driverId = d ? d : null;
     }
 
+    if (
+      dto.vehicleId !== undefined ||
+      dto.driverId !== undefined ||
+      dto.customerId !== undefined
+    ) {
+      const nextVehicleId =
+        dto.vehicleId !== undefined ? dto.vehicleId : existing.vehicleId;
+      const nextDriverId =
+        dto.driverId !== undefined
+          ? dto.driverId?.trim() || null
+          : existing.driverId;
+      const nextCustomerExplicit = dto.customerId?.trim();
+
+      let newCustomerId: string;
+      if (nextVehicleId) {
+        const vehicle = await this.prisma.vehicle.findFirst({
+          where: { id: nextVehicleId, organizationId },
+          select: { customerId: true },
+        });
+        if (!vehicle) throw new NotFoundException("Vehicle not found in this organization");
+        newCustomerId = vehicle.customerId;
+      } else if (nextDriverId) {
+        const driver = await this.prisma.driver.findFirst({
+          where: { id: nextDriverId, organizationId },
+          select: { customerId: true },
+        });
+        if (!driver) throw new NotFoundException("Driver not found in this organization");
+        newCustomerId = driver.customerId;
+      } else if (nextCustomerExplicit) {
+        const c = await this.prisma.customer.findFirst({
+          where: { id: nextCustomerExplicit, organizationId },
+        });
+        if (!c) throw new NotFoundException("Customer not found in this organization");
+        newCustomerId = nextCustomerExplicit;
+      } else {
+        newCustomerId = existing.customerId;
+      }
+      this.assertIncidentCustomerAccess(newCustomerId, allowedCustomerIds);
+      data.customerId = newCustomerId;
+    }
+
     if (dto.status !== undefined) {
       data.status = dto.status;
       if (dto.status === IncidentStatus.RESOLVED && existing.resolvedAt == null) {
@@ -183,14 +329,21 @@ export class IncidentsService {
     });
   }
 
-  async remove(organizationId: string, id: string) {
-    await this.findOrFail(id, organizationId);
+  async remove(organizationId: string, id: string, allowedCustomerIds: string[] | null) {
+    const existing = await this.findOrFail(id, organizationId);
+    this.assertIncidentCustomerAccess(existing.customerId, allowedCustomerIds);
     await this.prisma.incident.delete({ where: { id } });
     return { success: true };
   }
 
-  async addAttachment(organizationId: string, incidentId: string, dto: AddAttachmentDto) {
-    await this.findOrFail(incidentId, organizationId);
+  async addAttachment(
+    organizationId: string,
+    incidentId: string,
+    dto: AddAttachmentDto,
+    allowedCustomerIds: string[] | null,
+  ) {
+    const inc = await this.findOrFail(incidentId, organizationId);
+    this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
     return this.prisma.incidentAttachment.create({
       data: {
         incidentId,
@@ -207,8 +360,10 @@ export class IncidentsService {
     buffer: Buffer,
     originalName: string,
     mimetype: string,
+    allowedCustomerIds: string[] | null,
   ) {
-    await this.findOrFail(incidentId, organizationId);
+    const inc = await this.findOrFail(incidentId, organizationId);
+    this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
     assertIncidentAttachmentMime(mimetype);
     if (buffer.length > INCIDENT_ATTACHMENT_UPLOAD_MAX_BYTES) {
       throw new BadRequestException(
@@ -233,8 +388,10 @@ export class IncidentsService {
     organizationId: string,
     incidentId: string,
     attachmentId: string,
+    allowedCustomerIds: string[] | null,
   ) {
-    await this.findOrFail(incidentId, organizationId);
+    const inc = await this.findOrFail(incidentId, organizationId);
+    this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
     const attachment = await this.prisma.incidentAttachment.findFirst({
       where: { id: attachmentId, incidentId },
     });
@@ -243,13 +400,25 @@ export class IncidentsService {
     return { success: true };
   }
 
-  async stats(organizationId: string, dateFrom?: string, dateTo?: string) {
+  async stats(
+    organizationId: string,
+    dateFrom: string | undefined,
+    dateTo: string | undefined,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
+  ) {
     const dateFilter: Prisma.DateTimeFilter = {};
     if (dateFrom) dateFilter.gte = new Date(dateFrom);
     if (dateTo) dateFilter.lte = new Date(dateTo);
 
     const baseWhere: Prisma.IncidentWhereInput = { organizationId };
     if (dateFrom || dateTo) baseWhere.date = dateFilter;
+    const customerFilter = await this.resolveListCustomerIds(
+      organizationId,
+      allowedCustomerIds,
+      filterCustomerId,
+    );
+    if (customerFilter) baseWhere.customerId = customerFilter;
 
     const [byType, byStatus, costAgg, openCount] = await Promise.all([
       this.prisma.incident.groupBy({

@@ -3,15 +3,17 @@ import {
   Get,
   Param,
   Query,
-  UseGuards,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
 import { FuelReportsService } from './fuel-reports.service';
 import {
   ConsumptionReportQueryDto,
@@ -26,24 +28,25 @@ import {
   PeriodSummaryDto,
 } from './fuel-reports.dto';
 
+interface FuelReportsRequest extends ExpressRequest {
+  organizationMember: { id: string };
+}
+
 @ApiTags('fuel-reports')
 @Controller('organizations/:organizationId/fuel/reports')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
 @ApiBearerAuth()
 export class FuelReportsController {
   constructor(private readonly fuelReportsService: FuelReportsService) {}
 
-  /**
-   * GET /api/organizations/:orgId/fuel/reports/consumption
-   */
   @Get('consumption')
   @ApiOkResponse({ type: [VehicleConsumptionDto] })
   async getConsumption(
-    @Request() req: any,
+    @Request() req: FuelReportsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ConsumptionReportQueryDto,
   ): Promise<VehicleConsumptionDto[]> {
-    const memberId = req.user.organizationMemberId;
+    const memberId = req.organizationMember.id;
     return this.fuelReportsService.getConsumptionReport(
       organizationId,
       memberId,
@@ -51,17 +54,14 @@ export class FuelReportsController {
     );
   }
 
-  /**
-   * GET /api/organizations/:orgId/fuel/reports/costs
-   */
   @Get('costs')
   @ApiOkResponse({ type: [CostsPeriodDto] })
   async getCosts(
-    @Request() req: any,
+    @Request() req: FuelReportsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: CostsReportQueryDto,
   ): Promise<CostsPeriodDto[]> {
-    const memberId = req.user.organizationMemberId;
+    const memberId = req.organizationMember.id;
     return this.fuelReportsService.getCostsReport(
       organizationId,
       memberId,
@@ -69,17 +69,14 @@ export class FuelReportsController {
     );
   }
 
-  /**
-   * GET /api/organizations/:orgId/fuel/reports/benchmark
-   */
   @Get('benchmark')
   @ApiOkResponse({ type: BenchmarkSummaryDto })
   async getBenchmark(
-    @Request() req: any,
+    @Request() req: FuelReportsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: BenchmarkReportQueryDto,
   ): Promise<BenchmarkSummaryDto> {
-    const memberId = req.user.organizationMemberId;
+    const memberId = req.organizationMember.id;
     return this.fuelReportsService.getBenchmarkReport(
       organizationId,
       memberId,
@@ -87,17 +84,14 @@ export class FuelReportsController {
     );
   }
 
-  /**
-   * GET /api/organizations/:orgId/fuel/reports/efficiency
-   */
   @Get('efficiency')
   @ApiOkResponse({ type: [VehicleEfficiencyDto] })
   async getEfficiency(
-    @Request() req: any,
+    @Request() req: FuelReportsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: EfficiencyReportQueryDto,
   ): Promise<VehicleEfficiencyDto[]> {
-    const memberId = req.user.organizationMemberId;
+    const memberId = req.organizationMember.id;
     return this.fuelReportsService.getEfficiencyReport(
       organizationId,
       memberId,
@@ -105,17 +99,14 @@ export class FuelReportsController {
     );
   }
 
-  /**
-   * GET /api/organizations/:orgId/fuel/reports/summary
-   */
   @Get('summary')
   @ApiOkResponse({ type: PeriodSummaryDto })
   async getSummary(
-    @Request() req: any,
+    @Request() req: FuelReportsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: SummaryReportQueryDto,
   ): Promise<PeriodSummaryDto> {
-    const memberId = req.user.organizationMemberId;
+    const memberId = req.organizationMember.id;
     return this.fuelReportsService.getSummaryReport(
       organizationId,
       memberId,

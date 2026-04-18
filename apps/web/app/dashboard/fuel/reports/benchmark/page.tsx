@@ -16,18 +16,20 @@ export default function BenchmarkReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
   const router = useRouter();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<BenchmarkSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
     setLoading(true);
-    fuelReportsAPI.benchmark(currentOrganization.id)
+    fuelReportsAPI.benchmark(currentOrganization.id, {
+      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+    })
       .then((res) => setData(res.data))
       .catch(() => toast.error(t("fuel.toastError")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, selectedCustomerId, t]);
 
   return (
     <div className="space-y-6">

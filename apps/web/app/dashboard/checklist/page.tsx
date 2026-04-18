@@ -177,7 +177,10 @@ export default function ChecklistPage() {
     if (!orgId) return;
     try {
       setLoading(true);
-      const res = await checklistAPI.listTemplates(orgId);
+      const res = await checklistAPI.listTemplates(
+        orgId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      );
       setTemplates(res.data);
     } catch {
       toast.error(t("checklist.toastError"));
@@ -193,6 +196,7 @@ export default function ChecklistPage() {
     ...(statusFilter !== STATUS_ALL && { status: statusFilter as EntryStatus }),
     ...(dateFrom && { dateFrom }),
     ...(dateTo && { dateTo }),
+    ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
   });
 
   const loadEntries = async () => {
@@ -212,12 +216,20 @@ export default function ChecklistPage() {
     if (activeTab === "templates") loadTemplates();
     else loadEntries();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, orgId]);
+  }, [activeTab, orgId, selectedCustomerId]);
 
   useEffect(() => {
     if (activeTab === "entries" && orgId) loadEntries();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryVehicleFilter, entryTemplateFilter, entryDriverFilter, statusFilter, dateFrom, dateTo]);
+  }, [
+    entryVehicleFilter,
+    entryTemplateFilter,
+    entryDriverFilter,
+    statusFilter,
+    dateFrom,
+    dateTo,
+    selectedCustomerId,
+  ]);
 
   useEffect(() => {
     setEntryVehicleFilter(ENTRY_FILTER_ALL);
@@ -668,6 +680,7 @@ export default function ChecklistPage() {
         onOpenChange={(o) => { if (!o) { setTemplateFormOpen(false); setEditTemplate(null); } else { setTemplateFormOpen(true); } }}
         template={editTemplate}
         organizationId={orgId}
+        defaultCustomerId={selectedCustomerId}
         onSuccess={loadTemplates}
       />
 

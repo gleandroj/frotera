@@ -35,6 +35,13 @@ export class ListAlertsQueryDto {
   vehicleId?: string;
 
   @ApiPropertyOptional({
+    description: "Filtra alertas por veículos desta empresa (e filiais)",
+  })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
+  @ApiPropertyOptional({
     description: "true = só reconhecidos, false = só não reconhecidos",
   })
   @IsOptional()
@@ -124,6 +131,11 @@ export class AlertStatsResponseDto {
 }
 
 export class CreateGeofenceDto {
+  @ApiProperty({ description: "Customer (empresa) that owns this zone; filiais see ancestor zones." })
+  @IsString()
+  @MinLength(1)
+  customerId!: string;
+
   @ApiProperty()
   @IsString()
   @MinLength(1)
@@ -211,6 +223,9 @@ export class GeofenceResponseDto {
 
   @ApiProperty()
   organizationId!: string;
+
+  @ApiProperty()
+  customerId!: string;
 
   @ApiProperty()
   name!: string;

@@ -16,18 +16,20 @@ export default function ConsumptionReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
   const router = useRouter();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<VehicleConsumption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
     setLoading(true);
-    fuelReportsAPI.consumption(currentOrganization.id)
+    fuelReportsAPI.consumption(currentOrganization.id, {
+      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+    })
       .then((res) => setData(res.data))
       .catch(() => toast.error(t("fuel.toastError")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, selectedCustomerId, t]);
 
   const trendVariant = (trend: string) => {
     if (trend === "improving") return "secondary";

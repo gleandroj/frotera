@@ -18,7 +18,7 @@ export default function CostsReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
   const router = useRouter();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<CostsPeriod[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>("month");
   const [loading, setLoading] = useState(true);
@@ -26,11 +26,14 @@ export default function CostsReportPage() {
   useEffect(() => {
     if (!currentOrganization?.id) return;
     setLoading(true);
-    fuelReportsAPI.costs(currentOrganization.id, { groupBy })
+    fuelReportsAPI.costs(currentOrganization.id, {
+      groupBy,
+      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+    })
       .then((res) => setData(res.data))
       .catch(() => toast.error(t("fuel.toastError")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, groupBy]);
+  }, [currentOrganization?.id, groupBy, selectedCustomerId, t]);
 
   const groupByOptions: GroupBy[] = ["day", "month", "year"];
 

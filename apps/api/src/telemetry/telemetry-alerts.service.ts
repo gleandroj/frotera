@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import type { RedisClientType } from "redis";
 import { CustomerFleetSettingsService } from "@/customers/customer-fleet-settings.service";
+import { CustomersService } from "@/customers/customers.service";
 import { PrismaService } from "@/prisma/prisma.service";
 import type { NormalizedPosition } from "@/trackers/dto/index";
 import { TRACKER_REDIS } from "@/trackers/ingress/tracker-redis-writer.service";
@@ -16,8 +17,6 @@ import { isPointInZone } from "./geofence.utils";
 import {
   ALERT_DEDUP_PREFIX,
   DEVICE_OFFLINE_DEDUP_MULT,
-  GEOFENCE_ORG_CACHE_PREFIX,
-  GEOFENCE_ORG_CACHE_TTL_SEC,
   GEOFENCE_STATE_HASH_PREFIX,
   SPEEDING_DEDUP_SEC,
   TELEMETRY_ALERT_CHANNEL,
@@ -35,6 +34,7 @@ export class TelemetryAlertsService {
     private readonly redisWriter: TrackerRedisWriterService,
     private readonly config: ConfigService,
     private readonly fleetSettings: CustomerFleetSettingsService,
+    private readonly customersService: CustomersService,
   ) {}
 
   async processPosition(params: {
@@ -100,6 +100,18 @@ export class TelemetryAlertsService {
       vehicleId,
       point,
     });
+  }
+
+  private async vehicleCustomerId(
+    organizationId: string,
+    vehicleId: string | null,
+  ): Promise<string | null> {
+    if (!vehicleId) return null;
+    const v = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, organizationId },
+      select: { customerId: true },
+    });
+    return v?.customerId ?? null;
   }
 
   private async checkSpeeding(ctx: {
@@ -197,7 +209,14 @@ export class TelemetryAlertsService {
     point: [number, number];
   }): Promise<void> {
     const { deviceId, organizationId, vehicleId, point } = ctx;
-    const zones = await this.loadActiveGeofences(organizationId);
+    const vehicleCustomerId = await this.vehicleCustomerId(
+      organizationId,
+      vehicleId,
+    );
+    const zones = await this.loadActiveGeofences(
+      organizationId,
+      vehicleCustomerId,
+    );
     if (zones.length === 0) return;
 
     const hashKey = `${GEOFENCE_STATE_HASH_PREFIX}${deviceId}`;
@@ -259,6 +278,7 @@ export class TelemetryAlertsService {
 
   private async loadActiveGeofences(
     organizationId: string,
+    vehicleCustomerId: string | null,
   ): Promise<
     Array<{
       id: string;
@@ -270,25 +290,19 @@ export class TelemetryAlertsService {
       alertOnExit: boolean;
     }>
   > {
-    const cacheKey = `${GEOFENCE_ORG_CACHE_PREFIX}${organizationId}`;
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      try {
-        return JSON.parse(cached) as Array<{
-          id: string;
-          name: string;
-          type: GeofenceType;
-          coordinates: Prisma.JsonValue;
-          vehicleIds: string[];
-          alertOnEnter: boolean;
-          alertOnExit: boolean;
-        }>;
-      } catch {
-        /* fall through */
-      }
+    if (!vehicleCustomerId) {
+      return [];
     }
-    const rows = await this.prisma.geofenceZone.findMany({
-      where: { organizationId, active: true },
+    const ownerIds = await this.customersService.getCustomerIdAndAncestorIds(
+      vehicleCustomerId,
+      organizationId,
+    );
+    return this.prisma.geofenceZone.findMany({
+      where: {
+        organizationId,
+        active: true,
+        customerId: { in: ownerIds },
+      },
       select: {
         id: true,
         name: true,
@@ -299,12 +313,6 @@ export class TelemetryAlertsService {
         alertOnExit: true,
       },
     });
-    await this.redis.setEx(
-      cacheKey,
-      GEOFENCE_ORG_CACHE_TTL_SEC,
-      JSON.stringify(rows),
-    );
-    return rows;
   }
 
   private rowToWire(

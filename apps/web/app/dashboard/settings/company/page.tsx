@@ -24,16 +24,14 @@ import { toast } from "sonner";
 
 export default function CustomerFleetSettingsPage() {
   const { t } = useTranslation();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const canEdit = can(Module.COMPANIES, Action.EDIT);
   const orgId = currentOrganization?.id;
-  const isSuperAdmin = user?.isSuperAdmin === true;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [list, setList] = useState<ListCustomerFleetSettingsResponse | null>(null);
-  /** `"organization"` = padrão org-wide (só superadmin); caso contrário `customerId`. */
   const [editTarget, setEditTarget] = useState<string>("");
   const [offlineMinutes, setOfflineMinutes] = useState("");
   const [defaultSpeedKmh, setDefaultSpeedKmh] = useState("");
@@ -57,29 +55,16 @@ export default function CustomerFleetSettingsPage() {
 
   useEffect(() => {
     if (!list || editTarget !== "") return;
-    if (isSuperAdmin) {
-      setEditTarget("organization");
+    const preferred = selectedCustomerId ?? list.customers[0]?.customerId;
+    if (preferred && list.customers.some((c) => c.customerId === preferred)) {
+      setEditTarget(preferred);
     } else if (list.customers[0]) {
       setEditTarget(list.customers[0].customerId);
     }
-  }, [list, isSuperAdmin, editTarget]);
+  }, [list, selectedCustomerId, editTarget]);
 
   useEffect(() => {
     if (!list || editTarget === "") return;
-    if (isSuperAdmin && editTarget === "organization") {
-      const od = list.organizationDefault;
-      setOfflineMinutes(
-        od?.deviceOfflineThresholdMinutes != null
-          ? String(od.deviceOfflineThresholdMinutes)
-          : "",
-      );
-      setDefaultSpeedKmh(
-        od?.defaultSpeedLimitKmh != null && Number.isFinite(od.defaultSpeedLimitKmh)
-          ? String(od.defaultSpeedLimitKmh)
-          : "",
-      );
-      return;
-    }
     const row = list.customers.find((c) => c.customerId === editTarget);
     if (row) {
       setOfflineMinutes(
@@ -93,7 +78,7 @@ export default function CustomerFleetSettingsPage() {
           : "",
       );
     }
-  }, [list, editTarget, isSuperAdmin]);
+  }, [list, editTarget]);
 
   const parsePayload = useCallback(() => {
     const offlineTrim = offlineMinutes.trim();
@@ -130,20 +115,12 @@ export default function CustomerFleetSettingsPage() {
     if (!payload) return;
     setSaving(true);
     try {
-      if (isSuperAdmin && editTarget === "organization") {
-        const res = await customerFleetSettingsAPI.patch(orgId, {
-          applyMode: "organization_default",
-          ...payload,
-        });
-        setList(res.data);
-      } else if (typeof editTarget === "string") {
-        const res = await customerFleetSettingsAPI.patch(orgId, {
-          applyMode: "single",
-          customerId: editTarget,
-          ...payload,
-        });
-        setList(res.data);
-      }
+      const res = await customerFleetSettingsAPI.patch(orgId, {
+        applyMode: "single",
+        customerId: editTarget,
+        ...payload,
+      });
+      setList(res.data);
       toast.success(t("companySettings.saveSuccess"));
     } catch (e) {
       toast.error(getApiErrorMessage(e, t, "common.error"));
@@ -163,11 +140,7 @@ export default function CustomerFleetSettingsPage() {
         ...payload,
       });
       setList(res.data);
-      toast.success(
-        isSuperAdmin
-          ? t("companySettings.applyAllOrgSuccess")
-          : t("companySettings.applyAllAccessibleSuccess"),
-      );
+      toast.success(t("companySettings.applyAllAccessibleSuccess"));
     } catch (e) {
       toast.error(getApiErrorMessage(e, t, "common.error"));
     } finally {
@@ -210,7 +183,7 @@ export default function CustomerFleetSettingsPage() {
         <CardContent className="space-y-6">
           {loading || !list ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : list.customers.length === 0 && !isSuperAdmin ? (
+          ) : list.customers.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t("companySettings.noCustomersForSettings")}
             </p>
@@ -225,11 +198,6 @@ export default function CustomerFleetSettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {isSuperAdmin && (
-                      <SelectItem value="organization">
-                        {t("companySettings.targetOrganization")}
-                      </SelectItem>
-                    )}
                     {customerOptions.map((c) => (
                       <SelectItem key={c.customerId} value={c.customerId}>
                         {c.customerName ?? c.customerId}
@@ -238,9 +206,7 @@ export default function CustomerFleetSettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {isSuperAdmin
-                    ? t("companySettings.editTargetHintSuperAdmin")
-                    : t("companySettings.editTargetHintMember")}
+                  {t("companySettings.editTargetHintMember")}
                 </p>
               </div>
 
@@ -287,9 +253,7 @@ export default function CustomerFleetSettingsPage() {
                   disabled={saving || customerOptions.length === 0}
                   onClick={() => void handleApplyAllAccessible()}
                 >
-                  {isSuperAdmin
-                    ? t("companySettings.applyAllCustomers")
-                    : t("companySettings.applyAllAccessible")}
+                  {t("companySettings.applyAllAccessible")}
                 </Button>
               </div>
             </>

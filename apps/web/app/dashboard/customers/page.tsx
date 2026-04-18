@@ -58,8 +58,9 @@ export default function CustomersPage() {
         onDelete: setDeleteCustomer,
         canEditCustomer,
         canDeleteCustomer,
+        isSuperAdmin: user?.isSuperAdmin === true,
       }),
-    [t, customers, canEditCustomer, canDeleteCustomer],
+    [t, customers, canEditCustomer, canDeleteCustomer, user?.isSuperAdmin],
   );
 
   if (!currentOrganization) {

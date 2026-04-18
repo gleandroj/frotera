@@ -2,14 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min, ValidateIf } from "class-validator";
 
-export class OrganizationFleetDefaultDto {
-  @ApiProperty({ nullable: true })
-  deviceOfflineThresholdMinutes!: number | null;
-
-  @ApiProperty({ nullable: true })
-  defaultSpeedLimitKmh!: number | null;
-}
-
 export class CustomerFleetSettingResolvedDto {
   @ApiProperty()
   customerId!: string;
@@ -25,21 +17,14 @@ export class CustomerFleetSettingResolvedDto {
 }
 
 export class ListCustomerFleetSettingsResponseDto {
-  @ApiPropertyOptional({
-    nullable: true,
-    description:
-      "Padrão organization-wide (customerId null). Visível apenas a superadmin ou membros sem restrição de empresas.",
-  })
-  organizationDefault!: OrganizationFleetDefaultDto | null;
-
   @ApiProperty({ type: [CustomerFleetSettingResolvedDto] })
   customers!: CustomerFleetSettingResolvedDto[];
 }
 
 export class UpdateCustomerFleetSettingsDto {
-  @ApiProperty({ enum: ["single", "all_accessible", "organization_default"] })
-  @IsIn(["single", "all_accessible", "organization_default"])
-  applyMode!: "single" | "all_accessible" | "organization_default";
+  @ApiProperty({ enum: ["single", "all_accessible"] })
+  @IsIn(["single", "all_accessible"])
+  applyMode!: "single" | "all_accessible";
 
   @ApiPropertyOptional({
     description: "Obrigatório quando applyMode = single (empresa / customer)",

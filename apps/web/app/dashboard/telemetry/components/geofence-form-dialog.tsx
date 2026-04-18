@@ -103,6 +103,10 @@ export function GeofenceFormDialog({
       toast.error(t("telemetry.geofences.form.name"));
       return;
     }
+    if (!isEdit && !customerId?.trim()) {
+      toast.error(t("telemetry.geofences.form.customerRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -119,7 +123,10 @@ export function GeofenceFormDialog({
         await telemetryAPI.updateGeofence(organizationId, zone!.id, payload);
         toast.success(t("telemetry.geofences.updateSuccess"));
       } else {
-        await telemetryAPI.createGeofence(organizationId, payload);
+        await telemetryAPI.createGeofence(organizationId, {
+          ...payload,
+          customerId: customerId!.trim(),
+        });
         toast.success(t("telemetry.geofences.createSuccess"));
       }
       onSaved();
@@ -196,7 +203,7 @@ export function GeofenceFormDialog({
             <Label>{t("telemetry.geofences.form.vehicles")}</Label>
             <VehicleMultiSelect
               organizationId={organizationId}
-              customerId={customerId}
+              customerId={isEdit ? zone?.customerId ?? customerId : customerId}
               value={vehicleIds}
               onChange={setVehicleIds}
               disabled={saving}

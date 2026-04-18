@@ -30,6 +30,7 @@ import { PermissionGuard } from "@/auth/guards/permission.guard";
 import { Permission } from "@/auth/decorators/permission.decorator";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
 import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
+import { Request as ExpressRequest } from "express";
 import {
   AddAttachmentDto,
   CreateIncidentDto,
@@ -38,6 +39,11 @@ import {
 } from "./incidents.dto";
 import { IncidentsService } from "./incidents.service";
 import { INCIDENT_ATTACHMENT_UPLOAD_MAX_BYTES } from "./incidents-attachment-upload";
+
+interface IncidentsRequest extends ExpressRequest {
+  user: { userId: string };
+  allowedCustomerIds: string[] | null;
+}
 
 @ApiTags("incidents")
 @Controller("organizations/:organizationId/incidents")
@@ -50,11 +56,19 @@ export class IncidentsController {
   @Permission(RoleModuleEnum.INCIDENTS, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Estatísticas de ocorrências" })
   stats(
+    @Request() req: IncidentsRequest,
     @Param("organizationId") organizationId: string,
     @Query("dateFrom") dateFrom?: string,
     @Query("dateTo") dateTo?: string,
+    @Query("customerId") filterCustomerId?: string,
   ) {
-    return this.service.stats(organizationId, dateFrom, dateTo);
+    return this.service.stats(
+      organizationId,
+      dateFrom,
+      dateTo,
+      req.allowedCustomerIds ?? null,
+      filterCustomerId,
+    );
   }
 
   @Get()
@@ -63,19 +77,25 @@ export class IncidentsController {
   list(
     @Param("organizationId") organizationId: string,
     @Query() filters: IncidentFiltersDto,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.list(organizationId, filters);
+    return this.service.list(organizationId, filters, req.allowedCustomerIds ?? null);
   }
 
   @Post()
   @Permission(RoleModuleEnum.INCIDENTS, RoleActionEnum.CREATE)
   @ApiOperation({ summary: "Registrar ocorrência" })
   create(
-    @Request() req: { user: { userId: string } },
+    @Request() req: IncidentsRequest,
     @Param("organizationId") organizationId: string,
     @Body() dto: CreateIncidentDto,
   ) {
-    return this.service.create(req.user.userId, organizationId, dto);
+    return this.service.create(
+      req.user.userId,
+      organizationId,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
   @Get(":id")
@@ -84,8 +104,9 @@ export class IncidentsController {
   findOne(
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.findOne(organizationId, id);
+    return this.service.findOne(organizationId, id, req.allowedCustomerIds ?? null);
   }
 
   @Patch(":id")
@@ -95,8 +116,9 @@ export class IncidentsController {
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
     @Body() dto: UpdateIncidentDto,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.update(organizationId, id, dto);
+    return this.service.update(organizationId, id, dto, req.allowedCustomerIds ?? null);
   }
 
   @Delete(":id")
@@ -105,8 +127,9 @@ export class IncidentsController {
   remove(
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.remove(organizationId, id);
+    return this.service.remove(organizationId, id, req.allowedCustomerIds ?? null);
   }
 
   /** Declarar antes de POST :id/attachments (corpo JSON) para o roteador não ambiguar. */
@@ -133,6 +156,7 @@ export class IncidentsController {
   uploadAttachment(
     @Param("organizationId") organizationId: string,
     @Param("id") incidentId: string,
+    @Request() req: IncidentsRequest,
     @UploadedFile(
       new ParseFilePipe({
         errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -150,6 +174,7 @@ export class IncidentsController {
       file.buffer,
       file.originalname,
       file.mimetype,
+      req.allowedCustomerIds ?? null,
     );
   }
 
@@ -160,8 +185,14 @@ export class IncidentsController {
     @Param("organizationId") organizationId: string,
     @Param("id") incidentId: string,
     @Body() dto: AddAttachmentDto,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.addAttachment(organizationId, incidentId, dto);
+    return this.service.addAttachment(
+      organizationId,
+      incidentId,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
   @Delete(":id/attachments/:attachmentId")
@@ -171,7 +202,13 @@ export class IncidentsController {
     @Param("organizationId") organizationId: string,
     @Param("id") incidentId: string,
     @Param("attachmentId") attachmentId: string,
+    @Request() req: IncidentsRequest,
   ) {
-    return this.service.removeAttachment(organizationId, incidentId, attachmentId);
+    return this.service.removeAttachment(
+      organizationId,
+      incidentId,
+      attachmentId,
+      req.allowedCustomerIds ?? null,
+    );
   }
 }

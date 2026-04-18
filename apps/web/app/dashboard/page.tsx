@@ -81,7 +81,7 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const intlLocale = useIntlLocale();
-  const { user, organizations, currentOrganization } = useAuth();
+  const { user, organizations, currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -107,10 +107,15 @@ export default function DashboardPage() {
     if (!orgId) return;
     setLoadingStats(true);
     try {
-      const dashRes = await getDashboardStats(orgId);
+      const dashRes = await getDashboardStats(
+        orgId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      );
       setStats(dashRes.data);
       if (canChecklistView) {
-        const checklistRes = await checklistAPI.reportsSummary(orgId, undefined);
+        const checklistRes = await checklistAPI.reportsSummary(orgId, {
+          ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+        });
         setChecklistSummary(checklistRes.data);
       } else {
         setChecklistSummary(null);
@@ -122,7 +127,7 @@ export default function DashboardPage() {
     } finally {
       setLoadingStats(false);
     }
-  }, [orgId, canChecklistView, t]);
+  }, [orgId, canChecklistView, selectedCustomerId, t]);
 
   useEffect(() => {
     if (!orgId) return;

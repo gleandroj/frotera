@@ -56,11 +56,7 @@ export class DriversService {
     if (filterCustomerId) {
       where.customerId = filterCustomerId;
     } else if (allowedCustomerIds !== null) {
-      // Motoristas sem empresa (customerId null) + motoristas das empresas permitidas
-      where.OR = [
-        { customerId: null },
-        { customerId: { in: allowedCustomerIds } },
-      ];
+      where.customerId = { in: allowedCustomerIds };
     }
 
     const rows = await this.prisma.driver.findMany({
@@ -97,15 +93,16 @@ export class DriversService {
       }
     }
 
-    // Validar customerId se fornecido
-    if (dto.customerId) {
-      await this.validateCustomerAccess(dto.customerId, organizationId, member);
+    const customerId = dto.customerId?.trim();
+    if (!customerId) {
+      throw new BadRequestException(ApiCode.COMMON_BAD_REQUEST);
     }
+    await this.validateCustomerAccess(customerId, organizationId, member);
 
     const driver = await this.prisma.driver.create({
       data: {
         organizationId,
-        customerId: dto.customerId || null,
+        customerId,
         name: dto.name.trim(),
         cpf: dto.cpf?.trim() || null,
         cnh: dto.cnh?.trim() || null,
@@ -150,10 +147,7 @@ export class DriversService {
       throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
     }
 
-    // Verificar acesso via empresa do motorista
-    if (driver.customerId) {
-      await this.validateCustomerReadAccess(driver.customerId, organizationId, member);
-    }
+    await this.validateCustomerReadAccess(driver.customerId, organizationId, member);
 
     return this.toResponse(driver);
   }
@@ -174,14 +168,14 @@ export class DriversService {
       throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
     }
 
-    // Verificar acesso à empresa atual
-    if (existing.customerId) {
-      await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
-    }
+    await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
 
-    // Validar novo customerId se fornecido
-    if (dto.customerId !== undefined && dto.customerId !== null) {
-      await this.validateCustomerAccess(dto.customerId, organizationId, member);
+    if (dto.customerId !== undefined) {
+      const next = dto.customerId?.trim();
+      if (!next) {
+        throw new BadRequestException(ApiCode.COMMON_BAD_REQUEST);
+      }
+      await this.validateCustomerAccess(next, organizationId, member);
     }
 
     // Validar CPF único se alterado
@@ -199,7 +193,9 @@ export class DriversService {
       where: { id: driverId },
       data: {
         ...(dto.name !== undefined && { name: dto.name.trim() }),
-        ...(dto.customerId !== undefined && { customerId: dto.customerId }),
+        ...(dto.customerId !== undefined && {
+          customerId: dto.customerId.trim(),
+        }),
         ...(dto.cpf !== undefined && { cpf: dto.cpf?.trim() || null }),
         ...(dto.cnh !== undefined && { cnh: dto.cnh?.trim() || null }),
         ...(dto.cnhCategory !== undefined && { cnhCategory: dto.cnhCategory }),
@@ -239,9 +235,7 @@ export class DriversService {
       throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
     }
 
-    if (existing.customerId) {
-      await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
-    }
+    await this.validateCustomerReadAccess(existing.customerId, organizationId, member);
 
     // Soft delete: marcar como inativo e encerrar vínculos ativos
     await this.prisma.$transaction([

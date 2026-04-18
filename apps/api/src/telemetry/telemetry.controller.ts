@@ -73,11 +73,13 @@ export class TelemetryController {
   @ApiResponse({ status: 200, type: AlertStatsResponseDto })
   getAlertStats(
     @Param("organizationId") organizationId: string,
+    @Query("customerId") filterCustomerId: string | undefined,
     @Request() req: TelemetryRequest,
   ) {
     return this.telemetryService.getAlertStats(
       organizationId,
       req.allowedCustomerIds ?? null,
+      filterCustomerId,
     );
   }
 
@@ -101,8 +103,16 @@ export class TelemetryController {
   @Permission(RoleModuleEnum.TELEMETRY, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Listar zonas de geofence" })
   @ApiResponse({ status: 200, type: [GeofenceResponseDto] })
-  listGeofences(@Param("organizationId") organizationId: string) {
-    return this.telemetryService.listGeofences(organizationId);
+  listGeofences(
+    @Param("organizationId") organizationId: string,
+    @Query("customerId") filterCustomerId: string | undefined,
+    @Request() req: TelemetryRequest,
+  ) {
+    return this.telemetryService.listGeofences(
+      organizationId,
+      req.allowedCustomerIds ?? null,
+      filterCustomerId,
+    );
   }
 
   @Post("geofences")
@@ -112,8 +122,13 @@ export class TelemetryController {
   createGeofence(
     @Param("organizationId") organizationId: string,
     @Body() dto: CreateGeofenceDto,
+    @Request() req: TelemetryRequest,
   ) {
-    return this.telemetryService.createGeofence(organizationId, dto);
+    return this.telemetryService.createGeofence(
+      organizationId,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
   @Patch("geofences/:id")
@@ -124,8 +139,14 @@ export class TelemetryController {
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
     @Body() dto: UpdateGeofenceDto,
+    @Request() req: TelemetryRequest,
   ) {
-    return this.telemetryService.updateGeofence(organizationId, id, dto);
+    return this.telemetryService.updateGeofence(
+      organizationId,
+      id,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
   @Delete("geofences/:id")
@@ -135,7 +156,12 @@ export class TelemetryController {
   deleteGeofence(
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
+    @Request() req: TelemetryRequest,
   ) {
-    return this.telemetryService.deleteGeofence(organizationId, id);
+    return this.telemetryService.deleteGeofence(
+      organizationId,
+      id,
+      req.allowedCustomerIds ?? null,
+    );
   }
 }

@@ -342,11 +342,6 @@ export const organizationAPI = {
     externalApi.delete(`/api/organizations/${organizationId}/roles/${roleId}`),
 };
 
-export interface OrganizationFleetDefault {
-  deviceOfflineThresholdMinutes: number | null;
-  defaultSpeedLimitKmh: number | null;
-}
-
 export interface CustomerFleetSettingResolved {
   customerId: string;
   customerName: string | null;
@@ -355,14 +350,10 @@ export interface CustomerFleetSettingResolved {
 }
 
 export interface ListCustomerFleetSettingsResponse {
-  organizationDefault: OrganizationFleetDefault | null;
   customers: CustomerFleetSettingResolved[];
 }
 
-export type FleetPatchApplyMode =
-  | "single"
-  | "all_accessible"
-  | "organization_default";
+export type FleetPatchApplyMode = "single" | "all_accessible";
 
 export const customerFleetSettingsAPI = {
   list: (organizationId: string) =>
@@ -545,6 +536,7 @@ export const vehiclesAPI = {
 export interface Incident {
   id: string;
   organizationId: string;
+  customerId: string;
   vehicleId: string | null;
   driverId: string | null;
   createdById: string;
@@ -601,6 +593,7 @@ export const incidentsAPI = {
       driverId?: string;
       dateFrom?: string;
       dateTo?: string;
+      customerId?: string;
       page?: number;
       limit?: number;
     },
@@ -653,7 +646,10 @@ export const incidentsAPI = {
       `/api/organizations/${orgId}/incidents/${id}/attachments/${attachmentId}`,
     ),
 
-  stats: (orgId: string, params?: { dateFrom?: string; dateTo?: string }) =>
+  stats: (
+    orgId: string,
+    params?: { dateFrom?: string; dateTo?: string; customerId?: string },
+  ) =>
     externalApi.get<IncidentStats>(
       `/api/organizations/${orgId}/incidents/stats`,
       { params },
@@ -708,6 +704,7 @@ export interface TelemetryAlertStats {
 export interface GeofenceZone {
   id: string;
   organizationId: string;
+  customerId: string;
   name: string;
   description: string | null;
   type: GeofenceTypeApi;
@@ -721,6 +718,7 @@ export interface GeofenceZone {
 }
 
 export interface CreateGeofencePayload {
+  customerId: string;
   name: string;
   description?: string;
   type: GeofenceTypeApi;
@@ -737,6 +735,7 @@ export const telemetryAPI = {
       type?: string;
       severity?: string;
       vehicleId?: string;
+      customerId?: string;
       acknowledged?: boolean;
       dateFrom?: string;
       dateTo?: string;
@@ -749,9 +748,10 @@ export const telemetryAPI = {
       { params },
     ),
 
-  getAlertStats: (orgId: string) =>
+  getAlertStats: (orgId: string, params?: { customerId?: string }) =>
     externalApi.get<TelemetryAlertStats>(
       `/api/organizations/${orgId}/telemetry/alerts/stats`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined },
     ),
 
   acknowledgeAlert: (orgId: string, alertId: string) =>
@@ -760,9 +760,10 @@ export const telemetryAPI = {
       {},
     ),
 
-  listGeofences: (orgId: string) =>
+  listGeofences: (orgId: string, params?: { customerId?: string }) =>
     externalApi.get<GeofenceZone[]>(
       `/api/organizations/${orgId}/telemetry/geofences`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined },
     ),
 
   createGeofence: (orgId: string, data: CreateGeofencePayload) =>
@@ -1233,19 +1234,31 @@ export interface PeriodSummary {
 }
 
 export const fuelReportsAPI = {
-  consumption: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string }) =>
+  consumption: (
+    orgId: string,
+    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string },
+  ) =>
     externalApi.get<VehicleConsumption[]>(`/api/organizations/${orgId}/fuel/reports/consumption`, { params }),
 
-  costs: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string; groupBy?: string }) =>
+  costs: (
+    orgId: string,
+    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string; groupBy?: string },
+  ) =>
     externalApi.get<CostsPeriod[]>(`/api/organizations/${orgId}/fuel/reports/costs`, { params }),
 
-  benchmark: (orgId: string, params?: { vehicleId?: string; dateFrom?: string; dateTo?: string; state?: string }) =>
+  benchmark: (
+    orgId: string,
+    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string; state?: string },
+  ) =>
     externalApi.get<BenchmarkSummary>(`/api/organizations/${orgId}/fuel/reports/benchmark`, { params }),
 
-  efficiency: (orgId: string, params?: { thresholdPct?: number }) =>
+  efficiency: (orgId: string, params?: { thresholdPct?: number; customerId?: string }) =>
     externalApi.get<VehicleEfficiency[]>(`/api/organizations/${orgId}/fuel/reports/efficiency`, { params }),
 
-  summary: (orgId: string, params: { period: 'day' | 'month' | 'year'; date: string; vehicleId?: string }) =>
+  summary: (
+    orgId: string,
+    params: { period: 'day' | 'month' | 'year'; date: string; vehicleId?: string; customerId?: string },
+  ) =>
     externalApi.get<PeriodSummary>(`/api/organizations/${orgId}/fuel/reports/summary`, { params }),
 
   marketPrices: (orgId: string, params: { state: string; fuelType: string }) =>
@@ -1273,6 +1286,7 @@ export interface ChecklistTemplateItem {
 export interface ChecklistTemplate {
   id: string;
   organizationId: string;
+  customerId?: string;
   name: string;
   description?: string | null;
   active: boolean;
@@ -1317,6 +1331,7 @@ export interface ChecklistEntry {
 
 export interface CreateChecklistTemplatePayload {
   name: string;
+  customerId?: string;
   description?: string;
   active?: boolean;
   vehicleRequired: boolean;
@@ -1345,6 +1360,7 @@ export interface ChecklistEntryFilters {
   status?: EntryStatus;
   dateFrom?: string;
   dateTo?: string;
+  customerId?: string;
 }
 
 export interface ChecklistSummaryQuery {
@@ -1352,6 +1368,7 @@ export interface ChecklistSummaryQuery {
   dateTo?: string;
   templateId?: string;
   vehicleId?: string;
+  customerId?: string;
 }
 
 export interface ChecklistSummaryPeriod {
@@ -1384,9 +1401,10 @@ export interface ChecklistSummaryResponse {
 }
 
 export const checklistAPI = {
-  listTemplates: (organizationId: string) =>
+  listTemplates: (organizationId: string, params?: { customerId?: string }) =>
     externalApi.get<ChecklistTemplate[]>(
       `/api/organizations/${organizationId}/checklist/templates`,
+      { params },
     ),
   createTemplate: (organizationId: string, payload: CreateChecklistTemplatePayload) =>
     externalApi.post<ChecklistTemplate>(

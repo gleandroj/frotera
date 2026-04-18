@@ -60,6 +60,7 @@ import { ResourceSelectCreateRow } from "@/components/resource-select-create-row
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { useAuth } from "@/lib/hooks/use-auth";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 
 const TRACKER_MODELS = [
@@ -182,6 +183,7 @@ export function VehicleFormDialog({
   hideOverlay = false,
 }: VehicleFormDialogProps) {
   const { t } = useTranslation();
+  const { user, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!vehicle;
   const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
@@ -939,7 +941,12 @@ export function VehicleFormDialog({
       customer={null}
       organizationId={organizationId}
       customers={customers}
-      defaultParentId={null}
+      defaultParentId={
+        selectedCustomerId ??
+        (customerId?.trim() ? customerId.trim() : null) ??
+        undefined
+      }
+      allowRootCreation={user?.isSuperAdmin ?? false}
       hideOverlay
       onSuccess={(created) => {
         refreshCustomersList();

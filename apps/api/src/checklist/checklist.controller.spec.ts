@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ChecklistController } from './checklist.controller';
 import { ChecklistService } from './checklist.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
 import {
   ChecklistEntryFilterDto,
   ChecklistEntryResponseDto,
@@ -27,11 +28,18 @@ describe('ChecklistController', () => {
   const entryId = 'entry-1';
   const vehicleId = 'vehicle-1';
 
-  const mockRequest = { user: { userId }, ip: "203.0.113.1" };
+  const mockAccess = { allowedCustomerIds: null as string[] | null, isSuperAdmin: false };
+
+  const mockRequest = {
+    user: { userId, isSuperAdmin: false },
+    allowedCustomerIds: null as string[] | null,
+    ip: "203.0.113.1",
+  };
 
   const mockTemplate: ChecklistTemplateResponseDto = {
     id: templateId,
     organizationId: orgId,
+    customerId: 'cust-1',
     name: 'Pré-Viagem',
     description: null,
     active: true,
@@ -111,6 +119,8 @@ describe('ChecklistController', () => {
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(OrganizationMemberGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
     controller = module.get<ChecklistController>(ChecklistController);
@@ -123,16 +133,16 @@ describe('ChecklistController', () => {
     it('should return all templates for the organization', async () => {
       mockChecklistService.listTemplates.mockResolvedValue([mockTemplate]);
 
-      const result = await controller.listTemplates(orgId);
+      const result = await controller.listTemplates(orgId, undefined, mockRequest as any);
 
-      expect(service.listTemplates).toHaveBeenCalledWith(orgId);
+      expect(service.listTemplates).toHaveBeenCalledWith(orgId, mockAccess, undefined);
       expect(result).toEqual([mockTemplate]);
     });
 
     it('should return empty array when no templates exist', async () => {
       mockChecklistService.listTemplates.mockResolvedValue([]);
 
-      const result = await controller.listTemplates(orgId);
+      const result = await controller.listTemplates(orgId, undefined, mockRequest as any);
 
       expect(result).toEqual([]);
     });
@@ -143,6 +153,7 @@ describe('ChecklistController', () => {
       mockChecklistService.createTemplate.mockResolvedValue(mockTemplate);
 
       const dto: CreateChecklistTemplateDto = {
+        customerId: 'cust-1',
         name: 'Pré-Viagem',
         vehicleRequired: true,
         driverRequirement: ChecklistDriverRequirement.OPTIONAL,
@@ -151,9 +162,9 @@ describe('ChecklistController', () => {
         ],
       };
 
-      const result = await controller.createTemplate(orgId, dto);
+      const result = await controller.createTemplate(orgId, dto, mockRequest as any);
 
-      expect(service.createTemplate).toHaveBeenCalledWith(orgId, dto);
+      expect(service.createTemplate).toHaveBeenCalledWith(orgId, dto, mockAccess);
       expect(result).toEqual(mockTemplate);
     });
 
@@ -161,6 +172,7 @@ describe('ChecklistController', () => {
       mockChecklistService.createTemplate.mockResolvedValue(mockTemplate);
 
       const dto: CreateChecklistTemplateDto = {
+        customerId: 'cust-1',
         name: 'Pré-Viagem',
         description: 'Verificação antes da saída',
         active: false,
@@ -172,9 +184,9 @@ describe('ChecklistController', () => {
         ],
       };
 
-      await controller.createTemplate(orgId, dto);
+      await controller.createTemplate(orgId, dto, mockRequest as any);
 
-      expect(service.createTemplate).toHaveBeenCalledWith(orgId, dto);
+      expect(service.createTemplate).toHaveBeenCalledWith(orgId, dto, mockAccess);
     });
   });
 
@@ -182,9 +194,9 @@ describe('ChecklistController', () => {
     it('should return a specific template by id', async () => {
       mockChecklistService.getTemplate.mockResolvedValue(mockTemplate);
 
-      const result = await controller.getTemplate(orgId, templateId);
+      const result = await controller.getTemplate(orgId, templateId, mockRequest as any);
 
-      expect(service.getTemplate).toHaveBeenCalledWith(templateId, orgId);
+      expect(service.getTemplate).toHaveBeenCalledWith(templateId, orgId, mockAccess);
       expect(result).toEqual(mockTemplate);
     });
   });
@@ -196,9 +208,9 @@ describe('ChecklistController', () => {
 
       const dto: UpdateChecklistTemplateDto = { name: 'Pré-Viagem v2' };
 
-      const result = await controller.updateTemplate(orgId, templateId, dto);
+      const result = await controller.updateTemplate(orgId, templateId, dto, mockRequest as any);
 
-      expect(service.updateTemplate).toHaveBeenCalledWith(templateId, orgId, dto);
+      expect(service.updateTemplate).toHaveBeenCalledWith(templateId, orgId, dto, mockAccess);
       expect(result.name).toBe('Pré-Viagem v2');
     });
 
@@ -212,9 +224,9 @@ describe('ChecklistController', () => {
         ],
       };
 
-      await controller.updateTemplate(orgId, templateId, dto);
+      await controller.updateTemplate(orgId, templateId, dto, mockRequest as any);
 
-      expect(service.updateTemplate).toHaveBeenCalledWith(templateId, orgId, dto);
+      expect(service.updateTemplate).toHaveBeenCalledWith(templateId, orgId, dto, mockAccess);
     });
   });
 
@@ -222,9 +234,9 @@ describe('ChecklistController', () => {
     it('should call service.deleteTemplate with correct args', async () => {
       mockChecklistService.deleteTemplate.mockResolvedValue(undefined);
 
-      await controller.deleteTemplate(orgId, templateId);
+      await controller.deleteTemplate(orgId, templateId, mockRequest as any);
 
-      expect(service.deleteTemplate).toHaveBeenCalledWith(templateId, orgId);
+      expect(service.deleteTemplate).toHaveBeenCalledWith(templateId, orgId, mockAccess);
     });
   });
 
@@ -235,9 +247,9 @@ describe('ChecklistController', () => {
       mockChecklistService.getEntriesSummary.mockResolvedValue(mockSummary);
 
       const query: ChecklistSummaryQueryDto = { templateId };
-      const result = await controller.getEntriesSummary(orgId, query);
+      const result = await controller.getEntriesSummary(orgId, query, mockRequest as any);
 
-      expect(service.getEntriesSummary).toHaveBeenCalledWith(orgId, query);
+      expect(service.getEntriesSummary).toHaveBeenCalledWith(orgId, query, mockAccess);
       expect(result).toEqual(mockSummary);
     });
   });
@@ -249,9 +261,9 @@ describe('ChecklistController', () => {
       mockChecklistService.listEntries.mockResolvedValue([mockEntry]);
 
       const filters: ChecklistEntryFilterDto = {};
-      const result = await controller.listEntries(orgId, filters);
+      const result = await controller.listEntries(orgId, filters, mockRequest as any);
 
-      expect(service.listEntries).toHaveBeenCalledWith(orgId, filters);
+      expect(service.listEntries).toHaveBeenCalledWith(orgId, filters, mockAccess);
       expect(result).toEqual([mockEntry]);
     });
 
@@ -265,15 +277,15 @@ describe('ChecklistController', () => {
         dateTo: '2026-04-30',
       };
 
-      await controller.listEntries(orgId, filters);
+      await controller.listEntries(orgId, filters, mockRequest as any);
 
-      expect(service.listEntries).toHaveBeenCalledWith(orgId, filters);
+      expect(service.listEntries).toHaveBeenCalledWith(orgId, filters, mockAccess);
     });
 
     it('should return empty array when no entries match filters', async () => {
       mockChecklistService.listEntries.mockResolvedValue([]);
 
-      const result = await controller.listEntries(orgId, { status: EntryStatus.INCOMPLETE });
+      const result = await controller.listEntries(orgId, { status: EntryStatus.INCOMPLETE }, mockRequest as any);
 
       expect(result).toEqual([]);
     });
@@ -292,7 +304,7 @@ describe('ChecklistController', () => {
       const result = await controller.createEntry(orgId, dto, mockRequest as any);
 
       expect(mockChecklistService.getMemberIdForUser).toHaveBeenCalledWith(orgId, userId);
-      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, {
+      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, mockAccess, {
         clientIp: "203.0.113.1",
       });
       expect(result).toEqual(mockEntry);
@@ -310,7 +322,7 @@ describe('ChecklistController', () => {
 
       await controller.createEntry(orgId, dto, mockRequest as any);
 
-      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, {
+      expect(service.createEntry).toHaveBeenCalledWith(orgId, memberId, dto, mockAccess, {
         clientIp: "203.0.113.1",
       });
     });
@@ -353,9 +365,9 @@ describe('ChecklistController', () => {
     it('should return a specific entry by id', async () => {
       mockChecklistService.getEntry.mockResolvedValue(mockEntry);
 
-      const result = await controller.getEntry(orgId, entryId);
+      const result = await controller.getEntry(orgId, entryId, mockRequest as any);
 
-      expect(service.getEntry).toHaveBeenCalledWith(entryId, orgId);
+      expect(service.getEntry).toHaveBeenCalledWith(entryId, orgId, mockAccess);
       expect(result).toEqual(mockEntry);
     });
   });
@@ -367,9 +379,9 @@ describe('ChecklistController', () => {
 
       const dto: UpdateChecklistEntryStatusDto = { status: EntryStatus.COMPLETED };
 
-      const result = await controller.updateEntryStatus(orgId, entryId, dto);
+      const result = await controller.updateEntryStatus(orgId, entryId, dto, mockRequest as any);
 
-      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto);
+      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto, mockAccess);
       expect(result.status).toBe(EntryStatus.COMPLETED);
     });
 
@@ -379,9 +391,9 @@ describe('ChecklistController', () => {
 
       const dto: UpdateChecklistEntryStatusDto = { status: EntryStatus.INCOMPLETE };
 
-      await controller.updateEntryStatus(orgId, entryId, dto);
+      await controller.updateEntryStatus(orgId, entryId, dto, mockRequest as any);
 
-      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto);
+      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto, mockAccess);
     });
 
     it('should update entry status to PENDING', async () => {
@@ -390,9 +402,9 @@ describe('ChecklistController', () => {
 
       const dto: UpdateChecklistEntryStatusDto = { status: EntryStatus.PENDING };
 
-      await controller.updateEntryStatus(orgId, entryId, dto);
+      await controller.updateEntryStatus(orgId, entryId, dto, mockRequest as any);
 
-      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto);
+      expect(service.updateEntryStatus).toHaveBeenCalledWith(entryId, orgId, dto, mockAccess);
     });
   });
 
@@ -406,6 +418,8 @@ describe('ChecklistController', () => {
       })
         .overrideGuard(JwtAuthGuard)
         .useValue({ canActivate: jest.fn(() => false) })
+        .overrideGuard(OrganizationMemberGuard)
+        .useValue({ canActivate: jest.fn(() => true) })
         .compile();
 
       const guardedController = guardModule.get<ChecklistController>(ChecklistController);
@@ -419,7 +433,7 @@ describe('ChecklistController', () => {
     it('should allow access when valid JWT is provided', async () => {
       mockChecklistService.listTemplates.mockResolvedValue([]);
 
-      const result = await controller.listTemplates(orgId);
+      const result = await controller.listTemplates(orgId, undefined, mockRequest as any);
 
       expect(result).toEqual([]);
     });

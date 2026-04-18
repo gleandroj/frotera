@@ -86,12 +86,14 @@ export default function IncidentsPage() {
         ...(filterSeverity ? { severity: filterSeverity } : {}),
         ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
         ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {}),
+        ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
       };
       const [listRes, statsRes] = await Promise.all([
         incidentsAPI.list(currentOrganization.id, params),
         incidentsAPI.stats(currentOrganization.id, {
           ...(dateFrom ? { dateFrom: `${dateFrom}T00:00:00.000Z` } : {}),
           ...(dateTo ? { dateTo: `${dateTo}T23:59:59.999Z` } : {}),
+          ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
         }),
       ]);
       setIncidents(listRes.data.incidents);
@@ -110,6 +112,7 @@ export default function IncidentsPage() {
     filterSeverity,
     dateFrom,
     dateTo,
+    selectedCustomerId,
     t,
   ]);
 
