@@ -115,7 +115,6 @@ model CustomerFleetSetting {
 
 enum TrackerModel {
   X12_GT06
-  X22_NT20
 }
 
 enum AlertType {
@@ -128,6 +127,9 @@ enum AlertType {
   LOW_BATTERY
   IGNITION_ON
   IGNITION_OFF
+  SOS
+  POWER_CUT
+  SHOCK
 
   @@map("alert_type")
 }
@@ -199,9 +201,10 @@ model TrackerDevice {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vehicle       Vehicle?
   positions     DevicePosition[]
+  statusLogs    DeviceStatusLog[]
   telemetryAlerts TelemetryAlert[]
 
   @@index([organizationId])
@@ -210,20 +213,48 @@ model TrackerDevice {
 }
 
 model DevicePosition {
-  id        String   @id @default(cuid())
-  deviceId  String
-  latitude  Float
-  longitude Float
-  altitude  Float?
-  speed     Float?
-  heading   Float?
-  recordedAt DateTime
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  deviceId    String
+  latitude    Float
+  longitude   Float
+  altitude    Float?
+  speed       Float?
+  heading     Float?
+  recordedAt  DateTime
+  createdAt   DateTime @default(now())
+  // GT06 status fields
+  ignitionOn  Boolean?
+  voltageLevel Int?
+  gsmSignal   Int?
+  alarmCode   Int?
+  chargeOn    Boolean?
+  powerCut    Boolean?
+  lbsMcc      Int?
+  lbsMnc      Int?
+  lbsLac      Int?
+  lbsCellId   Int?
 
   device TrackerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, recordedAt])
   @@map("device_positions")
+}
+
+model DeviceStatusLog {
+  id           String   @id @default(cuid())
+  deviceId     String
+  recordedAt   DateTime @default(now())
+  ignitionOn   Boolean?
+  voltageLevel Int?
+  gsmSignal    Int?
+  alarmCode    Int?
+  chargeOn     Boolean?
+  powerCut     Boolean?
+
+  device TrackerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, recordedAt])
+  @@map("device_status_logs")
 }
 
 model TelemetryAlert {

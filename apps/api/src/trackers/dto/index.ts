@@ -23,6 +23,17 @@ export interface NormalizedPosition {
   heading?: number;
   recordedAt: string; // ISO string
   alarmFlags?: number;
+  // GT06 status fields
+  ignitionOn?: boolean;
+  voltageLevel?: number;
+  gsmSignal?: number;
+  alarmCode?: number;
+  chargeOn?: boolean;
+  powerCut?: boolean;
+  lbsMcc?: number;
+  lbsMnc?: number;
+  lbsLac?: number;
+  lbsCellId?: number;
 }
 
 // ─── Devices ─────────────────────────────────────────────────────────────────

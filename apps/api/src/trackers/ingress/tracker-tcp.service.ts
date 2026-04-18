@@ -18,12 +18,16 @@ import {
   isGT06Login,
   isGT06Location,
   isGT06Heartbeat,
+  isGT06AlarmPacket,
   getImeiFromGT06Login,
   getGT06ProtocolName,
   parseGT06LocationToPosition,
+  parseGT06HeartbeatStatus,
+  parseGT06AlarmPacket,
   buildGT06LoginAck,
   buildGT06HeartbeatAck,
   buildGT06LocationAck,
+  buildGT06AlarmAck,
 } from "../protocols/gt06.parser";
 
 interface ParsedPacket {
@@ -220,10 +224,60 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (isGT06Heartbeat(parsed.protocolNumber)) {
-      this.logger.log(
-        `[GT06] Heartbeat | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber}`,
-      );
       socket.write(buildGT06HeartbeatAck(parsed.serialNumber, parsed.protocolNumber));
+      const status = parseGT06HeartbeatStatus(parsed.content);
+      this.logger.log(
+        `[GT06] Heartbeat | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber} | acc=${status.accOn} volt=${status.voltageLevel} gsm=${status.gsmSignal}`,
+      );
+      if (ctx.deviceId && ctx.imei) {
+        void this.redisWriter.pushStatusOnly(ctx.deviceId, status).catch(() => undefined);
+        if (ctx.deviceOrganizationId) {
+          void this.processStatusAlerts(ctx, status).catch((err: Error) =>
+            this.logger.warn(`Heartbeat alert failed: ${err.message}`),
+          );
+        }
+        void this.persistStatusLog(ctx.deviceId, status).catch(() => undefined);
+      }
+      return;
+    }
+
+    if (isGT06AlarmPacket(parsed.protocolNumber)) {
+      socket.write(buildGT06AlarmAck(parsed.serialNumber, parsed.protocolNumber));
+      const position = parseGT06AlarmPacket(parsed.content);
+      const alarmStr = position?.alarmCode != null ? `alarmCode=${position.alarmCode}` : "no-gps-fix";
+      this.logger.log(
+        `[GT06] Alarm | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber} | ${alarmStr}`,
+      );
+      if (ctx.deviceId && ctx.imei) {
+        if (position) {
+          await this.redisWriter.pushPosition(ctx.deviceId, ctx.imei, position);
+        }
+        if (ctx.deviceOrganizationId) {
+          const status = {
+            accOn: position?.ignitionOn,
+            chargeOn: position?.chargeOn,
+            powerCut: position?.powerCut,
+            alarmCode: position?.alarmCode,
+            voltageLevel: position?.voltageLevel,
+            gsmSignal: position?.gsmSignal,
+          };
+          void this.processStatusAlerts(ctx, status).catch((err: Error) =>
+            this.logger.warn(`Alarm alert failed: ${err.message}`),
+          );
+          if (position?.alarmCode != null && position.alarmCode > 0) {
+            void this.telemetryAlerts
+              .processDeviceAlarm({
+                deviceId: ctx.deviceId,
+                organizationId: ctx.deviceOrganizationId,
+                vehicleId: ctx.deviceVehicleId,
+                alarmCode: position.alarmCode,
+              })
+              .catch((err: Error) =>
+                this.logger.warn(`processDeviceAlarm failed: ${err.message}`),
+              );
+          }
+        }
+      }
       return;
     }
 
@@ -263,8 +317,64 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       }
     }
   }
+
+  private async processStatusAlerts(
+    ctx: SocketContext,
+    status: {
+      accOn?: boolean;
+      chargeOn?: boolean;
+      powerCut?: boolean;
+      alarmCode?: number;
+      voltageLevel?: number;
+      gsmSignal?: number;
+    },
+  ): Promise<void> {
+    if (!ctx.deviceId || !ctx.deviceOrganizationId) return;
+
+    // Ignition change detection via status-only events
+    if (status.accOn != null && status.accOn !== ctx.prevIgnitionOn) {
+      ctx.prevIgnitionOn = status.accOn;
+    }
+
+    // Low battery: voltageLevel 0 = power cut, 1 = very low
+    if (status.voltageLevel != null && status.voltageLevel <= 1 && !status.powerCut) {
+      void this.telemetryAlerts
+        .processDeviceAlarm({
+          deviceId: ctx.deviceId,
+          organizationId: ctx.deviceOrganizationId,
+          vehicleId: ctx.deviceVehicleId,
+          alarmCode: 0x10, // synthetic: low battery
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  private async persistStatusLog(
+    deviceId: string,
+    status: {
+      accOn?: boolean;
+      chargeOn?: boolean;
+      powerCut?: boolean;
+      alarmCode?: number;
+      voltageLevel?: number;
+      gsmSignal?: number;
+    },
+  ): Promise<void> {
+    await this.prisma.deviceStatusLog.create({
+      data: {
+        deviceId,
+        ignitionOn: status.accOn,
+        chargeOn: status.chargeOn,
+        powerCut: status.powerCut,
+        alarmCode: status.alarmCode,
+        voltageLevel: status.voltageLevel,
+        gsmSignal: status.gsmSignal,
+      },
+    });
+  }
 }
 
-function extractIgnitionFromPosition(_position: NormalizedPosition): boolean | null {
-  return null;
+function extractIgnitionFromPosition(position: NormalizedPosition): boolean | null {
+  return position.ignitionOn ?? null;
 }
+

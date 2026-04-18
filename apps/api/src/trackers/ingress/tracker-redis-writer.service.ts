@@ -37,31 +37,39 @@ export class TrackerRedisWriterService {
     const spd = position.speed != null ? String(position.speed) : "";
     const hdg = position.heading != null ? String(position.heading) : "";
     const rec = position.recordedAt;
-    const alarm =
-      position.alarmFlags != null ? String(position.alarmFlags) : "";
+    const alarm = position.alarmFlags != null ? String(position.alarmFlags) : "";
+    const ign = position.ignitionOn != null ? String(position.ignitionOn) : "";
+    const volt = position.voltageLevel != null ? String(position.voltageLevel) : "";
+    const gsm = position.gsmSignal != null ? String(position.gsmSignal) : "";
+    const alarmCode = position.alarmCode != null ? String(position.alarmCode) : "";
+    const chrg = position.chargeOn != null ? String(position.chargeOn) : "";
+    const pcut = position.powerCut != null ? String(position.powerCut) : "";
+    const mcc = position.lbsMcc != null ? String(position.lbsMcc) : "";
+    const mnc = position.lbsMnc != null ? String(position.lbsMnc) : "";
+    const lac = position.lbsLac != null ? String(position.lbsLac) : "";
+    const cell = position.lbsCellId != null ? String(position.lbsCellId) : "";
 
     await this.redis.sendCommand([
-      "XADD",
-      this.streamKey,
-      "*",
-      "deviceId",
-      deviceId,
-      "imei",
-      imei,
-      "latitude",
-      lat,
-      "longitude",
-      lng,
-      "altitude",
-      alt,
-      "speed",
-      spd,
-      "heading",
-      hdg,
-      "recordedAt",
-      rec,
-      "alarmFlags",
-      alarm,
+      "XADD", this.streamKey, "*",
+      "deviceId", deviceId,
+      "imei", imei,
+      "latitude", lat,
+      "longitude", lng,
+      "altitude", alt,
+      "speed", spd,
+      "heading", hdg,
+      "recordedAt", rec,
+      "alarmFlags", alarm,
+      "ignitionOn", ign,
+      "voltageLevel", volt,
+      "gsmSignal", gsm,
+      "alarmCode", alarmCode,
+      "chargeOn", chrg,
+      "powerCut", pcut,
+      "lbsMcc", mcc,
+      "lbsMnc", mnc,
+      "lbsLac", lac,
+      "lbsCellId", cell,
     ]);
 
     await this.redis.hSet(lastKey, {
@@ -87,6 +95,34 @@ export class TrackerRedisWriterService {
     await this.redis.publish(pubChannel, payload);
 
     this.logger.debug(`Pushed position for device ${deviceId}`);
+  }
+
+  /**
+   * Push a status-only event (heartbeat without GPS) to a dedicated Redis key.
+   * Does not write to the position stream (no lat/lng available).
+   */
+  async pushStatusOnly(
+    deviceId: string,
+    status: {
+      accOn?: boolean;
+      chargeOn?: boolean;
+      powerCut?: boolean;
+      alarmCode?: number;
+      voltageLevel?: number;
+      gsmSignal?: number;
+    },
+  ): Promise<void> {
+    const key = `tracker:status:${deviceId}`;
+    await this.redis.hSet(key, {
+      ignitionOn: status.accOn != null ? String(status.accOn) : "",
+      chargeOn: status.chargeOn != null ? String(status.chargeOn) : "",
+      powerCut: status.powerCut != null ? String(status.powerCut) : "",
+      alarmCode: status.alarmCode != null ? String(status.alarmCode) : "",
+      voltageLevel: status.voltageLevel != null ? String(status.voltageLevel) : "",
+      gsmSignal: status.gsmSignal != null ? String(status.gsmSignal) : "",
+      updatedAt: new Date().toISOString(),
+    });
+    this.logger.debug(`Pushed status-only for device ${deviceId}`);
   }
 
   /**

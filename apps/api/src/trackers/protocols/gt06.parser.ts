@@ -12,12 +12,14 @@ const START_2 = 0x79;
 const STOP = [0x0d, 0x0a];
 
 const PROTOCOL_LOGIN = 0x01;
+const PROTOCOL_LOCATION_STD = 0x12;   // GPS standard (divisor 1_800_000, bits 12/11/10)
 const PROTOCOL_LOCATION_2G = 0x22;
 const PROTOCOL_LOCATION_4G = 0xa0;
 const PROTOCOL_LOCATION_ADVANCED = 0x94; // GPS + LBS + status
 const PROTOCOL_LOCATION_ON_DEMAND = 0x1a; // trigger via SMS, response via TCP
 const PROTOCOL_HEARTBEAT = 0x36;
 const PROTOCOL_HEARTBEAT_OLD = 0x13;
+const PROTOCOL_ALARM = 0x16;          // GPS + LBS + alarm status
 
 export function isGT06Packet(buffer: Buffer): boolean {
   if (buffer.length < 10) return false;
@@ -137,11 +139,16 @@ export function isGT06Login(protocolNumber: number): boolean {
 
 export function isGT06Location(protocolNumber: number): boolean {
   return (
+    protocolNumber === PROTOCOL_LOCATION_STD ||
     protocolNumber === PROTOCOL_LOCATION_2G ||
     protocolNumber === PROTOCOL_LOCATION_4G ||
     protocolNumber === PROTOCOL_LOCATION_ADVANCED ||
     protocolNumber === PROTOCOL_LOCATION_ON_DEMAND
   );
+}
+
+export function isGT06AlarmPacket(protocolNumber: number): boolean {
+  return protocolNumber === PROTOCOL_ALARM;
 }
 
 export function isGT06Heartbeat(protocolNumber: number): boolean {
@@ -156,6 +163,8 @@ export function getGT06ProtocolName(protocolNumber: number): string {
   switch (protocolNumber) {
     case PROTOCOL_LOGIN:
       return "Login";
+    case PROTOCOL_LOCATION_STD:
+      return "Location (0x12 std)";
     case PROTOCOL_LOCATION_2G:
       return "Location (2G)";
     case PROTOCOL_LOCATION_4G:
@@ -168,6 +177,8 @@ export function getGT06ProtocolName(protocolNumber: number): string {
       return "Heartbeat";
     case PROTOCOL_HEARTBEAT_OLD:
       return "Heartbeat (0x13)";
+    case PROTOCOL_ALARM:
+      return "Alarm (0x16)";
     default:
       return `Unknown (0x${protocolNumber.toString(16).padStart(2, "0")})`;
   }
@@ -204,6 +215,166 @@ export function findGpsOffset(buf: Buffer): number | null {
     }
   }
   return null;
+}
+
+/**
+ * Parse 1-byte GT06 terminal information field.
+ * Bit 6 (0x40) = ACC/ignition on, bit 5 (0x20) = charge on, bits 2-0 = alarm type
+ * (0=normal, 1=SOS, 2=power cut, 3=shock/vibration).
+ */
+export function parseGT06TerminalInfo(b: number): {
+  accOn: boolean;
+  chargeOn: boolean;
+  powerCut: boolean;
+  alarmCode: number;
+} {
+  const alarmCode = b & 0x07;
+  return {
+    accOn: (b & 0x40) !== 0,
+    chargeOn: (b & 0x20) !== 0,
+    powerCut: alarmCode === 2,
+    alarmCode,
+  };
+}
+
+/**
+ * Parse GT06 standard location packet (0x12).
+ * Same 18-byte GPS block layout as 0x22, but:
+ *   - Divisor 1_800_000 instead of 300_000
+ *   - Bit 12 = GPS fix, bit 11 = lat south, bit 10 = lng west
+ */
+export function getPositionFromGT06LocationStd(
+  content: Buffer,
+): NormalizedPosition | null {
+  if (content.length < 18) return null;
+
+  const year = 2000 + ((content[0] >> 4) * 10 + (content[0] & 0x0f));
+  const month = (content[1] >> 4) * 10 + (content[1] & 0x0f);
+  const day = (content[2] >> 4) * 10 + (content[2] & 0x0f);
+  const hour = (content[3] >> 4) * 10 + (content[3] & 0x0f);
+  const min = (content[4] >> 4) * 10 + (content[4] & 0x0f);
+  const sec = (content[5] >> 4) * 10 + (content[5] & 0x0f);
+  const recordedAt = new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
+
+  let lat = content.readInt32BE(7) / 1_800_000;
+  let lng = content.readInt32BE(11) / 1_800_000;
+  const speed = (content[15] ?? 0) * 1.852;
+  const courseStatus = content.readUInt16BE(16);
+
+  const gpsFixed = (courseStatus & 0x1000) !== 0;  // bit 12
+  const latSouth = (courseStatus & 0x0800) !== 0;  // bit 11
+  const lngWest  = (courseStatus & 0x0400) !== 0;  // bit 10
+  const course   = courseStatus & 0x03ff;
+
+  if (latSouth) lat = -lat;
+  if (lngWest)  lng = -lng;
+
+  if (!gpsFixed) return null;
+
+  return { latitude: lat, longitude: lng, speed, heading: course, recordedAt };
+}
+
+/**
+ * Parse GT06 heartbeat status (0x13 old heartbeat), content is typically 5 bytes.
+ * Byte 0: terminal info, byte 1: voltage level, byte 2: GSM signal.
+ * Returns status fields without a position (no GPS in heartbeat).
+ */
+export function parseGT06HeartbeatStatus(content: Buffer): {
+  accOn?: boolean;
+  chargeOn?: boolean;
+  powerCut?: boolean;
+  alarmCode?: number;
+  voltageLevel?: number;
+  gsmSignal?: number;
+} {
+  if (content.length < 1) return {};
+  const { accOn, chargeOn, powerCut, alarmCode } = parseGT06TerminalInfo(content[0]);
+  const voltageLevel = content.length >= 2 ? content[1] : undefined;
+  const gsmSignal = content.length >= 3 ? content[2] : undefined;
+  return { accOn, chargeOn, powerCut, alarmCode, voltageLevel, gsmSignal };
+}
+
+/**
+ * Parse GT06 alarm packet (0x16): GPS block + LBS section + status bytes.
+ * Layout: 18B GPS | 1B LBS-len | [LBS data] | terminal-info | voltage | GSM
+ * statusOffset = 18 + content[18] (LBS section total length covers its own length byte).
+ */
+export function parseGT06AlarmPacket(content: Buffer): NormalizedPosition | null {
+  if (content.length < 19) return null;
+
+  const year = 2000 + ((content[0] >> 4) * 10 + (content[0] & 0x0f));
+  const month = (content[1] >> 4) * 10 + (content[1] & 0x0f);
+  const day = (content[2] >> 4) * 10 + (content[2] & 0x0f);
+  const hour = (content[3] >> 4) * 10 + (content[3] & 0x0f);
+  const min = (content[4] >> 4) * 10 + (content[4] & 0x0f);
+  const sec = (content[5] >> 4) * 10 + (content[5] & 0x0f);
+  const recordedAt = new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
+
+  let lat = content.readInt32BE(7) / 300_000;
+  let lng = content.readInt32BE(11) / 300_000;
+  const speed = (content[15] ?? 0) * 1.852;
+  const courseStatus = content.readUInt16BE(16);
+
+  const gpsFixed = (courseStatus & 0x8000) !== 0;
+  const latSouth = (courseStatus & 0x4000) !== 0;
+  const lngWest  = (courseStatus & 0x2000) !== 0;
+  const course   = courseStatus & 0x03ff;
+
+  if (latSouth) lat = -lat;
+  if (lngWest)  lng = -lng;
+
+  const lbsLen = content[18];
+  const statusOffset = 18 + lbsLen;
+
+  // Parse LBS cell info when present (MCC 2B, MNC 1B, LAC 2B, CellID 2B = 7 bytes min)
+  let lbsMcc: number | undefined;
+  let lbsMnc: number | undefined;
+  let lbsLac: number | undefined;
+  let lbsCellId: number | undefined;
+  if (lbsLen >= 8 && content.length >= 19 + 7) {
+    lbsMcc    = content.readUInt16BE(19);
+    lbsMnc    = content[21];
+    lbsLac    = content.readUInt16BE(22);
+    lbsCellId = content.readUInt16BE(24);
+  }
+
+  let accOn: boolean | undefined;
+  let chargeOn: boolean | undefined;
+  let powerCut: boolean | undefined;
+  let alarmCode: number | undefined;
+  let voltageLevel: number | undefined;
+  let gsmSignal: number | undefined;
+
+  if (content.length > statusOffset) {
+    const info = parseGT06TerminalInfo(content[statusOffset]);
+    accOn = info.accOn;
+    chargeOn = info.chargeOn;
+    powerCut = info.powerCut;
+    alarmCode = info.alarmCode;
+  }
+  if (content.length > statusOffset + 1) voltageLevel = content[statusOffset + 1];
+  if (content.length > statusOffset + 2) gsmSignal    = content[statusOffset + 2];
+
+  // Accept alarm packets even without GPS fix (alarm is still meaningful)
+  if (!gpsFixed) return null;
+
+  return {
+    latitude: lat,
+    longitude: lng,
+    speed,
+    heading: course,
+    recordedAt,
+    ignitionOn: accOn,
+    chargeOn,
+    powerCut,
+    alarmCode,
+    voltageLevel,
+    gsmSignal,
+    lbsMcc,
+    lbsMnc,
+    lbsLac,
+    lbsCellId,
+  };
 }
 
 /**
@@ -404,6 +575,9 @@ export function parseGT06LocationToPosition(
   protocolNumber: number,
   content: Buffer,
 ): NormalizedPosition | null {
+  if (protocolNumber === PROTOCOL_LOCATION_STD) {
+    return getPositionFromGT06LocationStd(content);
+  }
   if (protocolNumber === PROTOCOL_LOCATION_ON_DEMAND) {
     return getPositionFromGT06LocationOnDemand(content);
   }
@@ -438,6 +612,17 @@ export function buildGT06HeartbeatAck(
   content.writeUInt16BE(serialNumber, 0);
   content.writeUInt16BE(0x0000, 2);
   return buildGT06Response(protocol, content, serialNumber);
+}
+
+/** Build alarm ACK (0x16 or other alarm protocol). */
+export function buildGT06AlarmAck(
+  serialNumber: number,
+  proto: number = PROTOCOL_ALARM,
+): Buffer {
+  const content = Buffer.alloc(4);
+  content.writeUInt16BE(serialNumber, 0);
+  content.writeUInt16BE(0x0000, 2);
+  return buildGT06Response(proto, content, serialNumber);
 }
 
 /** Build location ACK (same protocol + serial as request: 0x22, 0xa0, 0x94, or 0x1A). */

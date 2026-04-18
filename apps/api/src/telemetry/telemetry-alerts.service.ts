@@ -396,6 +396,42 @@ export class TelemetryAlertsService {
     );
   }
 
+  /**
+   * Process a hardware alarm (SOS, power cut, shock) from GT06 alarmCode.
+   * Dedup TTLs: SOS=0s (always), POWER_CUT=300s, SHOCK=60s, LOW_BATTERY(0x10)=1800s.
+   */
+  async processDeviceAlarm(params: {
+    deviceId: string;
+    organizationId: string;
+    vehicleId: string | null;
+    alarmCode: number;
+  }): Promise<void> {
+    const { deviceId, organizationId, vehicleId, alarmCode } = params;
+
+    type AlarmDef = { type: AlertType; severity: AlertSeverity; message: string; dedupSec: number };
+
+    const ALARM_MAP: Record<number, AlarmDef> = {
+      1: { type: AlertType.SOS, severity: AlertSeverity.CRITICAL, message: "Alarme SOS acionado", dedupSec: 0 },
+      2: { type: AlertType.POWER_CUT, severity: AlertSeverity.CRITICAL, message: "Corte de energia detectado", dedupSec: 300 },
+      3: { type: AlertType.SHOCK, severity: AlertSeverity.WARNING, message: "Choque/vibração detectado", dedupSec: 60 },
+      0x10: { type: AlertType.LOW_BATTERY, severity: AlertSeverity.WARNING, message: "Bateria fraca detectada", dedupSec: 1800 },
+    };
+
+    const def = ALARM_MAP[alarmCode];
+    if (!def) return;
+
+    await this.persistAndPublish({
+      organizationId,
+      vehicleId,
+      deviceId,
+      type: def.type,
+      severity: def.severity,
+      message: def.message,
+      metadata: { alarmCode },
+      dedupTtlSec: def.dedupSec,
+    });
+  }
+
   /** Cron: create DEVICE_OFFLINE when last position is older than threshold. */
   private envOfflineThresholdMinutes(): number {
     const raw = this.config.get<string>("DEVICE_OFFLINE_THRESHOLD_MINUTES") ?? "15";

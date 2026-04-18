@@ -101,6 +101,16 @@ export class TrackerPersistCronService {
         speed?: number;
         heading?: number;
         recordedAt: Date;
+        ignitionOn?: boolean;
+        voltageLevel?: number;
+        gsmSignal?: number;
+        alarmCode?: number;
+        chargeOn?: boolean;
+        powerCut?: boolean;
+        lbsMcc?: number;
+        lbsMnc?: number;
+        lbsLac?: number;
+        lbsCellId?: number;
       }> = [];
       const idsToAck: string[] = [];
 
@@ -113,6 +123,16 @@ export class TrackerPersistCronService {
           speed,
           heading,
           recordedAt,
+          ignitionOn,
+          voltageLevel,
+          gsmSignal,
+          alarmCode,
+          chargeOn,
+          powerCut,
+          lbsMcc,
+          lbsMnc,
+          lbsLac,
+          lbsCellId,
         } = message;
         if (!deviceId || !latitude || !longitude || !recordedAt) {
           this.logger.warn(
@@ -129,6 +149,16 @@ export class TrackerPersistCronService {
           speed: speed ? parseFloat(speed) : undefined,
           heading: heading ? parseFloat(heading) : undefined,
           recordedAt: new Date(recordedAt),
+          ignitionOn: ignitionOn === "true" ? true : ignitionOn === "false" ? false : undefined,
+          voltageLevel: voltageLevel ? parseInt(voltageLevel, 10) : undefined,
+          gsmSignal: gsmSignal ? parseInt(gsmSignal, 10) : undefined,
+          alarmCode: alarmCode ? parseInt(alarmCode, 10) : undefined,
+          chargeOn: chargeOn === "true" ? true : chargeOn === "false" ? false : undefined,
+          powerCut: powerCut === "true" ? true : powerCut === "false" ? false : undefined,
+          lbsMcc: lbsMcc ? parseInt(lbsMcc, 10) : undefined,
+          lbsMnc: lbsMnc ? parseInt(lbsMnc, 10) : undefined,
+          lbsLac: lbsLac ? parseInt(lbsLac, 10) : undefined,
+          lbsCellId: lbsCellId ? parseInt(lbsCellId, 10) : undefined,
         });
         idsToAck.push(id);
       }

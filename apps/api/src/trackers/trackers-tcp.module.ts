@@ -1,6 +1,6 @@
 /**
  * TrackersTcpModule — TCP ingress + persist cron.
- * Provides: TrackerTcpService (GT06/NT20 TCP server) and TrackerPersistCronService (Redis→Postgres).
+ * Provides: TrackerTcpService (GT06 TCP server) and TrackerPersistCronService (Redis→Postgres).
  * Imports TrackersModule so it has access to Redis, services, etc.
  * Used only by TrackerAppModule (tracker-main.ts process). Never imported by the HTTP AppModule.
  */

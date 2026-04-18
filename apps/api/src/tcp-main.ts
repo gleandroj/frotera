@@ -1,7 +1,7 @@
 /**
  * Entry point for the tracker TCP process (no HTTP).
  * Boots a minimal NestJS context with only: Config, Prisma, Schedule, and TrackersTcpModule.
- * The TCP server (GT06/NT20) and the persist cron (Redis→Postgres) run here.
+ * The TCP server (GT06) and the persist cron (Redis→Postgres) run here.
  *
  * Usage:
  *   pnpm run start:tracker        (production)
