@@ -44,7 +44,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'CHECKLIST', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
-      { module: 'TELEMETRY', actions: ['VIEW'],                          scope: 'ALL' },
+      { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'],          scope: 'ALL' },
       { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
     ],
   },
@@ -63,7 +63,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'CHECKLIST', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
-      { module: 'TELEMETRY', actions: ['VIEW'],                 scope: 'ALL' },
+      { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'], scope: 'ALL' },
       { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
     ],
   },
@@ -79,6 +79,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'CHECKLIST', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'FUEL',      actions: ['VIEW','CREATE'],        scope: 'ALL' },
       { module: 'INCIDENTS', actions: ['VIEW','CREATE'],        scope: 'ALL' },
+      { module: 'TELEMETRY', actions: ['VIEW','EDIT'],          scope: 'ALL' },
     ],
   },
   VIEWER: {
@@ -94,6 +95,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'FUEL',      actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'CHECKLIST', actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'INCIDENTS', actions: ['VIEW'], scope: 'ASSIGNED' },
+      { module: 'TELEMETRY', actions: ['VIEW'], scope: 'ASSIGNED' },
     ],
   },
   DRIVER: {

@@ -64,6 +64,19 @@ export function buildTrackerPositionsSocket(orgId: string): Socket {
   });
 }
 
+export function buildTelemetryAlertsSocket(orgId: string): Socket {
+  const base = externalApiUrl || "http://localhost:3001";
+  return io(base + "/telemetry-alerts", {
+    autoConnect: false,
+    transports: ["websocket", "polling"],
+    reconnection: true,
+    auth: {
+      token: getAccessToken(),
+      organizationId: orgId,
+    },
+  });
+}
+
 const setTokens = (accessToken: string, refreshToken: string): void => {
   setLocalStorage("accessToken", accessToken);
   setLocalStorage("refreshToken", refreshToken);
@@ -400,6 +413,7 @@ export interface Vehicle {
   chassis?: string | null;
   vehicleType?: string | null;
   inactive?: boolean;
+  speedLimit?: number | null;
   notes?: string | null;
   trackerDeviceId?: string | null;
   customerId?: string | null;
@@ -432,6 +446,7 @@ export interface CreateVehiclePayload {
   chassis?: string;
   vehicleType?: string;
   inactive?: boolean;
+  speedLimit?: number | null;
   notes?: string;
   trackerDeviceId?: string;
   customerId?: string;
@@ -449,6 +464,7 @@ export interface UpdateVehiclePayload {
   chassis?: string;
   vehicleType?: string;
   inactive?: boolean;
+  speedLimit?: number | null;
   notes?: string;
   trackerDeviceId?: string;
   customerId?: string;
@@ -600,6 +616,131 @@ export const incidentsAPI = {
       `/api/organizations/${orgId}/incidents/stats`,
       { params },
     ),
+};
+
+// ── TELEMETRY ───────────────────────────────────────────────────────────────
+
+export type TelemetryAlertType =
+  | "SPEEDING"
+  | "HARSH_BRAKING"
+  | "RAPID_ACCELERATION"
+  | "GEOFENCE_ENTER"
+  | "GEOFENCE_EXIT"
+  | "DEVICE_OFFLINE"
+  | "LOW_BATTERY"
+  | "IGNITION_ON"
+  | "IGNITION_OFF";
+
+export type TelemetryAlertSeverity = "INFO" | "WARNING" | "CRITICAL";
+
+export type GeofenceTypeApi = "CIRCLE" | "POLYGON";
+
+export interface TelemetryAlert {
+  id: string;
+  organizationId: string;
+  vehicleId: string | null;
+  deviceId: string;
+  type: TelemetryAlertType;
+  severity: TelemetryAlertSeverity;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  createdAt: string;
+  vehicle?: { id: string; name: string | null; plate: string | null } | null;
+  device?: { id: string; imei: string; name: string | null } | null;
+}
+
+export interface TelemetryAlertListResponse {
+  data: TelemetryAlert[];
+  total: number;
+}
+
+export interface TelemetryAlertStats {
+  total: number;
+  unacknowledged: number;
+  byType: Record<string, number>;
+  bySeverity: Record<string, number>;
+}
+
+export interface GeofenceZone {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string | null;
+  type: GeofenceTypeApi;
+  coordinates: Record<string, unknown>;
+  vehicleIds: string[];
+  alertOnEnter: boolean;
+  alertOnExit: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGeofencePayload {
+  name: string;
+  description?: string;
+  type: GeofenceTypeApi;
+  coordinates: Record<string, unknown>;
+  vehicleIds?: string[];
+  alertOnEnter?: boolean;
+  alertOnExit?: boolean;
+}
+
+export const telemetryAPI = {
+  listAlerts: (
+    orgId: string,
+    params?: {
+      type?: string;
+      severity?: string;
+      vehicleId?: string;
+      acknowledged?: boolean;
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: number;
+      offset?: number;
+    },
+  ) =>
+    externalApi.get<TelemetryAlertListResponse>(
+      `/api/organizations/${orgId}/telemetry/alerts`,
+      { params },
+    ),
+
+  getAlertStats: (orgId: string) =>
+    externalApi.get<TelemetryAlertStats>(
+      `/api/organizations/${orgId}/telemetry/alerts/stats`,
+    ),
+
+  acknowledgeAlert: (orgId: string, alertId: string) =>
+    externalApi.patch<TelemetryAlert>(
+      `/api/organizations/${orgId}/telemetry/alerts/${alertId}/acknowledge`,
+      {},
+    ),
+
+  listGeofences: (orgId: string) =>
+    externalApi.get<GeofenceZone[]>(
+      `/api/organizations/${orgId}/telemetry/geofences`,
+    ),
+
+  createGeofence: (orgId: string, data: CreateGeofencePayload) =>
+    externalApi.post<GeofenceZone>(
+      `/api/organizations/${orgId}/telemetry/geofences`,
+      data,
+    ),
+
+  updateGeofence: (
+    orgId: string,
+    id: string,
+    data: Partial<CreateGeofencePayload> & { active?: boolean },
+  ) =>
+    externalApi.patch<GeofenceZone>(
+      `/api/organizations/${orgId}/telemetry/geofences/${id}`,
+      data,
+    ),
+
+  deleteGeofence: (orgId: string, id: string) =>
+    externalApi.delete(`/api/organizations/${orgId}/telemetry/geofences/${id}`),
 };
 
 // Tracker devices and positions

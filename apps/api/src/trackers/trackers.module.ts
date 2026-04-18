@@ -49,6 +49,12 @@ import { TrackerPositionsGateway } from "./positions/tracker-positions.gateway";
     TrackerPositionsStreamService,
     TrackerPositionsGateway,
   ],
-  exports: [TrackerDevicesService, VehiclesService, TrackerRedisWriterService, TRACKER_REDIS],
+  exports: [
+    TrackerDevicesService,
+    VehiclesService,
+    TrackerRedisWriterService,
+    TRACKER_REDIS,
+    TRACKER_REDIS_SUB,
+  ],
 })
 export class TrackersModule {}

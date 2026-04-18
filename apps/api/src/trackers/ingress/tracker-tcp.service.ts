@@ -8,7 +8,9 @@ import { ConfigService } from "@nestjs/config";
 import * as net from "net";
 import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
+import { NormalizedPosition } from "../dto/index";
 import { TrackerRedisWriterService } from "./tracker-redis-writer.service";
+import { TelemetryAlertsService } from "@/telemetry/telemetry-alerts.service";
 import {
   isGT06Packet,
   getGT06PacketLength,
@@ -36,6 +38,9 @@ interface SocketContext {
   deviceId: string | null;
   imei: string | null;
   protocol: "GT06" | null;
+  deviceOrganizationId: string | null;
+  deviceVehicleId: string | null;
+  prevIgnitionOn: boolean | null;
 }
 
 @Injectable()
@@ -49,6 +54,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly trackerDevices: TrackerDevicesService,
     private readonly redisWriter: TrackerRedisWriterService,
+    private readonly telemetryAlerts: TelemetryAlertsService,
   ) {
     this.logger.log(`Tracker TCP service constructor...`);
   }
@@ -111,6 +117,9 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       deviceId: null,
       imei: null,
       protocol: null,
+      deviceOrganizationId: null,
+      deviceVehicleId: null,
+      prevIgnitionOn: null,
     };
     this.socketContexts.set(socket, ctx);
 
@@ -195,6 +204,9 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       if (device) {
         ctx.deviceId = device.id;
         ctx.imei = device.imei;
+        ctx.deviceOrganizationId = device.organizationId;
+        ctx.deviceVehicleId = device.vehicle?.id ?? null;
+        ctx.prevIgnitionOn = null;
         this.markConnected(device.id);
         this.logger.log(
           `[GT06] Login | IMEI=${imei} | deviceId=${device.id} | OK (pre-registered)`,
@@ -229,7 +241,30 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       );
       if (position && ctx.deviceId && ctx.imei) {
         await this.redisWriter.pushPosition(ctx.deviceId, ctx.imei, position);
+        const orgId = ctx.deviceOrganizationId;
+        if (orgId) {
+          const currentIgnition = extractIgnitionFromPosition(position);
+          void this.telemetryAlerts
+            .processPosition({
+              deviceId: ctx.deviceId,
+              organizationId: orgId,
+              vehicleId: ctx.deviceVehicleId,
+              position,
+              prevIgnitionOn: ctx.prevIgnitionOn ?? undefined,
+              currentIgnitionOn: currentIgnition ?? undefined,
+            })
+            .catch((err: Error) =>
+              this.logger.warn(`Alert processing failed: ${err.message}`),
+            );
+          if (currentIgnition !== null && currentIgnition !== undefined) {
+            ctx.prevIgnitionOn = currentIgnition;
+          }
+        }
       }
     }
   }
+}
+
+function extractIgnitionFromPosition(_position: NormalizedPosition): boolean | null {
+  return null;
 }

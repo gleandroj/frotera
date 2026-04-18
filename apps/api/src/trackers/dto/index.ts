@@ -286,6 +286,9 @@ export class VehicleResponseDto {
   @ApiPropertyOptional()
   inactive?: boolean;
 
+  @ApiPropertyOptional({ nullable: true, description: "Limite km/h para alertas de excesso de velocidade" })
+  speedLimit?: number | null;
+
   @ApiPropertyOptional()
   notes?: string | null;
 
@@ -402,6 +405,16 @@ export class CreateVehicleDto {
   @IsBoolean()
   inactive?: boolean;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Limite de velocidade em km/h (null = sem monitoramento)",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  speedLimit?: number | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -472,6 +485,16 @@ export class UpdateVehicleDto {
   @IsOptional()
   @IsBoolean()
   inactive?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Limite de velocidade em km/h (null = sem monitoramento)",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  speedLimit?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()

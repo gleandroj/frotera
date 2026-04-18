@@ -169,7 +169,98 @@
     },
     "toastCreated": "Veículo criado com sucesso.",
     "toastUpdated": "Veículo atualizado com sucesso.",
-    "toastError": "Falha ao salvar veículo. Tente novamente."
+    "toastError": "Falha ao salvar veículo. Tente novamente.",
+    "speedLimit": "Limite de velocidade (km/h)",
+    "speedLimitHint": "Deixe vazio para não monitorar excesso de velocidade."
+  },
+  "telemetry": {
+    "title": "Telemetria",
+    "description": "Alertas automáticos gerados pelos rastreadores.",
+    "manageGeofences": "Gerenciar zonas",
+    "tabs": {
+      "new": "Novos",
+      "acknowledged": "Reconhecidos"
+    },
+    "alerts": {
+      "noAlerts": "Nenhum alerta encontrado.",
+      "acknowledge": "Reconhecer",
+      "acknowledgeSuccess": "Alerta reconhecido.",
+      "acknowledgeError": "Erro ao reconhecer alerta.",
+      "columns": {
+        "severity": "Severidade",
+        "type": "Tipo",
+        "vehicle": "Veículo",
+        "message": "Mensagem",
+        "createdAt": "Data/Hora",
+        "actions": "Ações"
+      },
+      "filters": {
+        "type": "Tipo de alerta",
+        "vehicle": "Veículo",
+        "dateFrom": "De",
+        "dateTo": "Até",
+        "allTypes": "Todos os tipos",
+        "allVehicles": "Todos os veículos"
+      }
+    },
+    "alertTypes": {
+      "SPEEDING": "Excesso de velocidade",
+      "HARSH_BRAKING": "Frenagem brusca",
+      "RAPID_ACCELERATION": "Aceleração rápida",
+      "GEOFENCE_ENTER": "Entrou na zona",
+      "GEOFENCE_EXIT": "Saiu da zona",
+      "DEVICE_OFFLINE": "Dispositivo offline",
+      "LOW_BATTERY": "Bateria baixa",
+      "IGNITION_ON": "Ignição ligada",
+      "IGNITION_OFF": "Ignição desligada"
+    },
+    "alertSeverity": {
+      "INFO": "Info",
+      "WARNING": "Atenção",
+      "CRITICAL": "Crítico"
+    },
+    "geofences": {
+      "title": "Zonas de geofence",
+      "description": "Configure zonas geográficas para monitorar entradas e saídas.",
+      "noZones": "Nenhuma zona configurada.",
+      "newZone": "Nova zona",
+      "editZone": "Editar zona",
+      "deleteZone": "Excluir zona",
+      "deleteConfirm": "Tem certeza que deseja excluir a zona \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "createSuccess": "Zona criada com sucesso.",
+      "updateSuccess": "Zona atualizada com sucesso.",
+      "deleteSuccess": "Zona excluída com sucesso.",
+      "backToAlerts": "Voltar aos alertas",
+      "form": {
+        "name": "Nome da zona",
+        "namePlaceholder": "Ex: Sede principal",
+        "description": "Descrição",
+        "type": "Tipo de zona",
+        "typeCircle": "Circular",
+        "typePolygon": "Poligonal",
+        "radius": "Raio (metros)",
+        "radiusHint": "Clique no mapa para o centro; ajuste o raio abaixo.",
+        "alertOnEnter": "Alertar ao entrar",
+        "alertOnExit": "Alertar ao sair",
+        "vehicles": "IDs de veículos (opcional)",
+        "vehiclesHint": "Deixe vazio para monitorar todos os veículos. Separe IDs por vírgula.",
+        "mapInstructions": {
+          "circle": "Clique no mapa para definir o centro da zona circular.",
+          "polygon": "Clique no mapa para adicionar pontos. Use \"Fechar polígono\" com pelo menos 3 pontos."
+        },
+        "closePolygon": "Fechar polígono",
+        "resetPolygon": "Limpar pontos",
+        "active": "Ativa"
+      },
+      "columns": {
+        "name": "Nome",
+        "type": "Tipo",
+        "status": "Status",
+        "alertOnEnter": "Entrar",
+        "alertOnExit": "Sair",
+        "actions": "Ações"
+      }
+    }
   },
   "customers": {
     "listDescription": "Empresas em hierarquia. Associe veículos a empresas e restrinja o acesso dos usuários por empresa.",
@@ -343,6 +434,7 @@
     "whatsappLimitExceeded": "Limite de instâncias do WhatsApp foi atingido",
     "memberLimitExceeded": "Limite de membros da equipe foi atingido",
     "upgradeRequired": "Upgrade necessário para continuar",
+    "upgradeAction": "Fazer upgrade",
     "tryAgain": "Tentar Novamente",
     "goHome": "Ir para Início",
     "pageNotFound": "Página Não Encontrada",
@@ -726,7 +818,8 @@
       "fuel": "Abastecimento",
       "fuelReports": "Relatórios",
       "checklist": "Checklists",
-      "incidents": "Ocorrências"
+      "incidents": "Ocorrências",
+      "telemetry": "Telemetria"
     },
     "footer": {
       "copyright": "© {{year}} Rotera",
@@ -1273,13 +1366,7 @@
       "trackers": "Rastreadores",
       "customers": "Empresas",
       "openIncidents": "Ocorrências em aberto",
-      "openIncidentsHint": "Em aberto ou em andamento",
-      "planSectionTitle": "Plano e limites"
-    },
-    "planLimits": {
-      "needMore": {
-        "upgrade": "Fazer Upgrade"
-      }
+      "openIncidentsHint": "Em aberto ou em andamento"
     }
   },
   "roles": {

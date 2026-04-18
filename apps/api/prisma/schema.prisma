@@ -67,6 +67,8 @@ model Organization {
   checklistTemplates  ChecklistTemplate[]
   checklistEntries    ChecklistEntry[]
   incidents           Incident[]
+  telemetryAlerts     TelemetryAlert[]
+  geofenceZones       GeofenceZone[]
 
   @@map("organizations")
 }
@@ -97,6 +99,35 @@ enum TrackerModel {
   X22_NT20
 }
 
+enum AlertType {
+  SPEEDING
+  HARSH_BRAKING
+  RAPID_ACCELERATION
+  GEOFENCE_ENTER
+  GEOFENCE_EXIT
+  DEVICE_OFFLINE
+  LOW_BATTERY
+  IGNITION_ON
+  IGNITION_OFF
+
+  @@map("alert_type")
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+
+  @@map("alert_severity")
+}
+
+enum GeofenceType {
+  CIRCLE
+  POLYGON
+
+  @@map("geofence_type")
+}
+
 model Vehicle {
   id               String         @id @default(cuid())
   organizationId   String
@@ -109,6 +140,8 @@ model Vehicle {
   chassis          String?
   vehicleType      String?        // Tipo de veículo
   inactive         Boolean        @default(false)
+  /// km/h; null = sem monitoramento de velocidade (alertas SPEEDING)
+  speedLimit       Float?
   notes            String?        // Informações / histórico
   trackerDeviceId  String?        @unique
   customerId       String?
@@ -123,6 +156,7 @@ model Vehicle {
   fuelLogs          FuelLog[]
   checklistEntries  ChecklistEntry[]
   incidents         Incident[]
+  telemetryAlerts   TelemetryAlert[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -149,6 +183,7 @@ model TrackerDevice {
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   vehicle       Vehicle?
   positions     DevicePosition[]
+  telemetryAlerts TelemetryAlert[]
 
   @@index([organizationId])
   @@index([imei])
@@ -172,6 +207,54 @@ model DevicePosition {
   @@map("device_positions")
 }
 
+model TelemetryAlert {
+  id               String         @id @default(cuid())
+  organizationId   String
+  vehicleId        String?
+  deviceId         String
+  type             AlertType
+  severity         AlertSeverity
+  message          String
+  metadata         Json?
+  acknowledgedAt   DateTime?
+  acknowledgedBy   String?
+  createdAt        DateTime       @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  device       TrackerDevice       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  acknowledger OrganizationMember? @relation("AlertAcknowledger", fields: [acknowledgedBy], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([vehicleId])
+  @@index([deviceId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([acknowledgedAt])
+  @@map("telemetry_alerts")
+}
+
+model GeofenceZone {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           GeofenceType
+  coordinates    Json
+  vehicleIds     String[]
+  alertOnEnter   Boolean      @default(true)
+  alertOnExit    Boolean      @default(true)
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([active])
+  @@map("geofence_zones")
+}
+
 model OrganizationMember {
   id                 String   @id @default(cuid())
   roleId             String
@@ -191,6 +274,7 @@ model OrganizationMember {
   fuelLogs          FuelLog[]
   checklistEntries  ChecklistEntry[]
   createdIncidents  Incident[] @relation("IncidentCreatedBy")
+  acknowledgedAlerts TelemetryAlert[] @relation("AlertAcknowledger")
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")

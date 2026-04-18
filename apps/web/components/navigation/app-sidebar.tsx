@@ -1,4 +1,5 @@
 "use client";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -17,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
   BarChart3,
+  Bell,
   Building,
   Building2,
   Car,
@@ -32,6 +34,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "../icons/logo";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
+import { useUnreadAlerts } from "@/lib/hooks/use-unread-alerts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -41,6 +45,7 @@ interface NavigationItem {
   icon: LucideIcon | React.ElementType;
   current: boolean;
   disabled?: boolean;
+  badge?: number;
 }
 
 interface NavigationSection {
@@ -52,6 +57,9 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
+  const { can } = usePermissions();
+  const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
+  const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
 
   const isMember = currentOrganization
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
@@ -76,65 +84,81 @@ export function AppSidebar() {
     },
   ];
 
+  const overviewItems = useMemo((): NavigationItem[] => {
+    const items: NavigationItem[] = [
+      {
+        name: t("navigation.items.dashboard"),
+        href: "/dashboard",
+        icon: Home,
+        current: pathname === "/dashboard",
+      },
+      {
+        name: t("navigation.items.vehicles"),
+        href: "/dashboard/vehicles",
+        icon: Car,
+        current: pathname.startsWith("/dashboard/vehicles"),
+      },
+      {
+        name: t("navigation.items.checklist"),
+        href: "/dashboard/checklist",
+        icon: ClipboardList,
+        current: pathname.startsWith("/dashboard/checklist"),
+      },
+      {
+        name: t("navigation.items.incidents"),
+        href: "/dashboard/incidents",
+        icon: AlertCircle,
+        current: pathname.startsWith("/dashboard/incidents"),
+      },
+      {
+        name: t("navigation.items.drivers"),
+        href: "/dashboard/drivers",
+        icon: UserRound,
+        current: pathname.startsWith("/dashboard/drivers"),
+      },
+      {
+        name: t("navigation.items.documents"),
+        href: "/dashboard/documents",
+        icon: FileText,
+        current: pathname.startsWith("/dashboard/documents"),
+      },
+      {
+        name: t("navigation.items.fuel"),
+        href: "/dashboard/fuel",
+        icon: Fuel,
+        current:
+          pathname.startsWith("/dashboard/fuel") &&
+          !pathname.startsWith("/dashboard/fuel/reports"),
+      },
+      {
+        name: t("navigation.items.fuelReports"),
+        href: "/dashboard/fuel/reports",
+        icon: BarChart3,
+        current: pathname.startsWith("/dashboard/fuel/reports"),
+      },
+    ];
+    if (canViewTelemetry) {
+      items.push({
+        name: t("navigation.items.telemetry"),
+        href: "/dashboard/telemetry",
+        icon: Bell,
+        current: pathname.startsWith("/dashboard/telemetry"),
+        badge: unreadTelemetry > 0 ? unreadTelemetry : undefined,
+      });
+    }
+    items.push({
+      name: t("navigation.items.customers"),
+      href: "/dashboard/customers",
+      icon: Building,
+      current: pathname.startsWith("/dashboard/customers"),
+    });
+    return items;
+  }, [t, pathname, canViewTelemetry, unreadTelemetry]);
+
   const mainNavigation: NavigationSection[] = [
     {
-      title: t('navigation.sections.overview'),
-      items: [
-        {
-          name: t('navigation.items.dashboard'),
-          href: "/dashboard",
-          icon: Home,
-          current: pathname === "/dashboard",
-        },
-        {
-          name: t('navigation.items.vehicles'),
-          href: "/dashboard/vehicles",
-          icon: Car,
-          current: pathname.startsWith("/dashboard/vehicles"),
-        },
-        {
-          name: t('navigation.items.checklist'),
-          href: "/dashboard/checklist",
-          icon: ClipboardList,
-          current: pathname.startsWith("/dashboard/checklist"),
-        },
-        {
-          name: t('navigation.items.incidents'),
-          href: "/dashboard/incidents",
-          icon: AlertCircle,
-          current: pathname.startsWith("/dashboard/incidents"),
-        },
-        {
-          name: t('navigation.items.drivers'),
-          href: "/dashboard/drivers",
-          icon: UserRound,
-          current: pathname.startsWith("/dashboard/drivers"),
-        },
-        {
-          name: t('navigation.items.documents'),
-          href: "/dashboard/documents",
-          icon: FileText,
-          current: pathname.startsWith("/dashboard/documents"),
-        },
-        {
-          name: t('navigation.items.fuel'),
-          href: "/dashboard/fuel",
-          icon: Fuel,
-          current: pathname.startsWith("/dashboard/fuel") && !pathname.startsWith("/dashboard/fuel/reports"),
-        },
-        {
-          name: t('navigation.items.fuelReports'),
-          href: "/dashboard/fuel/reports",
-          icon: BarChart3,
-          current: pathname.startsWith("/dashboard/fuel/reports"),
-        },
-        {
-          name: t('navigation.items.customers'),
-          href: "/dashboard/customers",
-          icon: Building,
-          current: pathname.startsWith("/dashboard/customers"),
-        },
-      ],
+      title: t("navigation.sections.overview"),
+      items: overviewItems,
     },
     {
       title: t('navigation.sections.teamManagement'),
@@ -193,6 +217,14 @@ export function AppSidebar() {
                         <Link href={item.disabled ? "#" : item.href}>
                           <Icon className="size-4" />
                           <span>{item.name}</span>
+                          {item.badge != null && item.badge > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="ml-auto min-h-5 min-w-5 shrink-0 px-1 text-xs tabular-nums"
+                            >
+                              {item.badge > 99 ? "99+" : item.badge}
+                            </Badge>
+                          )}
                           {item.disabled && (
                             <Badge
                               variant="secondary"

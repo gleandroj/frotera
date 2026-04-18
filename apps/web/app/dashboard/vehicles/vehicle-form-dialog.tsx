@@ -113,6 +113,7 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
       chassis: z.string().default(""),
       vehicleType: z.string().default(""),
       inactive: z.boolean().default(false),
+      speedLimit: z.string().default(""),
       notes: z.string().default(""),
       customerId: isEdit
         ? z.string().default("")
@@ -151,6 +152,10 @@ function defaultValues(
     chassis: vehicle?.chassis ?? "",
     vehicleType: vehicle?.vehicleType ?? "",
     inactive: vehicle?.inactive ?? false,
+    speedLimit:
+      vehicle?.speedLimit != null && Number.isFinite(vehicle.speedLimit)
+        ? String(vehicle.speedLimit)
+        : "",
     notes: vehicle?.notes ?? "",
     customerId: isEdit ? (vehicle?.customerId ?? "") : (defaultCustomerId ?? ""),
     trackerDeviceId: vehicle?.trackerDeviceId ?? "",
@@ -250,6 +255,13 @@ export function VehicleFormDialog({
       chassis: values.chassis?.trim() || undefined,
       vehicleType: values.vehicleType?.trim() || undefined,
       inactive: values.inactive,
+      speedLimit: (() => {
+        const s = values.speedLimit?.trim();
+        if (!s) return isEdit ? null : undefined;
+        const n = parseFloat(s.replace(",", "."));
+        if (!Number.isFinite(n)) return isEdit ? null : undefined;
+        return n;
+      })(),
       notes: values.notes?.trim() || undefined,
       customerId: values.customerId?.trim() || undefined,
     };
@@ -471,6 +483,29 @@ export function VehicleFormDialog({
                       <FormLabel className="font-normal">
                         {t("vehicles.inactive")}
                       </FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="speedLimit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("vehicles.speedLimit")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="80"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("vehicles.speedLimitHint")}
+                      </p>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
