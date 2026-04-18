@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useTranslation } from '@/i18n/useTranslation';
-import { documentsAPI, type VehicleDocument, type DocumentStatus } from '@/lib/frontend/api-client';
+import { documentsAPI, type VehicleDocument } from '@/lib/frontend/api-client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -48,7 +48,7 @@ function documentVehicleLabel(doc: VehicleDocument, notAvailable: string): strin
 
 export default function DocumentsPage() {
   const { t } = useTranslation();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [documents, setDocuments] = useState<VehicleDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,29 +65,25 @@ export default function DocumentsPage() {
 
     try {
       setIsLoading(true);
-      const response = await documentsAPI.list(orgId);
+      const response = await documentsAPI.list(orgId, {
+        ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+        ...(activeTab === 'expiring'
+          ? { expiryStatus: 'EXPIRING' as const }
+          : activeTab === 'expired'
+            ? { expiryStatus: 'EXPIRED' as const }
+            : {}),
+      });
       setDocuments(response.data.documents);
     } catch {
       toast.error(t('common.error'));
     } finally {
       setIsLoading(false);
     }
-  }, [orgId, t]);
+  }, [orgId, t, selectedCustomerId, activeTab]);
 
   useEffect(() => {
     void loadDocuments();
   }, [loadDocuments]);
-
-  const displayedDocuments = useMemo(() => {
-    switch (activeTab) {
-      case 'expiring':
-        return documents.filter((doc) => doc.status === 'EXPIRING');
-      case 'expired':
-        return documents.filter((doc) => doc.status === 'EXPIRED');
-      default:
-        return documents;
-    }
-  }, [activeTab, documents]);
 
   const handleDeleteClick = (doc: VehicleDocument) => {
     setDocumentToDelete(doc);
@@ -160,7 +156,7 @@ export default function DocumentsPage() {
         <TabsContent value="all" className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">{t('common.loading')}</div>
-          ) : displayedDocuments.length === 0 ? (
+          ) : documents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">{t('documents.noDocuments')}</div>
           ) : (
             <div className="border rounded-lg">
@@ -177,7 +173,7 @@ export default function DocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedDocuments.map((doc) => (
+                  {documents.map((doc) => (
                     <TableRow key={doc.id}>
                       <TableCell>
                         <DocumentStatusBadge status={doc.status} />
@@ -241,7 +237,7 @@ export default function DocumentsPage() {
         <TabsContent value="expiring" className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">{t('common.loading')}</div>
-          ) : displayedDocuments.length === 0 ? (
+          ) : documents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {documents.length === 0 ? t('documents.noDocuments') : t('documents.noResults')}
             </div>
@@ -260,7 +256,7 @@ export default function DocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedDocuments.map((doc) => (
+                  {documents.map((doc) => (
                     <TableRow key={doc.id}>
                       <TableCell>
                         <DocumentStatusBadge status={doc.status} />
@@ -324,7 +320,7 @@ export default function DocumentsPage() {
         <TabsContent value="expired" className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">{t('common.loading')}</div>
-          ) : displayedDocuments.length === 0 ? (
+          ) : documents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {documents.length === 0 ? t('documents.noDocuments') : t('documents.noResults')}
             </div>
@@ -343,7 +339,7 @@ export default function DocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedDocuments.map((doc) => (
+                  {documents.map((doc) => (
                     <TableRow key={doc.id}>
                       <TableCell>
                         <DocumentStatusBadge status={doc.status} />

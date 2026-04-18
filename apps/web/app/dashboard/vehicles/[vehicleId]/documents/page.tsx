@@ -45,7 +45,7 @@ export default function VehicleDocumentsPage() {
   const router = useRouter();
   const params = useParams();
   const vehicleId = params.vehicleId as string;
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [documents, setDocuments] = useState<VehicleDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +67,10 @@ export default function VehicleDocumentsPage() {
       setVehicle(vehicleRes.data);
 
       // Load documents for this vehicle
-      const docsRes = await documentsAPI.list(orgId, { vehicleId });
+      const docsRes = await documentsAPI.list(orgId, {
+        vehicleId,
+        ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+      });
       setDocuments(docsRes.data.documents);
     } catch (error) {
       toast.error(t('common.error'));
@@ -78,7 +81,7 @@ export default function VehicleDocumentsPage() {
 
   useEffect(() => {
     loadData();
-  }, [orgId, vehicleId]);
+  }, [orgId, vehicleId, selectedCustomerId]);
 
   const handleDeleteClick = (doc: VehicleDocument) => {
     setDocumentToDelete(doc);

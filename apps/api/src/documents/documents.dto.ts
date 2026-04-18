@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   MinLength,
@@ -94,6 +96,12 @@ export class ListDocumentsQueryDto {
   @IsString()
   vehicleId?: string;
 
+  /** Restringe à subárvore da empresa (intersecção com o acesso do membro). */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
   @ApiPropertyOptional({ enum: DocumentType })
   @IsOptional()
   @IsEnum(DocumentType)
@@ -104,19 +112,36 @@ export class ListDocumentsQueryDto {
   @IsOptional()
   @IsDateString()
   expiryBefore?: string;
+
+  /**
+   * Filtro de status por vencimento (mesma regra de `calcStatus` no serviço).
+   * Só aceita EXPIRING ou EXPIRED; omitir retorna todos (ainda escopados por empresa/veículo).
+   */
+  @ApiPropertyOptional({ enum: [DocumentStatus.EXPIRING, DocumentStatus.EXPIRED] })
+  @IsOptional()
+  @IsIn([DocumentStatus.EXPIRING, DocumentStatus.EXPIRED])
+  expiryStatus?: DocumentStatus.EXPIRING | DocumentStatus.EXPIRED;
 }
 
 export class ExpiringQueryDto {
   /** Número de dias à frente para considerar "vencendo". Default: 30 */
   @ApiPropertyOptional({ default: 30 })
   @IsOptional()
+  @Type(() => Number)
   days?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  customerId?: string;
 }
 
 export class DocumentResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() organizationId: string;
   @ApiProperty() vehicleId: string;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  customerId: string | null;
   @ApiPropertyOptional({ type: String, nullable: true })
   vehicleName: string | null;
   @ApiPropertyOptional({ type: String, nullable: true })

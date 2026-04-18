@@ -10,7 +10,6 @@ import {
   UseGuards,
   HttpCode,
   Request,
-  ForbiddenException,
   HttpStatus,
   ParseFilePipe,
   MaxFileSizeValidator,
@@ -19,7 +18,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
+import { Permission } from '@/auth/decorators/permission.decorator';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { RoleActionEnum, RoleModuleEnum } from '@/roles/roles.dto';
 import { DocumentsService } from './documents.service';
 import {
   CreateDocumentDto,
@@ -29,53 +33,55 @@ import {
   ListDocumentsQueryDto,
   ExpiringQueryDto,
 } from './documents.dto';
-import { PrismaService } from '../prisma/prisma.service';
 
-export interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
+interface DocumentsRequest extends ExpressRequest {
+  user: { userId: string; email?: string };
+  allowedCustomerIds: string[] | null;
+  organizationMember: { id: string };
 }
 
 const MAX_DOCUMENT_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 @ApiTags('documents')
 @Controller('organizations/:organizationId/documents')
-@UseGuards(JwtAuthGuard)
-// TODO(RBAC): adicionar @UseGuards(PermissionGuard) e decoradores @Permission(Module.DOCUMENTS, ...)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class DocumentsController {
-  constructor(
-    private readonly documentsService: DocumentsService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly documentsService: DocumentsService) {}
 
-  // GET /api/organizations/:orgId/documents
-  // Query: vehicleId?, type?, expiryBefore?
   @Get()
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async list(
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ListDocumentsQueryDto,
   ): Promise<DocumentsListResponseDto> {
-    return this.documentsService.list(organizationId, query);
+    return this.documentsService.list(
+      organizationId,
+      query,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
-  // GET /api/organizations/:orgId/documents/expiring
-  // Query: days? (default 30)
-  // IMPORTANTE: esta rota deve ser declarada ANTES de /:id para evitar conflito
   @Get('expiring')
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async listExpiring(
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ExpiringQueryDto,
   ): Promise<DocumentsListResponseDto> {
     const days = query.days ?? 30;
-    return this.documentsService.listExpiring(organizationId, days);
+    return this.documentsService.listExpiring(
+      organizationId,
+      days,
+      req.allowedCustomerIds ?? null,
+      query.customerId,
+    );
   }
 
-  // POST /api/organizations/:orgId/documents/upload
   @Post('upload')
   @HttpCode(201)
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.CREATE)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -88,7 +94,6 @@ export class DocumentsController {
     FileInterceptor('file', { limits: { fileSize: MAX_DOCUMENT_UPLOAD_BYTES } }),
   )
   async uploadAttachment(
-    @Request() req: RequestWithUser,
     @Param('organizationId') organizationId: string,
     @UploadedFile(
       new ParseFilePipe({
@@ -101,11 +106,6 @@ export class DocumentsController {
     )
     file: Express.Multer.File,
   ): Promise<{ fileUrl: string }> {
-    const member = await this.prisma.organizationMember.findFirst({
-      where: { userId: req.user.userId, organizationId },
-      select: { id: true },
-    });
-    if (!member) throw new ForbiddenException();
     return this.documentsService.uploadAttachment(
       organizationId,
       file.buffer,
@@ -114,53 +114,64 @@ export class DocumentsController {
     );
   }
 
-  // POST /api/organizations/:orgId/documents
   @Post()
   @HttpCode(201)
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.CREATE)
   async create(
-    @Request() req: RequestWithUser,
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Body() dto: CreateDocumentDto,
   ): Promise<DocumentResponseDto> {
-    // TODO(RBAC): @Permission(Module.DOCUMENTS, Action.CREATE)
-    // Obter OrganizationMember pelo userId + organizationId
-    const member = await this.prisma.organizationMember.findFirst({
-      where: { userId: req.user.userId, organizationId },
-      select: { id: true },
-    });
-    if (!member) throw new ForbiddenException();
-    return this.documentsService.create(organizationId, member.id, dto);
+    return this.documentsService.create(
+      organizationId,
+      req.organizationMember.id,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
-  // GET /api/organizations/:orgId/documents/:id
   @Get(':id')
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async getOne(
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<DocumentResponseDto> {
-    // TODO(RBAC): @Permission(Module.DOCUMENTS, Action.VIEW)
-    return this.documentsService.getById(id, organizationId);
+    return this.documentsService.getById(
+      id,
+      organizationId,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
-  // PATCH /api/organizations/:orgId/documents/:id
   @Patch(':id')
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.EDIT)
   async update(
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() dto: UpdateDocumentDto,
   ): Promise<DocumentResponseDto> {
-    // TODO(RBAC): @Permission(Module.DOCUMENTS, Action.EDIT)
-    return this.documentsService.update(id, organizationId, dto);
+    return this.documentsService.update(
+      id,
+      organizationId,
+      dto,
+      req.allowedCustomerIds ?? null,
+    );
   }
 
-  // DELETE /api/organizations/:orgId/documents/:id
   @Delete(':id')
   @HttpCode(204)
+  @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.DELETE)
   async remove(
+    @Request() req: DocumentsRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<void> {
-    // TODO(RBAC): @Permission(Module.DOCUMENTS, Action.DELETE)
-    return this.documentsService.remove(id, organizationId);
+    return this.documentsService.remove(
+      id,
+      organizationId,
+      req.allowedCustomerIds ?? null,
+    );
   }
 }

@@ -827,6 +827,7 @@ export interface VehicleDocument {
   id: string;
   organizationId: string;
   vehicleId: string;
+  customerId?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;
   createdById: string;
@@ -864,18 +865,20 @@ export interface UpdateDocumentPayload {
 export const documentsAPI = {
   list: (organizationId: string, params?: {
     vehicleId?: string;
+    customerId?: string | null;
     type?: DocumentType;
     expiryBefore?: string;
+    expiryStatus?: Extract<DocumentStatus, 'EXPIRING' | 'EXPIRED'>;
   }) =>
     externalApi.get<{ documents: VehicleDocument[] }>(
       `/api/organizations/${organizationId}/documents`,
       { params }
     ),
 
-  listExpiring: (organizationId: string, days = 30) =>
+  listExpiring: (organizationId: string, days = 30, customerId?: string | null) =>
     externalApi.get<{ documents: VehicleDocument[] }>(
       `/api/organizations/${organizationId}/documents/expiring`,
-      { params: { days } }
+      { params: { days, ...(customerId ? { customerId } : {}) } }
     ),
 
   getOne: (organizationId: string, id: string) =>

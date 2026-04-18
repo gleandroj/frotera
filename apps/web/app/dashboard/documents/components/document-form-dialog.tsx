@@ -149,16 +149,22 @@ export function DocumentFormDialog({
     if (!open || !organizationId) return;
     setLoadingVehicles(true);
     vehiclesAPI
-      .list(organizationId)
+      .list(
+        organizationId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => setVehicles(res.data))
       .catch(() => toast.error(t('common.error')))
       .finally(() => setLoadingVehicles(false));
-  }, [open, organizationId, t]);
+  }, [open, organizationId, selectedCustomerId, t]);
 
   const refreshVehiclesSilently = () => {
     if (!organizationId) return;
     vehiclesAPI
-      .list(organizationId)
+      .list(
+        organizationId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => setVehicles(res.data ?? []))
       .catch(() => {});
   };
