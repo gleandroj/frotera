@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/hooks/use-auth";
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertCircle,
   BarChart3,
   Building,
   Building2,
@@ -96,6 +97,12 @@ export function AppSidebar() {
           href: "/dashboard/checklist",
           icon: ClipboardList,
           current: pathname.startsWith("/dashboard/checklist"),
+        },
+        {
+          name: t('navigation.items.incidents'),
+          href: "/dashboard/incidents",
+          icon: AlertCircle,
+          current: pathname.startsWith("/dashboard/incidents"),
         },
         {
           name: t('navigation.items.drivers'),

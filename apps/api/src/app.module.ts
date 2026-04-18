@@ -21,6 +21,7 @@ import { DocumentsModule } from "./documents/documents.module";
 import { FuelModule } from "./fuel/fuel.module";
 import { FuelReportsModule } from "./fuel-reports/fuel-reports.module";
 import { ChecklistModule } from "./checklist/checklist.module";
+import { IncidentsModule } from "./incidents/incidents.module";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ChecklistModule } from "./checklist/checklist.module";
     FuelModule,
     FuelReportsModule,
     ChecklistModule,
+    IncidentsModule,
   ],
 })
 export class AppModule {}

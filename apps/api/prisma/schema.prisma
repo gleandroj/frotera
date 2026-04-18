@@ -66,6 +66,7 @@ model Organization {
   fuelLogs            FuelLog[]
   checklistTemplates  ChecklistTemplate[]
   checklistEntries    ChecklistEntry[]
+  incidents           Incident[]
 
   @@map("organizations")
 }
@@ -121,6 +122,7 @@ model Vehicle {
   documents         VehicleDocument[]
   fuelLogs          FuelLog[]
   checklistEntries  ChecklistEntry[]
+  incidents         Incident[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -188,6 +190,7 @@ model OrganizationMember {
   createdDocuments  VehicleDocument[]
   fuelLogs          FuelLog[]
   checklistEntries  ChecklistEntry[]
+  createdIncidents  Incident[] @relation("IncidentCreatedBy")
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")
@@ -250,6 +253,29 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   REVOKED
+}
+
+enum IncidentType {
+  ACCIDENT
+  THEFT
+  FINE
+  BREAKDOWN
+  VANDALISM
+  OTHER
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum RoleModule {
@@ -342,6 +368,55 @@ model Notification {
   @@index([createdAt])
   @@index([type])
   @@map("notifications")
+}
+
+model Incident {
+  id              String           @id @default(cuid())
+  organizationId  String
+  vehicleId       String?
+  driverId        String?
+  createdById     String
+  type            IncidentType
+  title           String
+  description     String?
+  date            DateTime
+  location        String?
+  status          IncidentStatus   @default(OPEN)
+  severity        IncidentSeverity @default(LOW)
+  cost            Float?
+  insuranceClaim  Boolean          @default(false)
+  claimNumber     String?
+  notes           String?
+  resolvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  createdBy    OrganizationMember    @relation("IncidentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  attachments  IncidentAttachment[]
+
+  @@index([organizationId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([status])
+  @@index([type])
+  @@index([date])
+  @@map("incidents")
+}
+
+model IncidentAttachment {
+  id         String   @id @default(cuid())
+  incidentId String
+  fileUrl    String
+  fileType   String
+  name       String
+  createdAt  DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("incident_attachments")
 }
 
 // Single-row table: feature flags editable in AdminJS. Default = invitation-only (both false).

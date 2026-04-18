@@ -725,7 +725,8 @@
       "documents": "Documentos",
       "fuel": "Abastecimento",
       "fuelReports": "Relatórios",
-      "checklist": "Checklists"
+      "checklist": "Checklists",
+      "incidents": "Ocorrências"
     },
     "footer": {
       "copyright": "© {{year}} Rotera",
@@ -802,7 +803,8 @@
     "organizations": "Configurações da Organização",
     "resetPassword": "Redefinir Senha",
     "forgotPassword": "Esqueci a Senha",
-    "notifications": "Notificações"
+    "notifications": "Notificações",
+    "incidents": "Ocorrências"
   },
   "notifications": {
     "title": "Notificações",
@@ -929,6 +931,126 @@
       "member": "Preenchido por",
       "status": "Status",
       "date": "Data"
+    }
+  },
+  "incidents": {
+    "title": "Ocorrências",
+    "listDescription": "Registre e acompanhe acidentes, multas, furtos e avarias da frota.",
+    "noIncidents": "Nenhuma ocorrência registrada.",
+    "newIncident": "Nova Ocorrência",
+    "editIncident": "Editar Ocorrência",
+    "deleteIncident": "Excluir Ocorrência",
+    "incidentNotFound": "Ocorrência não encontrada.",
+    "backToIncidents": "← Voltar às ocorrências",
+    "selectOrganization": "Selecione uma organização para ver as ocorrências.",
+    "filterByType": "Filtrar por tipo...",
+    "filterByStatus": "Filtrar por status...",
+    "filterBySeverity": "Filtrar por gravidade...",
+    "dateFrom": "Data inicial",
+    "dateTo": "Data final",
+    "openActionsMenu": "Abrir menu de ações",
+    "applyFilters": "Aplicar filtros",
+    "columns": {
+      "title": "Título",
+      "type": "Tipo",
+      "vehicle": "Veículo",
+      "date": "Data",
+      "status": "Status",
+      "severity": "Gravidade",
+      "cost": "Custo",
+      "actions": "Ações"
+    },
+    "stats": {
+      "openIncidents": "Ocorrências Abertas",
+      "totalCost": "Custo Total no Período",
+      "byType": "Por Tipo"
+    },
+    "fields": {
+      "type": "Tipo",
+      "title": "Título",
+      "description": "Descrição",
+      "date": "Data",
+      "location": "Local",
+      "status": "Status",
+      "severity": "Gravidade",
+      "vehicle": "Veículo",
+      "driver": "Motorista",
+      "cost": "Custo",
+      "insuranceClaim": "Sinistro de Seguro",
+      "claimNumber": "Número do Sinistro",
+      "notes": "Observações",
+      "resolvedAt": "Resolvida em",
+      "createdAt": "Criada em",
+      "attachments": "Anexos"
+    },
+    "type": {
+      "ACCIDENT": "Acidente",
+      "THEFT": "Furto/Roubo",
+      "FINE": "Multa",
+      "BREAKDOWN": "Avaria",
+      "VANDALISM": "Vandalismo",
+      "OTHER": "Outro"
+    },
+    "status": {
+      "OPEN": "Aberta",
+      "IN_PROGRESS": "Em Andamento",
+      "RESOLVED": "Resolvida",
+      "CLOSED": "Fechada"
+    },
+    "severity": {
+      "LOW": "Baixa",
+      "MEDIUM": "Média",
+      "HIGH": "Alta",
+      "CRITICAL": "Crítica"
+    },
+    "statusActions": {
+      "startProgress": "Iniciar Atendimento",
+      "resolve": "Resolver",
+      "markResolved": "Marcar como Resolvida",
+      "close": "Fechar"
+    },
+    "timeline": {
+      "title": "Linha do Tempo",
+      "currentStatus": "Status Atual"
+    },
+    "attachments": {
+      "add": "Adicionar Anexo",
+      "chooseFile": "Escolher arquivo",
+      "uploading": "Enviando…",
+      "uploadHint": "JPEG, PNG, WebP ou PDF (até 15 MB).",
+      "uploadError": "Não foi possível enviar o arquivo. Verifique o tipo e o tamanho.",
+      "noAttachments": "Nenhum anexo adicionado.",
+      "download": "Baixar",
+      "delete": "Excluir Anexo"
+    },
+    "form": {
+      "titlePlaceholder": "Ex: Colisão traseira na Av. Paulista",
+      "descriptionPlaceholder": "Descreva o que aconteceu...",
+      "locationPlaceholder": "Ex: Av. Paulista, 1000 - São Paulo/SP",
+      "costPlaceholder": "0,00",
+      "claimNumberPlaceholder": "Ex: SIN-2024-001",
+      "notesPlaceholder": "Observações adicionais...",
+      "selectVehicle": "Selecionar veículo",
+      "noVehicle": "Sem veículo",
+      "selectDriver": "Selecionar motorista",
+      "noDriver": "Sem motorista",
+      "selectType": "Selecionar tipo",
+      "selectSeverity": "Selecionar gravidade",
+      "cancel": "Cancelar",
+      "submit": "Salvar"
+    },
+    "toast": {
+      "created": "Ocorrência registrada com sucesso.",
+      "updated": "Ocorrência atualizada com sucesso.",
+      "deleted": "Ocorrência excluída.",
+      "attachmentAdded": "Anexo adicionado.",
+      "attachmentRemoved": "Anexo removido.",
+      "statusUpdated": "Status atualizado para {{status}}.",
+      "error": "Falha ao salvar ocorrência. Tente novamente."
+    },
+    "confirmDelete": {
+      "title": "Excluir Ocorrência",
+      "description": "Tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita."
     }
   },
   "team": {

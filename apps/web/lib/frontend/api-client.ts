@@ -484,6 +484,124 @@ export const vehiclesAPI = {
     ),
 };
 
+export interface Incident {
+  id: string;
+  organizationId: string;
+  vehicleId: string | null;
+  driverId: string | null;
+  createdById: string;
+  type: "ACCIDENT" | "THEFT" | "FINE" | "BREAKDOWN" | "VANDALISM" | "OTHER";
+  title: string;
+  description: string | null;
+  date: string;
+  location: string | null;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  cost: number | null;
+  insuranceClaim: boolean;
+  claimNumber: string | null;
+  notes: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  attachments: IncidentAttachment[];
+  vehicle?: { id: string; name: string | null; plate: string | null } | null;
+}
+
+export interface IncidentAttachment {
+  id: string;
+  incidentId: string;
+  fileUrl: string;
+  fileType: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface IncidentStats {
+  byType: { type: string; count: number }[];
+  byStatus: { status: string; count: number }[];
+  totalCost: number;
+  openCount: number;
+}
+
+export interface IncidentListResponse {
+  incidents: Incident[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export const incidentsAPI = {
+  list: (
+    orgId: string,
+    params?: {
+      type?: string;
+      status?: string;
+      severity?: string;
+      vehicleId?: string;
+      driverId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) =>
+    externalApi.get<IncidentListResponse>(
+      `/api/organizations/${orgId}/incidents`,
+      { params },
+    ),
+
+  create: (orgId: string, data: Record<string, unknown>) =>
+    externalApi.post<Incident>(
+      `/api/organizations/${orgId}/incidents`,
+      data,
+    ),
+
+  getOne: (orgId: string, id: string) =>
+    externalApi.get<Incident>(`/api/organizations/${orgId}/incidents/${id}`),
+
+  update: (orgId: string, id: string, data: Record<string, unknown>) =>
+    externalApi.patch<Incident>(
+      `/api/organizations/${orgId}/incidents/${id}`,
+      data,
+    ),
+
+  remove: (orgId: string, id: string) =>
+    externalApi.delete(`/api/organizations/${orgId}/incidents/${id}`),
+
+  addAttachment: (
+    orgId: string,
+    id: string,
+    data: { fileUrl: string; fileType: string; name: string },
+  ) =>
+    externalApi.post<IncidentAttachment>(
+      `/api/organizations/${orgId}/incidents/${id}/attachments`,
+      data,
+    ),
+
+  uploadAttachment: (orgId: string, incidentId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return externalApi.post<IncidentAttachment>(
+      `/api/organizations/${orgId}/incidents/${incidentId}/attachments/upload`,
+      body,
+      { timeout: 120_000 },
+    );
+  },
+
+  removeAttachment: (orgId: string, id: string, attachmentId: string) =>
+    externalApi.delete(
+      `/api/organizations/${orgId}/incidents/${id}/attachments/${attachmentId}`,
+    ),
+
+  stats: (orgId: string, params?: { dateFrom?: string; dateTo?: string }) =>
+    externalApi.get<IncidentStats>(
+      `/api/organizations/${orgId}/incidents/stats`,
+      { params },
+    ),
+};
+
 // Tracker devices and positions
 export interface PositionHistoryQuery {
   from?: string;
