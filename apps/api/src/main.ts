@@ -85,8 +85,8 @@ async function bootstrap() {
   // Apply suspension guard globally (before other guards)
   app.useGlobalGuards(new SuspensionGuard(configService));
 
-  // Enable validation
-  app.useGlobalPipes(new ValidationPipe());
+  // Enable validation (transform so query/body strings coerce per @Type on DTOs)
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // Set up global exception filter for error codes
   app.useGlobalFilters(new HttpExceptionFilter());

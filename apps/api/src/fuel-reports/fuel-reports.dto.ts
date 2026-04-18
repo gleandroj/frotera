@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsOptional,
   IsString,
@@ -53,6 +54,7 @@ export class EfficiencyReportQueryDto {
     description: 'Consumption drop threshold percentage (default: 15)',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   thresholdPct?: number;
