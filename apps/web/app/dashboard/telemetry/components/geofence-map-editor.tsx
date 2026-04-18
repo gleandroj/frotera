@@ -16,9 +16,10 @@ import type { GeofenceTypeApi } from "@/lib/frontend/api-client";
 import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_CENTER: [number, number] = [-15.77972, -47.92972];
-const MIN_RADIUS_KM = 0.5;
-const MAX_RADIUS_KM = 100_000;
-const STEP_KM = 0.5;
+const MIN_RADIUS_KM = 0.1;
+const MAX_RADIUS_KM = 100;
+/** Half-kilometer steps: usable slider range (0.5–500 km) without excessive granularity. */
+const STEP_KM = 0.1;
 
 function parseCenter(raw: unknown): [number, number] {
   if (!Array.isArray(raw) || raw.length < 2) return DEFAULT_CENTER;

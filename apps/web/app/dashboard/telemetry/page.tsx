@@ -199,52 +199,72 @@ export default function TelemetryPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t("telemetry.alerts.filters.type")}</CardTitle>
+          <CardTitle className="text-base">
+            {t("telemetry.alerts.filters.cardTitle")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder={t("telemetry.alerts.filters.allTypes")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("telemetry.alerts.filters.allTypes")}
-              </SelectItem>
-              {ALERT_TYPES.map((x) => (
-                <SelectItem key={x} value={x}>
-                  {t(`telemetry.alertTypes.${x}`)}
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium leading-none text-muted-foreground">
+              {t("telemetry.alerts.filters.type")}
+            </span>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={t("telemetry.alerts.filters.allTypes")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("telemetry.alerts.filters.allTypes")}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterVehicleId} onValueChange={setFilterVehicleId}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder={t("telemetry.alerts.filters.allVehicles")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("telemetry.alerts.filters.allVehicles")}
-              </SelectItem>
-              {vehicles.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.plate || v.name || v.id}
+                {ALERT_TYPES.map((x) => (
+                  <SelectItem key={x} value={x}>
+                    {t(`telemetry.alertTypes.${x}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium leading-none text-muted-foreground">
+              {t("telemetry.alerts.filters.vehicle")}
+            </span>
+            <Select value={filterVehicleId} onValueChange={setFilterVehicleId}>
+              <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={t("telemetry.alerts.filters.allVehicles")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("telemetry.alerts.filters.allVehicles")}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">
-                {t("telemetry.alerts.filters.dateFrom")}
-              </span>
-              <DatePicker value={dateFrom} onChange={setDateFrom} />
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">
-                {t("telemetry.alerts.filters.dateTo")}
-              </span>
-              <DatePicker value={dateTo} onChange={setDateTo} />
-            </div>
+                {vehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.plate || v.name || v.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium leading-none text-muted-foreground">
+              {t("telemetry.alerts.filters.dateFrom")}
+            </span>
+            <DatePicker
+              value={dateFrom}
+              onChange={setDateFrom}
+              className="w-full min-w-0"
+              placeholder={t("common.calendar.pickDate")}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium leading-none text-muted-foreground">
+              {t("telemetry.alerts.filters.dateTo")}
+            </span>
+            <DatePicker
+              value={dateTo}
+              onChange={setDateTo}
+              className="w-full min-w-0"
+              placeholder={t("common.calendar.pickDate")}
+            />
           </div>
         </CardContent>
       </Card>

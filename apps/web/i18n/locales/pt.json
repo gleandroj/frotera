@@ -195,6 +195,7 @@
         "actions": "Ações"
       },
       "filters": {
+        "cardTitle": "Filtros",
         "type": "Tipo de alerta",
         "vehicle": "Veículo",
         "dateFrom": "De",
@@ -239,7 +240,7 @@
         "typeCircle": "Circular",
         "typePolygon": "Poligonal",
         "radiusKm": "Raio (km)",
-        "radiusKmHint": "Persistido como {{meters}} m. Use o deslizador ou o campo numérico (0,5 a 100 000 km, passo 0,5).",
+        "radiusKmHint": "Persistido como {{meters}} m. Use o deslizador ou o campo numérico (0,5 a 500 km, passo 0,5 km).",
         "alertOnEnter": "Alertar ao entrar",
         "alertOnExit": "Alertar ao sair",
         "vehicles": "Veículos (opcional)",
