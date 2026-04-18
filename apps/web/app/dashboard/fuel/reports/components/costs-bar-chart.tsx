@@ -4,8 +4,12 @@ import {
 } from "recharts";
 import { CostsPeriod } from "@/lib/frontend/api-client";
 import { useTranslation } from "@/i18n/useTranslation";
+import { formatLocaleCurrency } from "@/lib/locale-decimal";
 
-interface Props { data: CostsPeriod[] }
+interface Props {
+  data: CostsPeriod[];
+  intlLocale: string;
+}
 
 const FUEL_COLORS: Record<string, string> = {
   GASOLINE: "#2563eb",
@@ -15,7 +19,7 @@ const FUEL_COLORS: Record<string, string> = {
   GNV: "#0891b2",
 };
 
-export function CostsBarChart({ data }: Props) {
+export function CostsBarChart({ data, intlLocale }: Props) {
   const { t } = useTranslation();
   if (!data.length) return null;
 
@@ -30,16 +34,23 @@ export function CostsBarChart({ data }: Props) {
     ),
   }));
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  const formatAxisCurrency = (v: number) =>
+    new Intl.NumberFormat(intlLocale, {
+      style: "currency",
+      currency: "BRL",
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(v);
+
+  const formatTooltipCurrency = (v: number) => formatLocaleCurrency(v, intlLocale, "BRL");
 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-        <YAxis tickFormatter={(v) => `R$${v}`} tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(val: number) => formatCurrency(val)} />
+        <YAxis tickFormatter={(v) => formatAxisCurrency(Number(v))} tick={{ fontSize: 12 }} />
+        <Tooltip formatter={(val: number) => formatTooltipCurrency(val)} />
         <Legend />
         {fuelTypes.map((ft) => (
           <Bar

@@ -3,14 +3,16 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { VehicleConsumption } from "@/lib/frontend/api-client";
+import { formatLocaleDecimal } from "@/lib/locale-decimal";
 
 interface Props {
   data: VehicleConsumption[];
+  intlLocale: string;
 }
 
 const COLORS = ["#2563eb","#16a34a","#dc2626","#d97706","#7c3aed","#0891b2"];
 
-export function ConsumptionChart({ data }: Props) {
+export function ConsumptionChart({ data, intlLocale }: Props) {
   if (!data.length) return null;
 
   // Build flat series: all unique dates, each vehicle as a key
@@ -32,8 +34,24 @@ export function ConsumptionChart({ data }: Props) {
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-        <YAxis unit=" km/l" tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(val: number) => `${val?.toFixed(2)} km/l`} />
+        <YAxis
+          unit=" km/l"
+          tick={{ fontSize: 12 }}
+          tickFormatter={(v) =>
+            formatLocaleDecimal(Number(v), intlLocale, {
+              minFractionDigits: 1,
+              maxFractionDigits: 2,
+            })
+          }
+        />
+        <Tooltip
+          formatter={(val: number) =>
+            `${formatLocaleDecimal(val, intlLocale, {
+              minFractionDigits: 2,
+              maxFractionDigits: 2,
+            })} km/l`
+          }
+        />
         <Legend />
         {vehicleNames.map((name, i) => (
           <Line

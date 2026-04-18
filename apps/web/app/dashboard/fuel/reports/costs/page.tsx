@@ -8,19 +8,19 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
 
 type GroupBy = "day" | "month" | "year";
 
 export default function CostsReportPage() {
   const { t } = useTranslation();
+  const intlLocale = useIntlLocale();
   const router = useRouter();
   const { currentOrganization } = useAuth();
   const [data, setData] = useState<CostsPeriod[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>("month");
   const [loading, setLoading] = useState(true);
-
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
@@ -67,7 +67,7 @@ export default function CostsReportPage() {
         <div className="text-center text-muted-foreground">{t("fuelReports.costs.noData")}</div>
       ) : (
         <>
-          <CostsBarChart data={data} />
+          <CostsBarChart data={data} intlLocale={intlLocale} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -84,11 +84,38 @@ export default function CostsReportPage() {
                 {data.map((d) => (
                   <tr key={d.period} className="border-b hover:bg-muted/50">
                     <td className="py-2 font-medium">{d.period}</td>
-                    <td className="py-2 text-right">{formatCurrency(d.totalCost)}</td>
-                    <td className="py-2 text-right">{d.totalLiters.toFixed(1)} L</td>
-                    <td className="py-2 text-right">{d.avgPricePerLiter !== null ? `R$ ${d.avgPricePerLiter.toFixed(3)}` : "—"}</td>
-                    <td className="py-2 text-right">{d.costPerKm !== null ? `R$ ${d.costPerKm.toFixed(4)}` : "—"}</td>
-                    <td className="py-2 text-right">{d.logsCount}</td>
+                    <td className="py-2 text-right">
+                      {formatLocaleCurrency(d.totalCost, intlLocale, "BRL")}
+                    </td>
+                    <td className="py-2 text-right">
+                      {formatLocaleDecimal(d.totalLiters, intlLocale, {
+                        minFractionDigits: 1,
+                        maxFractionDigits: 1,
+                      })}{" "}
+                      L
+                    </td>
+                    <td className="py-2 text-right">
+                      {d.avgPricePerLiter !== null
+                        ? formatLocaleCurrency(d.avgPricePerLiter, intlLocale, "BRL", {
+                            minFractionDigits: 3,
+                            maxFractionDigits: 3,
+                          })
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {d.costPerKm !== null
+                        ? formatLocaleCurrency(d.costPerKm, intlLocale, "BRL", {
+                            minFractionDigits: 4,
+                            maxFractionDigits: 4,
+                          })
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {formatLocaleDecimal(d.logsCount, intlLocale, {
+                        minFractionDigits: 0,
+                        maxFractionDigits: 0,
+                      })}
+                    </td>
                   </tr>
                 ))}
               </tbody>

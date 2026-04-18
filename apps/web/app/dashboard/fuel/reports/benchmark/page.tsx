@@ -9,16 +9,16 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
 
 export default function BenchmarkReportPage() {
   const { t } = useTranslation();
+  const intlLocale = useIntlLocale();
   const router = useRouter();
   const { currentOrganization } = useAuth();
   const [data, setData] = useState<BenchmarkSummary | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
@@ -54,7 +54,9 @@ export default function BenchmarkReportPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">{t("fuelReports.benchmark.paid")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(data.totalPaid)}</div>
+                <div className="text-2xl font-bold">
+                  {formatLocaleCurrency(data.totalPaid, intlLocale, "BRL")}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -67,7 +69,9 @@ export default function BenchmarkReportPage() {
               </CardHeader>
               <CardContent>
                 <div className={`text-2xl font-bold ${data.totalOverpaid !== null && data.totalOverpaid > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {data.totalOverpaid !== null ? formatCurrency(Math.abs(data.totalOverpaid)) : "—"}
+                  {data.totalOverpaid !== null
+                    ? formatLocaleCurrency(Math.abs(data.totalOverpaid), intlLocale, "BRL")
+                    : "—"}
                 </div>
               </CardContent>
             </Card>
@@ -77,7 +81,12 @@ export default function BenchmarkReportPage() {
               </CardHeader>
               <CardContent>
                 <div className={`text-2xl font-bold ${data.overpaidPct !== null && data.overpaidPct > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {data.overpaidPct !== null ? `${data.overpaidPct > 0 ? "+" : ""}${data.overpaidPct.toFixed(1)}%` : "—"}
+                  {data.overpaidPct !== null
+                    ? `${data.overpaidPct > 0 ? "+" : ""}${formatLocaleDecimal(data.overpaidPct, intlLocale, {
+                        minFractionDigits: 1,
+                        maxFractionDigits: 1,
+                      })}%`
+                    : "—"}
                 </div>
               </CardContent>
             </Card>
@@ -86,7 +95,7 @@ export default function BenchmarkReportPage() {
           {data.timeSeries.length === 0 ? (
             <div className="text-center text-muted-foreground">{t("fuelReports.benchmark.noMarketData")}</div>
           ) : (
-            <BenchmarkAreaChart data={data.timeSeries} />
+            <BenchmarkAreaChart data={data.timeSeries} intlLocale={intlLocale} />
           )}
         </>
       )}

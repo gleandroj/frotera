@@ -2,14 +2,14 @@
 import { VehicleEfficiency } from "@/lib/frontend/api-client";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
 
 interface Props { data: VehicleEfficiency[] }
 
 export function EfficiencyTable({ data }: Props) {
   const { t } = useTranslation();
-
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  const intlLocale = useIntlLocale();
 
   return (
     <div className="overflow-x-auto">
@@ -32,20 +32,36 @@ export function EfficiencyTable({ data }: Props) {
                 <div className="text-xs text-muted-foreground">{v.vehiclePlate}</div>
               </td>
               <td className="py-2 text-right">
-                {v.currentAvgConsumption !== null ? `${v.currentAvgConsumption.toFixed(2)} km/l` : "—"}
+                {v.currentAvgConsumption !== null
+                  ? `${formatLocaleDecimal(v.currentAvgConsumption, intlLocale, {
+                      minFractionDigits: 2,
+                      maxFractionDigits: 2,
+                    })} km/l`
+                  : "—"}
               </td>
               <td className="py-2 text-right">
-                {v.historicalAvgConsumption !== null ? `${v.historicalAvgConsumption.toFixed(2)} km/l` : "—"}
+                {v.historicalAvgConsumption !== null
+                  ? `${formatLocaleDecimal(v.historicalAvgConsumption, intlLocale, {
+                      minFractionDigits: 2,
+                      maxFractionDigits: 2,
+                    })} km/l`
+                  : "—"}
               </td>
               <td className="py-2 text-right">
                 {v.consumptionDropPct !== null ? (
                   <span className={v.isAlert ? "text-red-600 font-medium" : ""}>
-                    {v.consumptionDropPct.toFixed(1)}%
+                    {formatLocaleDecimal(v.consumptionDropPct, intlLocale, {
+                      minFractionDigits: 1,
+                      maxFractionDigits: 1,
+                    })}
+                    %
                   </span>
                 ) : "—"}
               </td>
               <td className="py-2 text-right">
-                {v.estimatedExtraCost !== null ? formatCurrency(v.estimatedExtraCost) : "—"}
+                {v.estimatedExtraCost !== null
+                  ? formatLocaleCurrency(v.estimatedExtraCost, intlLocale, "BRL")
+                  : "—"}
               </td>
               <td className="py-2 text-center">
                 <Badge variant={v.isAlert ? "destructive" : "secondary"}>

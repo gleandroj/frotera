@@ -4,6 +4,8 @@ import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import { formatLocaleDecimal } from "@/lib/locale-decimal";
 
 const THEMES = { light: "", dark: ".dark" } as const;
 
@@ -131,6 +133,7 @@ const ChartTooltipContent = React.forwardRef<
     ref
   ) => {
     const { config } = useChart();
+    const intlLocale = useIntlLocale();
 
     const tooltipLabel = React.useMemo(() => {
       if (hideLabel || !payload?.length) {
@@ -237,9 +240,11 @@ const ChartTooltipContent = React.forwardRef<
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
-                      {item.value && (
+                      {item.value !== undefined && item.value !== null && (
                         <span className="font-mono font-medium tabular-nums text-foreground">
-                          {item.value.toLocaleString()}
+                          {typeof item.value === "number"
+                            ? formatLocaleDecimal(item.value, intlLocale)
+                            : String(item.value)}
                         </span>
                       )}
                     </div>

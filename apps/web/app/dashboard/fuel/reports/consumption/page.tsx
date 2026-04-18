@@ -9,9 +9,12 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
+import { formatLocaleDecimal } from "@/lib/locale-decimal";
 
 export default function ConsumptionReportPage() {
   const { t } = useTranslation();
+  const intlLocale = useIntlLocale();
   const router = useRouter();
   const { currentOrganization } = useAuth();
   const [data, setData] = useState<VehicleConsumption[]>([]);
@@ -51,7 +54,7 @@ export default function ConsumptionReportPage() {
         <div className="text-center text-muted-foreground">{t("fuelReports.consumption.noData")}</div>
       ) : (
         <>
-          <ConsumptionChart data={data} />
+          <ConsumptionChart data={data} intlLocale={intlLocale} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -71,10 +74,38 @@ export default function ConsumptionReportPage() {
                       <div className="font-medium">{v.vehicleName}</div>
                       <div className="text-xs text-muted-foreground">{v.vehiclePlate}</div>
                     </td>
-                    <td className="py-2 text-right">{v.avgConsumption?.toFixed(2) ?? "—"} km/l</td>
-                    <td className="py-2 text-right">{v.bestConsumption?.toFixed(2) ?? "—"} km/l</td>
-                    <td className="py-2 text-right">{v.worstConsumption?.toFixed(2) ?? "—"} km/l</td>
-                    <td className="py-2 text-right">{v.totalKm?.toLocaleString("pt-BR") ?? "—"} km</td>
+                    <td className="py-2 text-right">
+                      {v.avgConsumption != null
+                        ? `${formatLocaleDecimal(v.avgConsumption, intlLocale, {
+                            minFractionDigits: 2,
+                            maxFractionDigits: 2,
+                          })} km/l`
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {v.bestConsumption != null
+                        ? `${formatLocaleDecimal(v.bestConsumption, intlLocale, {
+                            minFractionDigits: 2,
+                            maxFractionDigits: 2,
+                          })} km/l`
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {v.worstConsumption != null
+                        ? `${formatLocaleDecimal(v.worstConsumption, intlLocale, {
+                            minFractionDigits: 2,
+                            maxFractionDigits: 2,
+                          })} km/l`
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {v.totalKm != null
+                        ? `${formatLocaleDecimal(v.totalKm, intlLocale, {
+                            minFractionDigits: 0,
+                            maxFractionDigits: 0,
+                          })} km`
+                        : "—"}
+                    </td>
                     <td className="py-2 text-center">
                       <Badge variant={trendVariant(v.trend)}>
                         {t(`fuelReports.consumption.trends.${v.trend}`)}
