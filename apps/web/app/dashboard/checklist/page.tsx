@@ -405,10 +405,6 @@ export default function ChecklistPage() {
             <p className="py-8 text-center text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : templates.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("checklist.noTemplates")}</p>
-          ) : filteredTemplates.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {t("checklist.noTemplatesMatchFilter")}
-            </p>
           ) : (
             <DataTable
               columns={templateColumns}
