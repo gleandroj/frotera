@@ -159,7 +159,7 @@ describe('FuelService', () => {
           vehicleId: { in: [vehicleId, 'vehicle-2'] },
         },
         include: fuelLogListInclude,
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
       });
     });
 
@@ -195,7 +195,7 @@ describe('FuelService', () => {
           driverId,
         },
         include: fuelLogListInclude,
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
       });
     });
 
@@ -233,7 +233,7 @@ describe('FuelService', () => {
           fuelType: FuelTypeEnum.DIESEL,
         },
         include: fuelLogListInclude,
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
       });
     });
   });

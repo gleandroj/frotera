@@ -99,7 +99,7 @@ export class FuelService {
         },
         driver: { select: { id: true, name: true } },
       },
-      orderBy: { date: 'desc' },
+      orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
     });
 
     return this.mapToResponse(logs);

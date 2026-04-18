@@ -11,6 +11,7 @@ import {
   IsPositive,
   IsString,
   Max,
+  Min,
   ValidateIf,
 } from 'class-validator';
 
@@ -40,9 +41,9 @@ export class CreateFuelLogDto {
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'Odometer reading in km at time of fueling (max 10 digits)' })
+  @ApiProperty({ description: 'Odometer reading in km at time of fueling (0 or positive, max 10 digits)' })
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   @Max(9_999_999_999)
   odometer: number;
 
@@ -110,7 +111,7 @@ export class UpdateFuelLogDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   @Max(9_999_999_999)
   odometer?: number;
 

@@ -102,6 +102,30 @@ function requiredPositiveNumber(
   );
 }
 
+/** Hodômetro em km: permite 0; vazio continua inválido. */
+function requiredOdometerKm(
+  t: (k: string) => string,
+  emptyKey: string,
+  minKey: string,
+  maxKey: string,
+  max: number,
+) {
+  return z.preprocess(
+    (raw) => {
+      if (raw === "" || raw === undefined || raw === null) return undefined;
+      if (typeof raw === "number" && Number.isNaN(raw)) return undefined;
+      return raw;
+    },
+    z
+      .number({
+        required_error: t(emptyKey),
+        invalid_type_error: t(emptyKey),
+      })
+      .min(0, t(minKey))
+      .max(max, t(maxKey)),
+  );
+}
+
 interface FuelFormDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -115,10 +139,11 @@ const buildSchema = (t: (k: string) => string) =>
     vehicleId: z.string().min(1, t("fuel.form.vehicleRequired")),
     driverId: z.string(),
     date: z.string().min(1, t("fuel.form.dateRequired")),
-    odometer: requiredPositiveNumber(
+    odometer: requiredOdometerKm(
       t,
       "fuel.form.odometerRequired",
-      "fuel.form.odometerPositive",
+      "fuel.form.odometerNegative",
+      "fuel.form.odometerMaxDigits",
       9_999_999_999,
     ),
     liters: requiredPositiveNumber(

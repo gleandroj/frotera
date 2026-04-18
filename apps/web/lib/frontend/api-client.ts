@@ -525,6 +525,8 @@ export interface VehicleDocument {
   id: string;
   organizationId: string;
   vehicleId: string;
+  vehicleName?: string | null;
+  vehiclePlate?: string | null;
   createdById: string;
   type: DocumentType;
   title: string;

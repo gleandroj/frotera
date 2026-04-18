@@ -147,7 +147,11 @@ export default function FuelPage() {
       ) : logs.length === 0 ? (
         <div className="text-center text-muted-foreground">{t("fuel.noLogs")}</div>
       ) : (
-        <DataTable columns={columns} data={logs} />
+        <DataTable
+          columns={columns}
+          data={logs}
+          initialSorting={[{ id: "date", desc: true }]}
+        />
       )}
 
       <FuelFormDrawer

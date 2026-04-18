@@ -43,6 +43,8 @@ export interface DataTableProps<TData, TValue> {
   noResultsLabel?: string;
   /** Rendered before the search input in the toolbar row (e.g. extra filters). */
   toolbarLeading?: React.ReactNode;
+  /** Default client-side sort (column `id` / `accessorKey`, e.g. `{ id: "date", desc: true }`). */
+  initialSorting?: SortingState;
 }
 
 export function DataTable<TData, TValue>({
@@ -52,9 +54,12 @@ export function DataTable<TData, TValue>({
   filterColumnId,
   noResultsLabel,
   toolbarLeading,
+  initialSorting,
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation();
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>(
+    () => initialSorting ?? [],
+  );
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 

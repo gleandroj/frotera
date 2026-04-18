@@ -17,6 +17,10 @@ import {
   UpdateDocumentDto,
 } from './documents.dto';
 
+const DOCUMENT_VEHICLE_INCLUDE = {
+  vehicle: { select: { name: true, plate: true } },
+} as const;
+
 const DOCUMENT_UPLOAD_MIME = new Set([
   'application/pdf',
   'image/jpeg',
@@ -58,6 +62,8 @@ export class DocumentsService {
       id: doc.id,
       organizationId: doc.organizationId,
       vehicleId: doc.vehicleId,
+      vehicleName: doc.vehicle?.name ?? null,
+      vehiclePlate: doc.vehicle?.plate ?? null,
       createdById: doc.createdById,
       type: doc.type as DocumentType,
       title: doc.title,
@@ -123,6 +129,7 @@ export class DocumentsService {
     const rows = await this.prisma.vehicleDocument.findMany({
       where,
       orderBy: [{ expiryDate: 'asc' }, { createdAt: 'desc' }],
+      include: DOCUMENT_VEHICLE_INCLUDE,
     });
     return { documents: rows.map((r) => this.toResponse(r)) };
   }
@@ -145,6 +152,7 @@ export class DocumentsService {
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
         notes: dto.notes ?? null,
       },
+      include: DOCUMENT_VEHICLE_INCLUDE,
     });
     return this.toResponse(doc);
   }
@@ -155,6 +163,7 @@ export class DocumentsService {
   ): Promise<DocumentResponseDto> {
     const doc = await this.prisma.vehicleDocument.findFirst({
       where: { id, organizationId, active: true },
+      include: DOCUMENT_VEHICLE_INCLUDE,
     });
     if (!doc) throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
     return this.toResponse(doc);
@@ -183,6 +192,7 @@ export class DocumentsService {
           expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
         }),
       },
+      include: DOCUMENT_VEHICLE_INCLUDE,
     });
     return this.toResponse(doc);
   }
@@ -220,6 +230,7 @@ export class DocumentsService {
         },
       },
       orderBy: [{ expiryDate: 'asc' }],
+      include: DOCUMENT_VEHICLE_INCLUDE,
     });
     return { documents: rows.map((r) => this.toResponse(r)) };
   }

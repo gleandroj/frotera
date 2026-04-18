@@ -117,6 +117,10 @@ export class DocumentResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() organizationId: string;
   @ApiProperty() vehicleId: string;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  vehicleName: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  vehiclePlate: string | null;
   @ApiProperty() createdById: string;
   @ApiProperty({ enum: DocumentType }) type: DocumentType;
   @ApiProperty() title: string;

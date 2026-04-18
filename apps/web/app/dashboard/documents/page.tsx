@@ -37,6 +37,15 @@ import {
 
 type TabType = 'all' | 'expiring' | 'expired';
 
+function documentVehicleLabel(doc: VehicleDocument, notAvailable: string): string {
+  const name = doc.vehicleName?.trim();
+  const plate = doc.vehiclePlate?.trim();
+  if (name && plate) return `${name} · ${plate}`;
+  if (name) return name;
+  if (plate) return plate;
+  return notAvailable;
+}
+
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
@@ -175,7 +184,7 @@ export default function DocumentsPage() {
                       </TableCell>
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
-                      <TableCell>{doc.vehicleId.substring(0, 8)}...</TableCell>
+                      <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')
@@ -258,7 +267,7 @@ export default function DocumentsPage() {
                       </TableCell>
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
-                      <TableCell>{doc.vehicleId.substring(0, 8)}...</TableCell>
+                      <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')
@@ -341,7 +350,7 @@ export default function DocumentsPage() {
                       </TableCell>
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
-                      <TableCell>{doc.vehicleId.substring(0, 8)}...</TableCell>
+                      <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')

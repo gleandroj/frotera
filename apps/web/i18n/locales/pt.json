@@ -1330,7 +1330,7 @@
       "vehicleRequired": "Selecione um veículo.",
       "dateRequired": "Informe a data do abastecimento.",
       "odometerRequired": "Informe a leitura do hodômetro.",
-      "odometerPositive": "Hodômetro deve ser maior que zero.",
+      "odometerNegative": "O hodômetro não pode ser negativo.",
       "odometerMaxDigits": "Hodômetro: no máximo 10 dígitos (até 9.999.999.999 km).",
       "litersRequired": "Informe a quantidade em litros.",
       "litersPositive": "Litros deve ser maior que zero.",

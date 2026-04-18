@@ -59,6 +59,18 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       },
     },
     {
+      accessorKey: "odometer",
+      meta: { labelKey: "fuel.fields.odometer" },
+      header: t("fuel.fields.odometer"),
+      cell: ({ row }) => {
+        const km = row.getValue("odometer") as number;
+        return formatLocaleDecimal(km, intlLocale, {
+          minFractionDigits: 0,
+          maxFractionDigits: 0,
+        });
+      },
+    },
+    {
       id: "driver",
       meta: { labelKey: "fuel.fields.driver" },
       header: t("fuel.fields.driver"),
