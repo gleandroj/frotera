@@ -28,6 +28,7 @@ import {
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { VehicleMultiSelect } from "./vehicle-multi-select";
 
 const GeofenceMapEditor = dynamic(
   () =>
@@ -37,23 +38,19 @@ const GeofenceMapEditor = dynamic(
   { ssr: false, loading: () => <p className="text-sm text-muted-foreground">…</p> },
 );
 
-function parseVehicleIds(raw: string): string[] {
-  return raw
-    .split(/[,;\s]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 export function GeofenceFormDialog({
   open,
   onOpenChange,
   organizationId,
+  customerId,
   zone,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   organizationId: string;
+  /** Scope vehicle list to the selected customer filter when set. */
+  customerId?: string | null;
   zone: GeofenceZone | null;
   onSaved: () => void;
 }) {
@@ -66,7 +63,7 @@ export function GeofenceFormDialog({
     center: [-15.77972, -47.92972],
     radius: 500,
   });
-  const [vehicleIdsRaw, setVehicleIdsRaw] = useState("");
+  const [vehicleIds, setVehicleIds] = useState<string[]>([]);
   const [alertOnEnter, setAlertOnEnter] = useState(true);
   const [alertOnExit, setAlertOnExit] = useState(true);
   const [active, setActive] = useState(true);
@@ -85,7 +82,7 @@ export function GeofenceFormDialog({
           radius: 500,
         },
       );
-      setVehicleIdsRaw(zone.vehicleIds?.join(", ") ?? "");
+      setVehicleIds(zone.vehicleIds ?? []);
       setAlertOnEnter(zone.alertOnEnter);
       setAlertOnExit(zone.alertOnExit);
       setActive(zone.active);
@@ -94,7 +91,7 @@ export function GeofenceFormDialog({
       setDescription("");
       setType("CIRCLE");
       setCoordinates({ center: [-15.77972, -47.92972], radius: 500 });
-      setVehicleIdsRaw("");
+      setVehicleIds([]);
       setAlertOnEnter(true);
       setAlertOnExit(true);
       setActive(true);
@@ -108,13 +105,12 @@ export function GeofenceFormDialog({
     }
     setSaving(true);
     try {
-      const vehicleIds = parseVehicleIds(vehicleIdsRaw);
       const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
         type,
         coordinates,
-        vehicleIds,
+        vehicleIds: [...vehicleIds],
         alertOnEnter,
         alertOnExit,
         ...(isEdit ? { active } : {}),
@@ -197,10 +193,12 @@ export function GeofenceFormDialog({
           />
           <div className="space-y-2">
             <Label>{t("telemetry.geofences.form.vehicles")}</Label>
-            <Input
-              value={vehicleIdsRaw}
-              onChange={(e) => setVehicleIdsRaw(e.target.value)}
-              placeholder="id1, id2"
+            <VehicleMultiSelect
+              organizationId={organizationId}
+              customerId={customerId}
+              value={vehicleIds}
+              onChange={setVehicleIds}
+              disabled={saving}
             />
             <p className="text-xs text-muted-foreground">
               {t("telemetry.geofences.form.vehiclesHint")}

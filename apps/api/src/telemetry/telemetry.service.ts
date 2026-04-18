@@ -40,7 +40,8 @@ function parseJsonCoordinates(
 ): Prisma.InputJsonValue {
   if (type === GeofenceType.CIRCLE) {
     const center = raw.center as unknown;
-    const radius = raw.radius;
+    const radiusRaw = raw.radius;
+    const radiusKmRaw = raw.radiusKm;
     if (!Array.isArray(center) || center.length !== 2) {
       throw new BadRequestException("coordinates.center must be [lat, lng]");
     }
@@ -49,17 +50,40 @@ function parseJsonCoordinates(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       throw new BadRequestException("Invalid center coordinates");
     }
-    if (typeof radius !== "number" || !Number.isFinite(radius) || radius < 1) {
+    let radiusMeters: number;
+    if (radiusKmRaw !== undefined && radiusKmRaw !== null) {
+      const rkm = Number(radiusKmRaw);
+      if (!Number.isFinite(rkm) || rkm <= 0) {
+        throw new BadRequestException("coordinates.radiusKm must be a positive number");
+      }
+      radiusMeters = rkm * 1000;
+      if (
+        typeof radiusRaw === "number" &&
+        Number.isFinite(radiusRaw) &&
+        Math.abs(radiusRaw - radiusMeters) > 0.01
+      ) {
+        throw new BadRequestException(
+          "coordinates.radius and coordinates.radiusKm disagree; send only one",
+        );
+      }
+    } else if (typeof radiusRaw === "number" && Number.isFinite(radiusRaw)) {
+      radiusMeters = radiusRaw;
+    } else {
+      throw new BadRequestException(
+        "coordinates.radius (meters) or coordinates.radiusKm is required",
+      );
+    }
+    if (radiusMeters < 1) {
       throw new BadRequestException("coordinates.radius must be >= 1 meter");
     }
     const test = isPointInZone([lat, lng], {
       type: GeofenceType.CIRCLE,
-      coordinates: { center: [lat, lng], radius },
+      coordinates: { center: [lat, lng], radius: radiusMeters },
     });
     if (!test) {
       throw new BadRequestException("Invalid circle geometry");
     }
-    return { center: [lat, lng], radius };
+    return { center: [lat, lng], radius: radiusMeters };
   }
   const points = raw.points as unknown;
   if (!Array.isArray(points) || points.length < 3) {

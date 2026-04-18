@@ -7,6 +7,7 @@ import {
   GeofenceType,
 } from "@prisma/client";
 import type { RedisClientType } from "redis";
+import { CustomerFleetSettingsService } from "@/customers/customer-fleet-settings.service";
 import { PrismaService } from "@/prisma/prisma.service";
 import type { NormalizedPosition } from "@/trackers/dto/index";
 import { TRACKER_REDIS } from "@/trackers/ingress/tracker-redis-writer.service";
@@ -33,6 +34,7 @@ export class TelemetryAlertsService {
     @Inject(TRACKER_REDIS) private readonly redis: RedisClientType,
     private readonly redisWriter: TrackerRedisWriterService,
     private readonly config: ConfigService,
+    private readonly fleetSettings: CustomerFleetSettingsService,
   ) {}
 
   async processPosition(params: {
@@ -111,9 +113,14 @@ export class TelemetryAlertsService {
 
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: vehicleId, organizationId },
-      select: { speedLimit: true },
+      select: { speedLimit: true, customerId: true },
     });
-    const limit = vehicle?.speedLimit;
+    const fleetDefault = await this.fleetSettings.resolveEffective(
+      organizationId,
+      vehicle?.customerId ?? null,
+    );
+    const limit =
+      vehicle?.speedLimit ?? fleetDefault.defaultSpeedLimitKmh ?? null;
     if (limit == null || limit <= 0) return;
     if (position.speed <= limit) return;
 
@@ -390,13 +397,24 @@ export class TelemetryAlertsService {
   }
 
   /** Cron: create DEVICE_OFFLINE when last position is older than threshold. */
-  async tryCreateDeviceOfflineAlert(device: {
-    id: string;
-    organizationId: string;
-    vehicleId: string | null;
-  }): Promise<void> {
+  private envOfflineThresholdMinutes(): number {
+    const raw = this.config.get<string>("DEVICE_OFFLINE_THRESHOLD_MINUTES") ?? "15";
+    const p = parseInt(raw, 10);
+    return Number.isFinite(p) && p >= 1 ? p : 15;
+  }
+
+  async tryCreateDeviceOfflineAlert(
+    device: {
+      id: string;
+      organizationId: string;
+      vehicleId: string | null;
+      /** When known (e.g. cron), avoids an extra vehicle read. */
+      vehicleCustomerId?: string | null;
+    },
+    opts?: { offlineThresholdMinutes?: number },
+  ): Promise<void> {
     try {
-      await this.runOfflineCheck(device);
+      await this.runOfflineCheck(device, opts?.offlineThresholdMinutes);
     } catch (e) {
       this.logger.warn(
         `Offline alert check failed for ${device.id}: ${e instanceof Error ? e.message : String(e)}`,
@@ -404,16 +422,34 @@ export class TelemetryAlertsService {
     }
   }
 
-  private async runOfflineCheck(device: {
-    id: string;
-    organizationId: string;
-    vehicleId: string | null;
-  }): Promise<void> {
-    const thresholdMin = parseInt(
-      this.config.get<string>("DEVICE_OFFLINE_THRESHOLD_MINUTES") ?? "15",
-      10,
-    );
-    const thresholdMs = Math.max(1, thresholdMin) * 60 * 1000;
+  private async runOfflineCheck(
+    device: {
+      id: string;
+      organizationId: string;
+      vehicleId: string | null;
+      vehicleCustomerId?: string | null;
+    },
+    preloadedThresholdMinutes?: number,
+  ): Promise<void> {
+    let thresholdMin = preloadedThresholdMinutes;
+    if (thresholdMin == null) {
+      let customerId: string | null | undefined = device.vehicleCustomerId;
+      if (customerId === undefined && device.vehicleId != null) {
+        const v = await this.prisma.vehicle.findFirst({
+          where: { id: device.vehicleId, organizationId: device.organizationId },
+          select: { customerId: true },
+        });
+        customerId = v?.customerId ?? null;
+      }
+      const eff = await this.fleetSettings.resolveEffective(
+        device.organizationId,
+        customerId ?? null,
+      );
+      thresholdMin =
+        eff.deviceOfflineThresholdMinutes ?? this.envOfflineThresholdMinutes();
+    }
+    thresholdMin = Math.max(1, thresholdMin);
+    const thresholdMs = thresholdMin * 60 * 1000;
     const now = Date.now();
 
     let recordedAtMs: number | null = null;

@@ -10,11 +10,15 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GeofenceTypeApi } from "@/lib/frontend/api-client";
 import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_CENTER: [number, number] = [-15.77972, -47.92972];
+const MIN_RADIUS_KM = 0.5;
+const MAX_RADIUS_KM = 100_000;
+const STEP_KM = 0.5;
 
 function parseCenter(raw: unknown): [number, number] {
   if (!Array.isArray(raw) || raw.length < 2) return DEFAULT_CENTER;
@@ -24,9 +28,17 @@ function parseCenter(raw: unknown): [number, number] {
   return [la, ln];
 }
 
-function parseRadius(raw: unknown): number {
+/** `coordinates.radius` is stored in meters (API / DB). */
+function parseRadiusMeters(raw: unknown): number {
   const n = typeof raw === "number" ? raw : Number(raw);
-  return Number.isFinite(n) && n >= 1 ? n : 500;
+  if (!Number.isFinite(n) || n < 1) return MIN_RADIUS_KM * 1000;
+  return n;
+}
+
+function clampRadiusKm(km: number): number {
+  if (!Number.isFinite(km)) return MIN_RADIUS_KM;
+  const stepped = Math.round(km / STEP_KM) * STEP_KM;
+  return Math.min(MAX_RADIUS_KM, Math.max(MIN_RADIUS_KM, stepped));
 }
 
 function parsePoints(raw: unknown): [number, number][] {
@@ -70,7 +82,9 @@ export function GeofenceMapEditor({
   const [center, setCenter] = useState<[number, number]>(() =>
     parseCenter(coordinates.center),
   );
-  const [radius, setRadius] = useState(() => parseRadius(coordinates.radius));
+  const [radiusKm, setRadiusKm] = useState(() =>
+    clampRadiusKm(parseRadiusMeters(coordinates.radius) / 1000),
+  );
   const [points, setPoints] = useState<[number, number][]>(() =>
     parsePoints(coordinates.points),
   );
@@ -78,23 +92,34 @@ export function GeofenceMapEditor({
   useEffect(() => {
     if (type === "CIRCLE") {
       setCenter(parseCenter(coordinates.center));
-      setRadius(parseRadius(coordinates.radius));
+      setRadiusKm(clampRadiusKm(parseRadiusMeters(coordinates.radius) / 1000));
     } else {
       setPoints(parsePoints(coordinates.points));
     }
   }, [type, coordinates, syncKey]);
+
+  const radiusMeters = radiusKm * 1000;
 
   const mapCenter = useMemo(() => {
     if (type === "POLYGON" && points.length > 0) return points[0]!;
     return center;
   }, [type, points, center]);
 
+  const setCircleRadiusKm = useCallback(
+    (nextKm: number) => {
+      const km = clampRadiusKm(nextKm);
+      setRadiusKm(km);
+      onChange({ center, radius: km * 1000 });
+    },
+    [center, onChange],
+  );
+
   const onMapClick = useCallback(
     (lat: number, lng: number) => {
       if (type === "CIRCLE") {
         const next: [number, number] = [lat, lng];
         setCenter(next);
-        onChange({ center: next, radius });
+        onChange({ center: next, radius: radiusKm * 1000 });
       } else {
         setPoints((prev) => {
           const next = [...prev, [lat, lng] as [number, number]];
@@ -103,7 +128,7 @@ export function GeofenceMapEditor({
         });
       }
     },
-    [type, onChange, radius],
+    [type, onChange, radiusKm],
   );
 
   const closePolygon = useCallback(() => {
@@ -128,7 +153,11 @@ export function GeofenceMapEditor({
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClick onClick={onMapClick} />
           {type === "CIRCLE" && (
-            <Circle center={center} radius={radius} pathOptions={{ color: "#2563eb" }} />
+            <Circle
+              center={center}
+              radius={radiusMeters}
+              pathOptions={{ color: "#2563eb" }}
+            />
           )}
           {type === "POLYGON" && points.length > 0 && (
             <Polygon
@@ -140,20 +169,37 @@ export function GeofenceMapEditor({
       </div>
       {type === "CIRCLE" && (
         <div className="space-y-2">
-          <Label>{t("telemetry.geofences.form.radius")}</Label>
+          <Label>{t("telemetry.geofences.form.radiusKm")}</Label>
           <Slider
-            value={[radius]}
-            min={50}
-            max={50_000}
-            step={50}
+            value={[radiusKm]}
+            min={MIN_RADIUS_KM}
+            max={MAX_RADIUS_KM}
+            step={STEP_KM}
             onValueChange={(v) => {
-              const r = v[0] ?? radius;
-              setRadius(r);
-              onChange({ center, radius: r });
+              const r = v[0] ?? radiusKm;
+              setCircleRadiusKm(r);
             }}
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="number"
+              min={MIN_RADIUS_KM}
+              max={MAX_RADIUS_KM}
+              step={STEP_KM}
+              className="max-w-[140px]"
+              value={radiusKm}
+              onChange={(e) => {
+                const x = parseFloat(e.target.value.replace(",", "."));
+                if (!Number.isFinite(x)) return;
+                setCircleRadiusKm(x);
+              }}
+            />
+            <span className="text-xs text-muted-foreground">km</span>
+          </div>
           <p className="text-xs text-muted-foreground">
-            {t("telemetry.geofences.form.radiusHint")} — {radius} m
+            {t("telemetry.geofences.form.radiusKmHint", {
+              meters: Math.round(radiusMeters).toLocaleString(),
+            })}
           </p>
         </div>
       )}

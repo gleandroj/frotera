@@ -171,7 +171,7 @@
     "toastUpdated": "Veículo atualizado com sucesso.",
     "toastError": "Falha ao salvar veículo. Tente novamente.",
     "speedLimit": "Limite de velocidade (km/h)",
-    "speedLimitHint": "Deixe vazio para não monitorar excesso de velocidade."
+    "speedLimitHint": "Deixe vazio para herdar o limite da empresa; se a empresa também não definir, fica ilimitado."
   },
   "telemetry": {
     "title": "Telemetria",
@@ -238,12 +238,17 @@
         "type": "Tipo de zona",
         "typeCircle": "Circular",
         "typePolygon": "Poligonal",
-        "radius": "Raio (metros)",
-        "radiusHint": "Clique no mapa para o centro; ajuste o raio abaixo.",
+        "radiusKm": "Raio (km)",
+        "radiusKmHint": "Persistido como {{meters}} m. Use o deslizador ou o campo numérico (0,5 a 100 000 km, passo 0,5).",
         "alertOnEnter": "Alertar ao entrar",
         "alertOnExit": "Alertar ao sair",
-        "vehicles": "IDs de veículos (opcional)",
-        "vehiclesHint": "Deixe vazio para monitorar todos os veículos. Separe IDs por vírgula.",
+        "vehicles": "Veículos (opcional)",
+        "vehiclesHint": "Deixe vazio para monitorar todos os veículos. Busque e marque os veículos aplicáveis.",
+        "vehiclesSelectPlaceholder": "Selecionar veículos…",
+        "vehiclesSearchPlaceholder": "Buscar por placa ou nome…",
+        "vehiclesNoResults": "Nenhum veículo encontrado.",
+        "vehiclesSelectedCount": "{{count}} selecionado(s)",
+        "removeVehicleChip": "Remover veículo",
         "mapInstructions": {
           "circle": "Clique no mapa para definir o centro da zona circular.",
           "polygon": "Clique no mapa para adicionar pontos. Use \"Fechar polígono\" com pelo menos 3 pontos."
@@ -260,6 +265,34 @@
         "alertOnExit": "Sair",
         "actions": "Ações"
       }
+    }
+  },
+  "companySettings": {
+    "title": "Empresas e telemetria",
+    "description": "Parâmetros por empresa (customer): limiar offline e limite de velocidade padrão quando o veículo não define o seu. Valores vazios herdam o padrão da organização (superadmin) ou a variável de ambiente para offline.",
+    "cardTitle": "Alertas e limites por empresa",
+    "cardDescription": "Escolha a empresa ou o padrão de toda a organização (superadmin). A resolução usa a empresa do veículo e, em falta, o padrão org-wide.",
+    "editTargetLabel": "Onde aplicar",
+    "targetOrganization": "Toda a organização (padrão global interno)",
+    "editTargetHintSuperAdmin": "O padrão da organização aplica a todas as empresas que não têm linha própria. Pode gravar por empresa ou replicar para todas as empresas da org.",
+    "editTargetHintMember": "Altera apenas empresas às quais tem acesso. “Aplicar a todas” replica só para essas empresas.",
+    "saveCurrent": "Guardar seleção atual",
+    "applyAllAccessible": "Aplicar a todas as empresas a que tenho acesso",
+    "applyAllCustomers": "Aplicar a todas as empresas da organização",
+    "applyAllAccessibleSuccess": "Valores aplicados a todas as empresas a que tem acesso.",
+    "applyAllOrgSuccess": "Valores aplicados a todas as empresas da organização.",
+    "noCustomersForSettings": "Sem empresas acessíveis para configurar.",
+    "offlineThresholdLabel": "Minutos sem posição (alerta dispositivo offline)",
+    "offlineThresholdPlaceholder": "Vazio = herdar padrão da organização ou env (15 min)",
+    "offlineThresholdHint": "Valor inteiro entre 1 e 10080. Vazio herda o padrão org-wide (se existir) ou a variável de ambiente.",
+    "defaultSpeedLabel": "Limite de velocidade padrão (km/h)",
+    "defaultSpeedPlaceholder": "Vazio = herdar padrão da organização ou ilimitado",
+    "defaultSpeedHint": "Usado quando o veículo não tem limite próprio. Vazio herda o padrão org-wide (se existir).",
+    "saveSuccess": "Configurações guardadas.",
+    "noPermission": "Sem permissão para editar estas configurações.",
+    "validation": {
+      "offlineMinutes": "Informe um número inteiro válido (≥ 1) ou deixe vazio.",
+      "defaultSpeed": "Informe um número válido (≥ 0) ou deixe vazio."
     }
   },
   "customers": {
@@ -819,7 +852,8 @@
       "fuelReports": "Relatórios",
       "checklist": "Checklists",
       "incidents": "Ocorrências",
-      "telemetry": "Telemetria"
+      "telemetry": "Telemetria",
+      "companyFleetSettings": "Empresa e telemetria"
     },
     "footer": {
       "copyright": "© {{year}} Rotera",

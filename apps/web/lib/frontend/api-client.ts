@@ -342,6 +342,48 @@ export const organizationAPI = {
     externalApi.delete(`/api/organizations/${organizationId}/roles/${roleId}`),
 };
 
+export interface OrganizationFleetDefault {
+  deviceOfflineThresholdMinutes: number | null;
+  defaultSpeedLimitKmh: number | null;
+}
+
+export interface CustomerFleetSettingResolved {
+  customerId: string;
+  customerName: string | null;
+  deviceOfflineThresholdMinutes: number | null;
+  defaultSpeedLimitKmh: number | null;
+}
+
+export interface ListCustomerFleetSettingsResponse {
+  organizationDefault: OrganizationFleetDefault | null;
+  customers: CustomerFleetSettingResolved[];
+}
+
+export type FleetPatchApplyMode =
+  | "single"
+  | "all_accessible"
+  | "organization_default";
+
+export const customerFleetSettingsAPI = {
+  list: (organizationId: string) =>
+    externalApi.get<ListCustomerFleetSettingsResponse>(
+      `/api/organizations/${organizationId}/customer-fleet-settings`,
+    ),
+  patch: (
+    organizationId: string,
+    data: {
+      applyMode: FleetPatchApplyMode;
+      customerId?: string;
+      deviceOfflineThresholdMinutes?: number | null;
+      defaultSpeedLimitKmh?: number | null;
+    },
+  ) =>
+    externalApi.patch<ListCustomerFleetSettingsResponse>(
+      `/api/organizations/${organizationId}/customer-fleet-settings`,
+      data,
+    ),
+};
+
 // Customer type and API
 export interface Customer {
   id: string;

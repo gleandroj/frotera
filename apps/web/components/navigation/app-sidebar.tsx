@@ -26,6 +26,7 @@ import {
   FileText,
   Fuel,
   Home,
+  SlidersHorizontal,
   User,
   UserRound,
   Users,
@@ -60,6 +61,7 @@ export function AppSidebar() {
   const { can } = usePermissions();
   const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
+  const canEditCompanySettings = can(Module.COMPANIES, Action.EDIT);
 
   const isMember = currentOrganization
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
@@ -73,6 +75,16 @@ export function AppSidebar() {
             href: "/settings/organizations",
             icon: Building2,
             current: pathname.startsWith("/settings/organizations"),
+          },
+        ]
+      : []),
+    ...(canEditCompanySettings && currentOrganization
+      ? [
+          {
+            name: t("navigation.items.companyFleetSettings"),
+            href: "/dashboard/settings/company",
+            icon: SlidersHorizontal,
+            current: pathname.startsWith("/dashboard/settings/company"),
           },
         ]
       : []),

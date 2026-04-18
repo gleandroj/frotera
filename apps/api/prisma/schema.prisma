@@ -60,6 +60,7 @@ model Organization {
   vehicles            Vehicle[]
   trackerDevices      TrackerDevice[]
   customers           Customer[]
+  customerFleetSettings CustomerFleetSetting[]
   roles               Role[]
   drivers             Driver[]
   documents           VehicleDocument[]
@@ -88,10 +89,28 @@ model Customer {
   memberAccess   OrganizationMemberCustomer[]
   invitationAccess InvitationCustomer[]
   drivers        Driver[]
+  fleetSettings  CustomerFleetSetting[]
 
   @@index([organizationId])
   @@index([parentId])
   @@map("customers")
+}
+
+/// Telemetria / frota por organização. `customerId` null = padrão de toda a organização (apenas superadmin grava).
+model CustomerFleetSetting {
+  id                            String   @id @default(cuid())
+  organizationId                String
+  customerId                    String?
+  deviceOfflineThresholdMinutes Int?
+  defaultSpeedLimitKmh          Float?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("customer_fleet_settings")
 }
 
 enum TrackerModel {

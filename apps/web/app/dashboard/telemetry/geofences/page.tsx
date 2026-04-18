@@ -35,7 +35,7 @@ import { toast } from "sonner";
 
 export default function GeofencesPage() {
   const { t } = useTranslation();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const canEdit = can(Module.TELEMETRY, Action.EDIT);
   const canDelete = can(Module.TELEMETRY, Action.DELETE);
@@ -194,6 +194,7 @@ export default function GeofencesPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         organizationId={orgId}
+        customerId={selectedCustomerId}
         zone={editing}
         onSaved={() => void load()}
       />

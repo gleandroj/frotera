@@ -1,0 +1,59 @@
+import { Controller, Get, Param, Patch, Body, Request, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Request as ExpressRequest } from "express";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { PermissionGuard } from "@/auth/guards/permission.guard";
+import { Permission } from "@/auth/decorators/permission.decorator";
+import { CustomerFleetSettingsService } from "@/customers/customer-fleet-settings.service";
+import {
+  ListCustomerFleetSettingsResponseDto,
+  UpdateCustomerFleetSettingsDto,
+} from "@/customers/customer-fleet-settings.dto";
+import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
+import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
+
+interface RequestWithFleet extends ExpressRequest {
+  user: { userId: string; isSuperAdmin?: boolean };
+  allowedCustomerIds: string[] | null;
+}
+
+@ApiTags("organizations")
+@Controller("organizations/:organizationId/customer-fleet-settings")
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
+@ApiBearerAuth()
+export class CustomerFleetSettingsController {
+  constructor(private readonly fleetSettings: CustomerFleetSettingsService) {}
+
+  @Get()
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.EDIT)
+  @ApiOperation({
+    summary: "List fleet/telemetry settings per customer (empresa) and optional org-wide default",
+  })
+  @ApiResponse({ status: 200, type: ListCustomerFleetSettingsResponseDto })
+  async list(
+    @Param("organizationId") organizationId: string,
+    @Request() req: RequestWithFleet,
+  ): Promise<ListCustomerFleetSettingsResponseDto> {
+    return this.fleetSettings.getList(organizationId, {
+      userId: req.user.userId,
+      isSuperAdmin: req.user.isSuperAdmin === true,
+      allowedCustomerIds: req.allowedCustomerIds,
+    });
+  }
+
+  @Patch()
+  @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.EDIT)
+  @ApiOperation({ summary: "Update fleet settings (single customer, all accessible, or org-wide)" })
+  @ApiResponse({ status: 200, type: ListCustomerFleetSettingsResponseDto })
+  async patch(
+    @Param("organizationId") organizationId: string,
+    @Body() body: UpdateCustomerFleetSettingsDto,
+    @Request() req: RequestWithFleet,
+  ): Promise<ListCustomerFleetSettingsResponseDto> {
+    return this.fleetSettings.patch(organizationId, body, {
+      userId: req.user.userId,
+      isSuperAdmin: req.user.isSuperAdmin === true,
+      allowedCustomerIds: req.allowedCustomerIds,
+    });
+  }
+}
