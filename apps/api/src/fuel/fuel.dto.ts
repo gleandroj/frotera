@@ -177,12 +177,18 @@ export class ListFuelLogsQueryDto {
   @IsString()
   driverId?: string;
 
-  @ApiPropertyOptional({ description: 'Start date ISO 8601' })
+  @ApiPropertyOptional({
+    description:
+      'Início do intervalo (ISO 8601). Filtra pelo horário do abastecimento (`date`), não por `createdAt`.',
+  })
   @IsOptional()
   @IsDateString()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ description: 'End date ISO 8601' })
+  @ApiPropertyOptional({
+    description:
+      'Fim do intervalo (ISO 8601). Filtra pelo horário do abastecimento (`date`), não por `createdAt`.',
+  })
   @IsOptional()
   @IsDateString()
   dateTo?: string;
@@ -205,12 +211,18 @@ export class FuelStatsQueryDto {
   @IsString()
   driverId?: string;
 
-  @ApiPropertyOptional({ description: 'Start date ISO 8601' })
+  @ApiPropertyOptional({
+    description:
+      'Início do intervalo (ISO 8601). Agregações usam a data/hora do abastecimento (`date`), não `createdAt`.',
+  })
   @IsOptional()
   @IsDateString()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ description: 'End date ISO 8601' })
+  @ApiPropertyOptional({
+    description:
+      'Fim do intervalo (ISO 8601). Agregações usam a data/hora do abastecimento (`date`), não `createdAt`.',
+  })
   @IsOptional()
   @IsDateString()
   dateTo?: string;

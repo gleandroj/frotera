@@ -1273,7 +1273,7 @@
     "editLog": "Editar Abastecimento",
     "deleteLog": "Excluir Abastecimento",
     "logDetail": "Detalhe do Abastecimento",
-    "backToList": "← Voltar aos abastecimentos",
+    "backToList": "Voltar aos abastecimentos",
     "filterByVehicle": "Filtrar por veículo...",
     "noResults": "Nenhum resultado.",
     "openActionsMenu": "Abrir menu de ações",
@@ -1313,11 +1313,11 @@
       "GNV": "GNV"
     },
     "stats": {
-      "totalCostMonth": "Custo Total (Mês)",
+      "totalCostMonth": "Custo total no período",
       "totalLiters": "Litros Abastecidos",
       "avgConsumption": "Consumo Médio (km/l)",
       "avgCostPerKm": "Custo Médio por km",
-      "logsMonth": "Abastecimentos (Mês)",
+      "logsMonth": "Abastecimentos no período",
       "noData": "Sem dados suficientes",
       "refuelsCountSubtitle": "{{count}} abastecimentos",
       "periodLitersSubtitle": "{{liters}} L no período"

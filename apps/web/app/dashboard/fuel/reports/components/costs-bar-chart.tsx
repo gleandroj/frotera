@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { CostsPeriod } from "@/lib/frontend/api-client";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface Props { data: CostsPeriod[] }
 
@@ -15,6 +16,7 @@ const FUEL_COLORS: Record<string, string> = {
 };
 
 export function CostsBarChart({ data }: Props) {
+  const { t } = useTranslation();
   if (!data.length) return null;
 
   const fuelTypes = Array.from(
@@ -40,7 +42,13 @@ export function CostsBarChart({ data }: Props) {
         <Tooltip formatter={(val: number) => formatCurrency(val)} />
         <Legend />
         {fuelTypes.map((ft) => (
-          <Bar key={ft} dataKey={ft} stackId="a" fill={FUEL_COLORS[ft] ?? "#94a3b8"} />
+          <Bar
+            key={ft}
+            dataKey={ft}
+            name={t(`fuel.fuelTypes.${ft}`, { defaultValue: ft })}
+            stackId="a"
+            fill={FUEL_COLORS[ft] ?? "#94a3b8"}
+          />
         ))}
       </BarChart>
     </ResponsiveContainer>

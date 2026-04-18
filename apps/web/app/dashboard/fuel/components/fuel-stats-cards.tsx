@@ -65,11 +65,11 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {formatCurrency(stats.currentMonthCost)}
+            {formatCurrency(stats.totalCost)}
           </div>
           <p className="text-xs text-muted-foreground">
             {t("fuel.stats.refuelsCountSubtitle", {
-              count: formatLocaleDecimal(stats.currentMonthCount, intlLocale, {
+              count: formatLocaleDecimal(stats.count, intlLocale, {
                 minFractionDigits: 0,
                 maxFractionDigits: 0,
               }),
@@ -104,7 +104,7 @@ export function FuelStatsCards({ stats }: FuelStatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {formatLocaleDecimal(stats.currentMonthCount, intlLocale, {
+            {formatLocaleDecimal(stats.count, intlLocale, {
               minFractionDigits: 0,
               maxFractionDigits: 0,
             })}
