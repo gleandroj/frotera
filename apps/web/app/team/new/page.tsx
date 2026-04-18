@@ -182,7 +182,7 @@ export default function NewUserPage() {
           toast.error(t("errors.memberLimitExceeded"), {
             description: t("errors.upgradeRequired"),
             action: {
-              label: t("dashboard.planLimits.needMore.upgrade"),
+              label: t("errors.upgradeAction"),
               onClick: () => router.push("/settings/billing"),
             },
           });
