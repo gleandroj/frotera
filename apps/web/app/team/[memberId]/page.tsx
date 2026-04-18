@@ -103,7 +103,7 @@ export default function EditMemberPage() {
   const schema = z
     .object({
       roleId: z.string().min(1, t("team.inviteDialog.validation.roleRequired")),
-      fullAccess: z.boolean().default(true),
+      fullAccess: z.boolean().default(false),
       customerIds: z.array(z.string()).default([]),
       name: z.string().default(""),
       email: z.string().default(""),

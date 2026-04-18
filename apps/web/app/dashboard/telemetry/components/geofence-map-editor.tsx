@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Circle,
   MapContainer,
   Polygon,
   TileLayer,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -54,6 +55,27 @@ function parsePoints(raw: unknown): [number, number][] {
   return out;
 }
 
+function isDefaultCenter(c: [number, number]): boolean {
+  return (
+    Math.abs(c[0] - DEFAULT_CENTER[0]) < 1e-4 &&
+    Math.abs(c[1] - DEFAULT_CENTER[1]) < 1e-4
+  );
+}
+
+function MapCenterSync({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [map, center, zoom]);
+  return null;
+}
+
 function MapClick({
   onClick,
 }: {
@@ -72,12 +94,15 @@ export function GeofenceMapEditor({
   coordinates,
   onChange,
   syncKey,
+  preferBrowserCenter = false,
 }: {
   type: GeofenceTypeApi;
   coordinates: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
   /** When this value changes, internal map state resets from `coordinates`. */
   syncKey: string;
+  /** When true (e.g. new zone), center the map on `navigator.geolocation` if still at the default. */
+  preferBrowserCenter?: boolean;
 }) {
   const { t } = useTranslation();
   const [center, setCenter] = useState<[number, number]>(() =>
@@ -89,6 +114,14 @@ export function GeofenceMapEditor({
   const [points, setPoints] = useState<[number, number][]>(() =>
     parsePoints(coordinates.points),
   );
+  const radiusKmRef = useRef(radiusKm);
+  radiusKmRef.current = radiusKm;
+
+  const browserGeoAttemptRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    browserGeoAttemptRef.current = null;
+  }, [syncKey]);
 
   useEffect(() => {
     if (type === "CIRCLE") {
@@ -99,12 +132,71 @@ export function GeofenceMapEditor({
     }
   }, [type, coordinates, syncKey]);
 
+  useEffect(() => {
+    if (!preferBrowserCenter) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+
+    const attemptKey = `${syncKey}:${type}`;
+    if (browserGeoAttemptRef.current === attemptKey) return;
+
+    if (type === "CIRCLE") {
+      if (!isDefaultCenter(parseCenter(coordinates.center))) return;
+    } else {
+      if (parsePoints(coordinates.points).length > 0) return;
+      if (!isDefaultCenter(center)) return;
+    }
+
+    browserGeoAttemptRef.current = attemptKey;
+
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        const next: [number, number] = [
+          pos.coords.latitude,
+          pos.coords.longitude,
+        ];
+        if (type === "CIRCLE") {
+          setCenter(next);
+          onChange({
+            center: next,
+            radius: radiusKmRef.current * 1000,
+          });
+        } else {
+          setCenter(next);
+        }
+      },
+      () => {
+        /* permission denied or timeout: keep default center */
+        browserGeoAttemptRef.current = null;
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 300_000,
+        timeout: 12_000,
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    type,
+    preferBrowserCenter,
+    syncKey,
+    coordinates.center,
+    coordinates.points,
+    center,
+    onChange,
+  ]);
+
   const radiusMeters = radiusKm * 1000;
 
   const mapCenter = useMemo(() => {
     if (type === "POLYGON" && points.length > 0) return points[0]!;
     return center;
   }, [type, points, center]);
+
+  const mapZoom = type === "POLYGON" && points.length > 1 ? 14 : 13;
 
   const setCircleRadiusKm = useCallback(
     (nextKm: number) => {
@@ -147,10 +239,11 @@ export function GeofenceMapEditor({
       <div className="h-[280px] w-full overflow-hidden rounded-md border">
         <MapContainer
           center={mapCenter}
-          zoom={type === "POLYGON" && points.length > 1 ? 14 : 13}
+          zoom={mapZoom}
           className="h-full w-full"
           scrollWheelZoom
         >
+          <MapCenterSync center={mapCenter} zoom={mapZoom} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClick onClick={onMapClick} />
           {type === "CIRCLE" && (

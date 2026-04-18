@@ -133,7 +133,7 @@ export function GeofenceFormDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>
             {isEdit
@@ -190,6 +190,7 @@ export function GeofenceFormDialog({
             type={type}
             coordinates={coordinates}
             onChange={setCoordinates}
+            preferBrowserCenter={!zone}
           />
           <div className="space-y-2">
             <Label>{t("telemetry.geofences.form.vehicles")}</Label>
