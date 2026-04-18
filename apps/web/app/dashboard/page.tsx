@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/lib/hooks/use-auth";
 import { CreateOrganizationDialog } from "@/components/organizations";
-import { PlanLimitsOverview } from "@/components/dashboard/plan-limits-overview";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { getDashboardStats, type DashboardStats } from "@/lib/api/dashboard";
@@ -52,11 +51,13 @@ function StatTile({
         emphasize && value > 0 && "border-amber-500/40 bg-amber-500/[0.06]",
       )}
     >
-      <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-        <span className="text-muted-foreground [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+      <CardHeader className="flex flex-row items-start gap-2 space-y-0 pb-2">
+        <span className="mt-0.5 shrink-0 text-muted-foreground [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <CardTitle className="truncate text-base font-medium">{title}</CardTitle>
-          {description ? <CardDescription className="text-xs">{description}</CardDescription> : null}
+          <CardTitle className="text-balance text-sm font-medium leading-snug sm:text-base">
+            {title}
+          </CardTitle>
+          {description ? <CardDescription className="text-xs leading-snug">{description}</CardDescription> : null}
         </div>
       </CardHeader>
       <CardContent>
@@ -156,8 +157,10 @@ export default function DashboardPage() {
         <>
           {stats ? (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{t("dashboard.home.quickStatsHint")}</p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <p className="max-w-3xl text-sm text-muted-foreground text-pretty">
+                {t("dashboard.home.quickStatsHint")}
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
                 <StatTile
                   title={t("dashboard.home.teamMembers")}
                   value={stats.teamMembers}
@@ -271,11 +274,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight">{t("dashboard.home.planSectionTitle")}</h2>
-            <PlanLimitsOverview />
-          </div>
         </>
       )}
 
