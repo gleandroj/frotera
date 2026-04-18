@@ -1,8 +1,9 @@
 import { PrismaModule } from "@/prisma/prisma.module";
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { CustomersController } from "./customers.controller";
 import { CustomersService } from "./customers.service";
 
+@Global()
 @Module({
   imports: [PrismaModule],
   controllers: [CustomersController],
