@@ -2,18 +2,79 @@
 
 import { useAuth } from "@/lib/hooks/use-auth";
 import { CreateOrganizationDialog } from "@/components/organizations";
+import { PlanLimitsOverview } from "@/components/dashboard/plan-limits-overview";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
-import { getDashboardStats } from "@/lib/api/dashboard";
+import { getDashboardStats, type DashboardStats } from "@/lib/api/dashboard";
 import { checklistAPI, type ChecklistSummaryResponse } from "@/lib/frontend/api-client";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Users, ClipboardList, BarChart2 } from "lucide-react";
+import {
+  Users,
+  ClipboardList,
+  BarChart2,
+  Car,
+  UserRound,
+  Radio,
+  Building2,
+  AlertTriangle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function StatTile({
+  title,
+  description,
+  value,
+  icon,
+  href,
+  canNavigate,
+  emphasize,
+}: {
+  title: string;
+  description?: string;
+  value: number;
+  icon: React.ReactNode;
+  href: string;
+  canNavigate: boolean;
+  emphasize?: boolean;
+}) {
+  const inner = (
+    <Card
+      className={cn(
+        "h-full transition-colors",
+        canNavigate && "cursor-pointer hover:bg-muted/40",
+        emphasize && value > 0 && "border-amber-500/40 bg-amber-500/[0.06]",
+      )}
+    >
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+        <span className="text-muted-foreground [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <CardTitle className="truncate text-base font-medium">{title}</CardTitle>
+          {description ? <CardDescription className="text-xs">{description}</CardDescription> : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+
+  if (canNavigate) {
+    return (
+      <Link href={href} className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        {inner}
+      </Link>
+    );
+  }
+
+  return inner;
+}
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -22,12 +83,18 @@ export default function DashboardPage() {
   const { user, organizations, currentOrganization } = useAuth();
   const { can } = usePermissions();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<number | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [checklistSummary, setChecklistSummary] = useState<ChecklistSummaryResponse | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
   const orgId = currentOrganization?.id;
   const canChecklistView = can(Module.CHECKLIST, Action.VIEW);
+  const canUsersView = can(Module.USERS, Action.VIEW);
+  const canVehiclesView = can(Module.VEHICLES, Action.VIEW);
+  const canDriversView = can(Module.DRIVERS, Action.VIEW);
+  const canTrackingView = can(Module.TRACKING, Action.VIEW);
+  const canCompaniesView = can(Module.COMPANIES, Action.VIEW);
+  const canIncidentsView = can(Module.INCIDENTS, Action.VIEW);
 
   useEffect(() => {
     if (user?.isSuperAdmin && organizations && organizations.length === 0) {
@@ -40,7 +107,7 @@ export default function DashboardPage() {
     setLoadingStats(true);
     try {
       const dashRes = await getDashboardStats(orgId);
-      setTeamMembers(dashRes.data.teamMembers);
+      setStats(dashRes.data);
       if (canChecklistView) {
         const checklistRes = await checklistAPI.reportsSummary(orgId, undefined);
         setChecklistSummary(checklistRes.data);
@@ -49,7 +116,7 @@ export default function DashboardPage() {
       }
     } catch {
       toast.error(t("dashboard.home.statsError"));
-      setTeamMembers(null);
+      setStats(null);
       setChecklistSummary(null);
     } finally {
       setLoadingStats(false);
@@ -86,16 +153,68 @@ export default function DashboardPage() {
       ) : loadingStats ? (
         <p className="text-muted-foreground">{t("common.loading")}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base font-medium">{t("dashboard.home.teamMembers")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{teamMembers ?? "—"}</div>
-            </CardContent>
-          </Card>
+        <>
+          {stats ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("dashboard.home.quickStatsHint")}</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <StatTile
+                  title={t("dashboard.home.teamMembers")}
+                  value={stats.teamMembers}
+                  icon={<Users />}
+                  href="/team"
+                  canNavigate={canUsersView}
+                />
+                {canVehiclesView ? (
+                  <StatTile
+                    title={t("dashboard.home.activeVehicles")}
+                    value={stats.vehiclesActive}
+                    icon={<Car />}
+                    href="/dashboard/vehicles"
+                    canNavigate
+                  />
+                ) : null}
+                {canDriversView ? (
+                  <StatTile
+                    title={t("dashboard.home.activeDrivers")}
+                    value={stats.driversActive}
+                    icon={<UserRound />}
+                    href="/dashboard/drivers"
+                    canNavigate
+                  />
+                ) : null}
+                {canTrackingView ? (
+                  <StatTile
+                    title={t("dashboard.home.trackers")}
+                    value={stats.trackers}
+                    icon={<Radio />}
+                    href="/dashboard/devices"
+                    canNavigate
+                  />
+                ) : null}
+                {canCompaniesView ? (
+                  <StatTile
+                    title={t("dashboard.home.customers")}
+                    value={stats.customers}
+                    icon={<Building2 />}
+                    href="/dashboard/customers"
+                    canNavigate
+                  />
+                ) : null}
+                {canIncidentsView ? (
+                  <StatTile
+                    title={t("dashboard.home.openIncidents")}
+                    description={t("dashboard.home.openIncidentsHint")}
+                    value={stats.openIncidents}
+                    icon={<AlertTriangle />}
+                    href="/dashboard/incidents"
+                    canNavigate
+                    emphasize
+                  />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {canChecklistView && (
             <Card>
@@ -152,7 +271,12 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-        </div>
+
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight">{t("dashboard.home.planSectionTitle")}</h2>
+            <PlanLimitsOverview />
+          </div>
+        </>
       )}
 
       <CreateOrganizationDialog

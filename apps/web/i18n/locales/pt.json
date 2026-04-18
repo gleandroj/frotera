@@ -1266,7 +1266,15 @@
       "checklistCompletion": "Taxa de conclusão",
       "openChecklistReport": "Abrir relatório",
       "openChecklists": "Ir para checklists",
-      "statsError": "Não foi possível carregar as estatísticas."
+      "statsError": "Não foi possível carregar as estatísticas.",
+      "quickStatsHint": "Atalhos para as áreas principais. Os números refletem o estado atual da organização.",
+      "activeVehicles": "Veículos ativos",
+      "activeDrivers": "Motoristas ativos",
+      "trackers": "Rastreadores",
+      "customers": "Empresas",
+      "openIncidents": "Ocorrências em aberto",
+      "openIncidentsHint": "Em aberto ou em andamento",
+      "planSectionTitle": "Plano e limites"
     },
     "planLimits": {
       "needMore": {

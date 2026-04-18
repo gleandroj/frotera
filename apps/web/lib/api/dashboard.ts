@@ -2,6 +2,11 @@ import { apiClient } from "../frontend/api-client";
 
 export interface DashboardStats {
   teamMembers: number;
+  vehiclesActive: number;
+  driversActive: number;
+  trackers: number;
+  customers: number;
+  openIncidents: number;
 }
 
 export interface DashboardResponse {
