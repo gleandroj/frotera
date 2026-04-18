@@ -191,6 +191,9 @@ export class CustomersService {
     allowedCustomerIds: string[] | null,
   ): Promise<CustomerResponseDto> {
     const parentId = dto.parentId?.trim() || null;
+    if (allowedCustomerIds !== null && !parentId) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
     if (parentId) {
       const parent = await this.prisma.customer.findFirst({
         where: { id: parentId, organizationId },

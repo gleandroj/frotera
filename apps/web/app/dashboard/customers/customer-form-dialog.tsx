@@ -47,14 +47,18 @@ interface CustomerFormDialogProps {
   customers: Customer[];
   onSuccess: (created?: Customer) => void;
   defaultParentId?: string | null;
+  /** When false, parentId is required (non-superadmins cannot create root customers). */
+  allowRootCreation?: boolean;
   /** Avoid stacking a second dimming overlay when this sheet opens over another modal/sheet. */
   hideOverlay?: boolean;
 }
 
-const buildSchema = (t: (k: string) => string) =>
+const buildSchema = (t: (k: string) => string, requireParent: boolean) =>
   z.object({
     name: z.string().min(1, t("common.required")),
-    parentId: z.string().default(""),
+    parentId: requireParent
+      ? z.string().min(1, t("common.required"))
+      : z.string().default(""),
   });
 
 type CustomerFormValues = z.infer<ReturnType<typeof buildSchema>>;
@@ -67,10 +71,12 @@ export function CustomerFormDialog({
   customers,
   onSuccess,
   defaultParentId,
+  allowRootCreation = true,
   hideOverlay = false,
 }: CustomerFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!customer;
+  const requireParent = !isEdit && !allowRootCreation;
 
   const [parentComboboxOpen, setParentComboboxOpen] = useState(false);
 
@@ -83,11 +89,14 @@ export function CustomerFormDialog({
     if (defaultParentId && parentOptions.some((c) => c.id === defaultParentId)) {
       return defaultParentId;
     }
+    if (requireParent && parentOptions.length === 1) {
+      return parentOptions[0].id;
+    }
     return "";
   };
 
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(buildSchema(t)),
+    resolver: zodResolver(buildSchema(t, requireParent)),
     defaultValues: {
       name: customer?.name ?? "",
       parentId: getDefaultParentId(),
@@ -104,7 +113,7 @@ export function CustomerFormDialog({
       name: customer?.name ?? "",
       parentId: getDefaultParentId(),
     });
-  }, [open, customer?.id, defaultParentId]);
+  }, [open, customer?.id, defaultParentId, allowRootCreation]);
 
   const handleSubmit = async (values: CustomerFormValues) => {
     try {
@@ -225,17 +234,19 @@ export function CustomerFormDialog({
                           <CommandList>
                             <CommandEmpty>{t("common.noResults")}</CommandEmpty>
                             <CommandGroup>
-                              <CommandItem
-                                value={t("customers.noParent")}
-                                onSelect={() => {
-                                  form.setValue("parentId", "", {
-                                    shouldValidate: true,
-                                  });
-                                  setParentComboboxOpen(false);
-                                }}
-                              >
-                                {t("customers.noParent")}
-                              </CommandItem>
+                              {!requireParent && (
+                                <CommandItem
+                                  value={t("customers.noParent")}
+                                  onSelect={() => {
+                                    form.setValue("parentId", "", {
+                                      shouldValidate: true,
+                                    });
+                                    setParentComboboxOpen(false);
+                                  }}
+                                >
+                                  {t("customers.noParent")}
+                                </CommandItem>
+                              )}
                               {parentOptions.map((c) => (
                                 <CommandItem
                                   key={c.id}

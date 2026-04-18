@@ -13,7 +13,7 @@ import { DeleteCustomerDialog } from "./delete-customer-dialog";
 
 export default function CustomersPage() {
   const { t } = useTranslation();
-  const { currentOrganization, selectedCustomerId } = useAuth();
+  const { user, currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const canEditCustomer = can(Module.COMPANIES, Action.EDIT);
   const canDeleteCustomer = can(Module.COMPANIES, Action.DELETE);
@@ -118,6 +118,7 @@ export default function CustomersPage() {
         customers={customers}
         onSuccess={fetchCustomers}
         defaultParentId={selectedCustomerId ?? undefined}
+        allowRootCreation={user?.isSuperAdmin ?? false}
       />
       <CustomerFormDialog
         open={!!editCustomer}
