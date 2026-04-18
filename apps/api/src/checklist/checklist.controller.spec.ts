@@ -6,6 +6,8 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import {
   ChecklistEntryFilterDto,
   ChecklistEntryResponseDto,
+  ChecklistSummaryQueryDto,
+  ChecklistSummaryResponseDto,
   ChecklistTemplateResponseDto,
   CreateChecklistEntryDto,
   CreateChecklistTemplateDto,
@@ -65,12 +67,29 @@ describe('ChecklistController', () => {
     updatedAt: '2026-04-17T10:00:00.000Z',
   };
 
+  const mockSummary: ChecklistSummaryResponseDto = {
+    period: { dateFrom: '2026-04-01T00:00:00.000Z', dateTo: '2026-04-18T00:00:00.000Z' },
+    totals: { total: 5, pending: 1, completed: 3, incomplete: 1, completionRate: 0.6 },
+    byTemplate: [
+      {
+        templateId,
+        templateName: 'Pré-Viagem',
+        total: 5,
+        pending: 1,
+        completed: 3,
+        incomplete: 1,
+        completionRate: 0.6,
+      },
+    ],
+  };
+
   const mockChecklistService = {
     listTemplates: jest.fn(),
     createTemplate: jest.fn(),
     getTemplate: jest.fn(),
     updateTemplate: jest.fn(),
     deleteTemplate: jest.fn(),
+    getEntriesSummary: jest.fn(),
     listEntries: jest.fn(),
     createEntry: jest.fn(),
     getMemberIdForUser: jest.fn(),
@@ -206,6 +225,20 @@ describe('ChecklistController', () => {
       await controller.deleteTemplate(orgId, templateId);
 
       expect(service.deleteTemplate).toHaveBeenCalledWith(templateId, orgId);
+    });
+  });
+
+  // ─── Reports ──────────────────────────────────────────────────────────────────
+
+  describe('getEntriesSummary', () => {
+    it('should return summary from service', async () => {
+      mockChecklistService.getEntriesSummary.mockResolvedValue(mockSummary);
+
+      const query: ChecklistSummaryQueryDto = { templateId };
+      const result = await controller.getEntriesSummary(orgId, query);
+
+      expect(service.getEntriesSummary).toHaveBeenCalledWith(orgId, query);
+      expect(result).toEqual(mockSummary);
     });
   });
 

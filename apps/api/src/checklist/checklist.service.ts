@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { ChecklistDriverRequirement, ItemType } from "@prisma/client";
+import { ChecklistDriverRequirement, EntryStatus, ItemType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { S3Service } from "../utils/s3.service";
 import { ApiCode } from "../common/api-codes.enum";
@@ -9,7 +9,8 @@ import {
   CHECKLIST_UPLOAD_MAX_BYTES,
 } from "./checklist-upload.mime";
 import {
-  ChecklistEntryFilterDto, ChecklistEntryResponseDto, ChecklistTemplateResponseDto,
+  ChecklistEntryFilterDto, ChecklistEntryResponseDto, ChecklistSummaryQueryDto,
+  ChecklistSummaryResponseDto, ChecklistTemplateResponseDto,
   CreateChecklistEntryDto, CreateChecklistTemplateDto, CreatePublicChecklistEntryDto,
   UpdateChecklistEntryStatusDto, UpdateChecklistTemplateDto,
 } from "./checklist.dto";
@@ -220,6 +221,115 @@ export class ChecklistService {
     const driverMap = new Map(driversFound.map((d) => [d.id, d.name]));
 
     return entries.map((e) => this.toEntryResponse(e, driverMap.get(e.driverId ?? "") ?? null));
+  }
+
+  /**
+   * Aggregated entry counts for reporting (no answer payloads).
+   * When both dateFrom and dateTo are omitted, defaults to the last 30 days ending now.
+   */
+  async getEntriesSummary(
+    organizationId: string,
+    query: ChecklistSummaryQueryDto,
+  ): Promise<ChecklistSummaryResponseDto> {
+    const now = new Date();
+    let periodFrom: Date;
+    let periodTo: Date;
+
+    if (!query.dateFrom && !query.dateTo) {
+      periodTo = now;
+      periodFrom = new Date(periodTo.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else if (query.dateFrom && query.dateTo) {
+      periodFrom = new Date(query.dateFrom);
+      periodTo = new Date(query.dateTo);
+    } else if (query.dateFrom) {
+      periodFrom = new Date(query.dateFrom);
+      periodTo = now;
+    } else {
+      periodTo = new Date(query.dateTo!);
+      periodFrom = new Date(periodTo.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    const where: Record<string, unknown> = { organizationId };
+    if (query.templateId) where.templateId = query.templateId;
+    if (query.vehicleId) where.vehicleId = query.vehicleId;
+    where.createdAt = { gte: periodFrom, lte: periodTo };
+
+    const countByStatus = await this.prisma.checklistEntry.groupBy({
+      by: ["status"],
+      where,
+      _count: { _all: true },
+    });
+
+    const byTemplateStatus = await this.prisma.checklistEntry.groupBy({
+      by: ["templateId", "status"],
+      where,
+      _count: { _all: true },
+    });
+
+    const statusTotals = (s: EntryStatus): number => {
+      const row = countByStatus.find((r) => r.status === s);
+      return row?._count._all ?? 0;
+    };
+
+    const pending = statusTotals(EntryStatus.PENDING);
+    const completed = statusTotals(EntryStatus.COMPLETED);
+    const incomplete = statusTotals(EntryStatus.INCOMPLETE);
+    const total = pending + completed + incomplete;
+    const completionRate = total === 0 ? 0 : completed / total;
+
+    const templateIds = [...new Set(byTemplateStatus.map((r) => r.templateId))];
+    const templates = templateIds.length
+      ? await this.prisma.checklistTemplate.findMany({
+          where: { id: { in: templateIds }, organizationId },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(templates.map((t) => [t.id, t.name]));
+
+    const templateAgg = new Map<
+      string,
+      { pending: number; completed: number; incomplete: number }
+    >();
+    for (const row of byTemplateStatus) {
+      const tid = row.templateId;
+      if (!templateAgg.has(tid)) {
+        templateAgg.set(tid, { pending: 0, completed: 0, incomplete: 0 });
+      }
+      const agg = templateAgg.get(tid)!;
+      const c = row._count._all;
+      if (row.status === EntryStatus.PENDING) agg.pending += c;
+      else if (row.status === EntryStatus.COMPLETED) agg.completed += c;
+      else if (row.status === EntryStatus.INCOMPLETE) agg.incomplete += c;
+    }
+
+    const byTemplate = [...templateAgg.entries()].map(([templateId, counts]) => {
+      const t = counts.pending + counts.completed + counts.incomplete;
+      return {
+        templateId,
+        templateName: nameById.get(templateId) ?? templateId,
+        total: t,
+        pending: counts.pending,
+        completed: counts.completed,
+        incomplete: counts.incomplete,
+        completionRate: t === 0 ? 0 : counts.completed / t,
+      };
+    });
+    byTemplate.sort((a, b) => b.total - a.total);
+
+    return {
+      period: {
+        dateFrom: periodFrom.toISOString(),
+        dateTo: periodTo.toISOString(),
+      },
+      totals: {
+        total,
+        pending,
+        completed,
+        incomplete,
+        completionRate,
+      },
+      byTemplate,
+    };
   }
 
   async createEntry(

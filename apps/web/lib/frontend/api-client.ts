@@ -1164,6 +1164,42 @@ export interface ChecklistEntryFilters {
   dateTo?: string;
 }
 
+export interface ChecklistSummaryQuery {
+  dateFrom?: string;
+  dateTo?: string;
+  templateId?: string;
+  vehicleId?: string;
+}
+
+export interface ChecklistSummaryPeriod {
+  dateFrom: string;
+  dateTo: string;
+}
+
+export interface ChecklistSummaryTotals {
+  total: number;
+  pending: number;
+  completed: number;
+  incomplete: number;
+  completionRate: number;
+}
+
+export interface ChecklistSummaryByTemplate {
+  templateId: string;
+  templateName: string;
+  total: number;
+  pending: number;
+  completed: number;
+  incomplete: number;
+  completionRate: number;
+}
+
+export interface ChecklistSummaryResponse {
+  period: ChecklistSummaryPeriod;
+  totals: ChecklistSummaryTotals;
+  byTemplate: ChecklistSummaryByTemplate[];
+}
+
 export const checklistAPI = {
   listTemplates: (organizationId: string) =>
     externalApi.get<ChecklistTemplate[]>(
@@ -1190,6 +1226,11 @@ export const checklistAPI = {
   deleteTemplate: (organizationId: string, templateId: string) =>
     externalApi.delete<{ message: string }>(
       `/api/organizations/${organizationId}/checklist/templates/${templateId}`,
+    ),
+  reportsSummary: (organizationId: string, params?: ChecklistSummaryQuery) =>
+    externalApi.get<ChecklistSummaryResponse>(
+      `/api/organizations/${organizationId}/checklist/reports/summary`,
+      { params },
     ),
   listEntries: (organizationId: string, filters?: ChecklistEntryFilters) =>
     externalApi.get<ChecklistEntry[]>(

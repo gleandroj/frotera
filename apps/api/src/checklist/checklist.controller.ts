@@ -4,14 +4,15 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChecklistService } from "./checklist.service";
 import { clientIpFromRequest } from "./checklist-client-ip";
 import {
-  ChecklistEntryFilterDto, CreateChecklistEntryDto,
-  CreateChecklistTemplateDto, UpdateChecklistEntryStatusDto, UpdateChecklistTemplateDto,
+  ChecklistEntryFilterDto, ChecklistSummaryQueryDto, ChecklistSummaryResponseDto,
+  CreateChecklistEntryDto, CreateChecklistTemplateDto, UpdateChecklistEntryStatusDto,
+  UpdateChecklistTemplateDto,
 } from "./checklist.dto";
 
 interface RequestWithUser extends ExpressRequest {
@@ -110,6 +111,18 @@ export class ChecklistController {
       file.originalname,
       file.mimetype,
     );
+  }
+
+  // ─── Reports ────────────────────────────────────────────────────────────────
+
+  @Get("reports/summary")
+  @ApiOperation({ summary: "Resumo agregado de entradas de checklist (por status e por template)" })
+  @ApiOkResponse({ type: ChecklistSummaryResponseDto })
+  getEntriesSummary(
+    @Param("organizationId") organizationId: string,
+    @Query() query: ChecklistSummaryQueryDto,
+  ): Promise<ChecklistSummaryResponseDto> {
+    return this.checklistService.getEntriesSummary(organizationId, query);
   }
 
   // ─── Entries ────────────────────────────────────────────────────────────────

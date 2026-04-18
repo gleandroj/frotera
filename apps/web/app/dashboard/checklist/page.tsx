@@ -13,6 +13,10 @@ import {
   ChecklistEntry,
   EntryStatus,
   ChecklistEntryFilters,
+  vehiclesAPI,
+  driversAPI,
+  type Vehicle,
+  type Driver,
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,8 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Plus } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { BarChart2, MoreHorizontal, Plus } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
@@ -60,7 +63,16 @@ type TabType = "templates" | "entries";
 
 const STATUS_ALL = "all";
 
+const ENTRY_FILTER_ALL = "__all__";
+
 const TEMPLATE_LIST_ALL = "all";
+
+function formatVehicleLabel(v: Vehicle): string {
+  const name = (v.name ?? "").trim();
+  const plate = (v.plate ?? "").trim();
+  if (name && plate) return `${name} (${plate})`;
+  return name || plate || v.id;
+}
 const TEMPLATE_LIST_ACTIVE = "active";
 const TEMPLATE_LIST_INACTIVE = "inactive";
 
@@ -79,10 +91,14 @@ export default function ChecklistPage() {
   const [templateToDelete, setTemplateToDelete] = useState<ChecklistTemplate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [vehicleFilter, setVehicleFilter] = useState("");
+  const [entryVehicleFilter, setEntryVehicleFilter] = useState(ENTRY_FILTER_ALL);
+  const [entryTemplateFilter, setEntryTemplateFilter] = useState(ENTRY_FILTER_ALL);
+  const [entryDriverFilter, setEntryDriverFilter] = useState(ENTRY_FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState<EntryStatus | typeof STATUS_ALL>(STATUS_ALL);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [entryFilterVehicles, setEntryFilterVehicles] = useState<Vehicle[]>([]);
+  const [entryFilterDrivers, setEntryFilterDrivers] = useState<Driver[]>([]);
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateListFilter, setTemplateListFilter] = useState<
@@ -113,17 +129,45 @@ export default function ChecklistPage() {
     return templates.find((tpl) => tpl.id === fillTemplateId)?.name ?? t("checklist.fillChecklist");
   }, [fillTemplateId, templates, t]);
 
+  const sortedEntryFilterVehicles = useMemo(
+    () =>
+      [...entryFilterVehicles].sort((a, b) =>
+        formatVehicleLabel(a).localeCompare(formatVehicleLabel(b), "pt", { sensitivity: "base" }),
+      ),
+    [entryFilterVehicles],
+  );
+
+  const sortedEntryFilterDrivers = useMemo(
+    () =>
+      [...entryFilterDrivers].sort((a, b) =>
+        (a.name ?? "").localeCompare(b.name ?? "", "pt", { sensitivity: "base" }),
+      ),
+    [entryFilterDrivers],
+  );
+
+  const sortedEntryFilterTemplates = useMemo(
+    () =>
+      [...templates].sort((a, b) =>
+        (a.name ?? "").localeCompare(b.name ?? "", "pt", { sensitivity: "base" }),
+      ),
+    [templates],
+  );
+
   const hasActiveEntryFilters = useMemo(
     () =>
-      vehicleFilter.trim() !== "" ||
+      entryVehicleFilter !== ENTRY_FILTER_ALL ||
+      entryTemplateFilter !== ENTRY_FILTER_ALL ||
+      entryDriverFilter !== ENTRY_FILTER_ALL ||
       statusFilter !== STATUS_ALL ||
       dateFrom !== "" ||
       dateTo !== "",
-    [vehicleFilter, statusFilter, dateFrom, dateTo],
+    [entryVehicleFilter, entryTemplateFilter, entryDriverFilter, statusFilter, dateFrom, dateTo],
   );
 
   const resetEntryFilters = () => {
-    setVehicleFilter("");
+    setEntryVehicleFilter(ENTRY_FILTER_ALL);
+    setEntryTemplateFilter(ENTRY_FILTER_ALL);
+    setEntryDriverFilter(ENTRY_FILTER_ALL);
     setStatusFilter(STATUS_ALL);
     setDateFrom("");
     setDateTo("");
@@ -143,7 +187,9 @@ export default function ChecklistPage() {
   };
 
   const buildFilters = (): ChecklistEntryFilters => ({
-    ...(vehicleFilter && { vehicleId: vehicleFilter }),
+    ...(entryVehicleFilter !== ENTRY_FILTER_ALL && { vehicleId: entryVehicleFilter }),
+    ...(entryTemplateFilter !== ENTRY_FILTER_ALL && { templateId: entryTemplateFilter }),
+    ...(entryDriverFilter !== ENTRY_FILTER_ALL && { driverId: entryDriverFilter }),
     ...(statusFilter !== STATUS_ALL && { status: statusFilter as EntryStatus }),
     ...(dateFrom && { dateFrom }),
     ...(dateTo && { dateTo }),
@@ -171,7 +217,36 @@ export default function ChecklistPage() {
   useEffect(() => {
     if (activeTab === "entries" && orgId) loadEntries();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicleFilter, statusFilter, dateFrom, dateTo]);
+  }, [entryVehicleFilter, entryTemplateFilter, entryDriverFilter, statusFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
+    setEntryVehicleFilter(ENTRY_FILTER_ALL);
+    setEntryDriverFilter(ENTRY_FILTER_ALL);
+  }, [selectedCustomerId]);
+
+  useEffect(() => {
+    if (activeTab !== "entries" || !orgId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const listParams = selectedCustomerId ? { customerId: selectedCustomerId } : undefined;
+        const [vRes, dRes, tplRes] = await Promise.all([
+          vehiclesAPI.list(orgId, listParams),
+          driversAPI.list(orgId, listParams),
+          checklistAPI.listTemplates(orgId),
+        ]);
+        if (cancelled) return;
+        setEntryFilterVehicles(vRes.data);
+        setEntryFilterDrivers(dRes.data.drivers);
+        setTemplates(tplRes.data);
+      } catch {
+        if (!cancelled) toast.error(t("checklist.toastError"));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, orgId, selectedCustomerId, t]);
 
   const handleConfirmDelete = async () => {
     if (!templateToDelete || !orgId) return;
@@ -381,17 +456,25 @@ export default function ChecklistPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("checklist.title")}</h1>
           <p className="text-muted-foreground">{t("checklist.pageSubtitle")}</p>
         </div>
-        {activeTab === "templates" && can(Module.CHECKLIST, Action.CREATE) && (
-          <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t("checklist.newTemplate")}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {can(Module.CHECKLIST, Action.VIEW) && (
+            <Button variant="outline" className="gap-2" onClick={() => router.push("/dashboard/checklist/reports")}>
+              <BarChart2 className="h-4 w-4" />
+              {t("checklist.reportsLink")}
+            </Button>
+          )}
+          {activeTab === "templates" && can(Module.CHECKLIST, Action.CREATE) && (
+            <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("checklist.newTemplate")}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
@@ -444,12 +527,55 @@ export default function ChecklistPage() {
 
         <TabsContent value="entries" className="space-y-4">
           <div className="flex flex-wrap items-end gap-2">
-            <Input
-              placeholder={t("checklist.filterByVehicle")}
-              value={vehicleFilter}
-              onChange={(e) => setVehicleFilter(e.target.value)}
-              className="w-48"
-            />
+            <Select
+              value={entryVehicleFilter}
+              onValueChange={setEntryVehicleFilter}
+            >
+              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByVehicle")}>
+                <SelectValue placeholder={t("checklist.filterVehicleAll")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ENTRY_FILTER_ALL}>{t("checklist.filterVehicleAll")}</SelectItem>
+                {sortedEntryFilterVehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {formatVehicleLabel(v)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={entryTemplateFilter}
+              onValueChange={setEntryTemplateFilter}
+            >
+              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByTemplate")}>
+                <SelectValue placeholder={t("checklist.filterTemplateAll")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ENTRY_FILTER_ALL}>{t("checklist.filterTemplateAll")}</SelectItem>
+                {sortedEntryFilterTemplates.map((tpl) => (
+                  <SelectItem key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                    {!tpl.active ? ` (${t("common.inactive")})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={entryDriverFilter}
+              onValueChange={setEntryDriverFilter}
+            >
+              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByDriver")}>
+                <SelectValue placeholder={t("checklist.filterDriverAll")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ENTRY_FILTER_ALL}>{t("checklist.filterDriverAll")}</SelectItem>
+                {sortedEntryFilterDrivers.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as EntryStatus | typeof STATUS_ALL)}
@@ -503,7 +629,9 @@ export default function ChecklistPage() {
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : entries.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("checklist.noEntries")}</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {hasActiveEntryFilters ? t("checklist.noEntriesMatchFilter") : t("checklist.noEntries")}
+            </p>
           ) : (
             <DataTable
               columns={entryColumns}

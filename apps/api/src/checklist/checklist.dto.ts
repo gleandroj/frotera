@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-  IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber,
+  IsArray, IsBoolean, IsDateString, IsEnum, IsNotEmpty, IsNumber,
   IsOptional, IsString, ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
@@ -101,6 +101,57 @@ export class ChecklistEntryFilterDto {
   @ApiPropertyOptional() @IsOptional() @IsEnum(EntryStatus) status?: EntryStatus;
   @ApiPropertyOptional() @IsOptional() @IsString() dateFrom?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() dateTo?: string;
+}
+
+/** Query for aggregated checklist entry summary (no status filter). */
+export class ChecklistSummaryQueryDto {
+  @ApiPropertyOptional({ description: "ISO date/datetime; if omitted with dateTo, lower bound is open until defaults apply" })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: "ISO date/datetime; if omitted with dateFrom, upper bound is now" })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() templateId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vehicleId?: string;
+}
+
+export class ChecklistSummaryTotalsDto {
+  @ApiProperty() total: number;
+  @ApiProperty() pending: number;
+  @ApiProperty() completed: number;
+  @ApiProperty() incomplete: number;
+  @ApiProperty({ description: "completed / total (0 if total is 0)" })
+  completionRate: number;
+}
+
+export class ChecklistSummaryByTemplateDto {
+  @ApiProperty() templateId: string;
+  @ApiProperty() templateName: string;
+  @ApiProperty() total: number;
+  @ApiProperty() pending: number;
+  @ApiProperty() completed: number;
+  @ApiProperty() incomplete: number;
+  @ApiProperty() completionRate: number;
+}
+
+export class ChecklistSummaryPeriodDto {
+  @ApiProperty() dateFrom: string;
+  @ApiProperty() dateTo: string;
+}
+
+export class ChecklistSummaryResponseDto {
+  @ApiProperty({ type: ChecklistSummaryPeriodDto })
+  period: ChecklistSummaryPeriodDto;
+
+  @ApiProperty({ type: ChecklistSummaryTotalsDto })
+  totals: ChecklistSummaryTotalsDto;
+
+  @ApiProperty({ type: [ChecklistSummaryByTemplateDto] })
+  byTemplate: ChecklistSummaryByTemplateDto[];
 }
 
 export class ChecklistAnswerResponseDto {
