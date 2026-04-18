@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { VehicleConsumption } from "@/lib/frontend/api-client";
+import { formatReportPeriodKey } from "@/lib/format-report-period";
 import { formatLocaleDecimal } from "@/lib/locale-decimal";
 
 interface Props {
@@ -33,7 +34,11 @@ export function ConsumptionChart({ data, intlLocale }: Props) {
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 12 }}
+          tickFormatter={(v) => formatReportPeriodKey(String(v), intlLocale)}
+        />
         <YAxis
           unit=" km/l"
           tick={{ fontSize: 12 }}
@@ -45,6 +50,7 @@ export function ConsumptionChart({ data, intlLocale }: Props) {
           }
         />
         <Tooltip
+          labelFormatter={(label) => formatReportPeriodKey(String(label), intlLocale)}
           formatter={(val: number) =>
             `${formatLocaleDecimal(val, intlLocale, {
               minFractionDigits: 2,

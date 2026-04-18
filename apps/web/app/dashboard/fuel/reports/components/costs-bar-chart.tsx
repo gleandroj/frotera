@@ -4,6 +4,7 @@ import {
 } from "recharts";
 import { CostsPeriod } from "@/lib/frontend/api-client";
 import { useTranslation } from "@/i18n/useTranslation";
+import { formatReportPeriodKey } from "@/lib/format-report-period";
 import { formatLocaleCurrency } from "@/lib/locale-decimal";
 
 interface Props {
@@ -48,9 +49,16 @@ export function CostsBarChart({ data, intlLocale }: Props) {
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+        <XAxis
+          dataKey="period"
+          tick={{ fontSize: 12 }}
+          tickFormatter={(v) => formatReportPeriodKey(String(v), intlLocale)}
+        />
         <YAxis tickFormatter={(v) => formatAxisCurrency(Number(v))} tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(val: number) => formatTooltipCurrency(val)} />
+        <Tooltip
+          labelFormatter={(label) => formatReportPeriodKey(String(label), intlLocale)}
+          formatter={(val: number) => formatTooltipCurrency(val)}
+        />
         <Legend />
         {fuelTypes.map((ft) => (
           <Bar

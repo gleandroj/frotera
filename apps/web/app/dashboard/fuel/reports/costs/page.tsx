@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
+import { formatReportPeriodKey } from "@/lib/format-report-period";
 
 type GroupBy = "day" | "month" | "year";
 
@@ -83,7 +84,9 @@ export default function CostsReportPage() {
               <tbody>
                 {data.map((d) => (
                   <tr key={d.period} className="border-b hover:bg-muted/50">
-                    <td className="py-2 font-medium">{d.period}</td>
+                    <td className="py-2 font-medium">
+                      {formatReportPeriodKey(d.period, intlLocale)}
+                    </td>
                     <td className="py-2 text-right">
                       {formatLocaleCurrency(d.totalCost, intlLocale, "BRL")}
                     </td>
