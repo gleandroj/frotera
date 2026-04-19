@@ -414,7 +414,10 @@ export function GeofenceFormDialog({
       hideOverlay
       onSuccess={(created) => {
         refreshCustomersSilently();
-        if (created?.id) setPickedCustomerId(created.id);
+        if (created?.id) {
+          setPickedCustomerId(created.id);
+          setCompanySubmitError(false);
+        }
       }}
     />
     </>
