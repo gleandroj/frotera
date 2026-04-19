@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Request as ExpressRequest } from "express";
+import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { PermissionGuard } from "@/auth/guards/permission.guard";
 import { Permission } from "@/auth/decorators/permission.decorator";
@@ -24,11 +24,6 @@ import {
   VehicleResponseDto,
 } from "../dto/index";
 import { VehiclesService } from "./vehicles.service";
-
-interface RequestWithAllowedCustomers extends ExpressRequest {
-  allowedCustomerIds: string[] | null;
-  organizationMember: { id: string; organizationId: string; customerRestricted: boolean };
-}
 
 @ApiTags("vehicles")
 @Controller("organizations/:organizationId/vehicles")
@@ -49,7 +44,7 @@ export class VehiclesController {
   async create(
     @Param("organizationId") organizationId: string,
     @Body() body: CreateVehicleDto,
-    @Request() req: RequestWithAllowedCustomers,
+    @Request() req: OrgScopedRequest,
   ): Promise<VehicleResponseDto> {
     return this.vehiclesService.create(
       organizationId,
@@ -68,7 +63,7 @@ export class VehiclesController {
     @Query("customerId") filterCustomerId: string | undefined,
     @Query("activeOnly") activeOnlyRaw: string | undefined,
     @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
-    @Request() req: RequestWithAllowedCustomers,
+    @Request() req: OrgScopedRequest,
   ): Promise<VehicleResponseDto[]> {
     const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
     const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
@@ -102,7 +97,7 @@ export class VehiclesController {
   async get(
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
-    @Request() req: RequestWithAllowedCustomers,
+    @Request() req: OrgScopedRequest,
   ): Promise<VehicleResponseDto> {
     return this.vehiclesService.findByOrganizationAndId(
       organizationId,
@@ -121,7 +116,7 @@ export class VehiclesController {
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
     @Body() body: UpdateVehicleDto,
-    @Request() req: RequestWithAllowedCustomers,
+    @Request() req: OrgScopedRequest,
   ): Promise<VehicleResponseDto> {
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,
@@ -145,7 +140,7 @@ export class VehiclesController {
   async delete(
     @Param("organizationId") organizationId: string,
     @Param("vehicleId") vehicleId: string,
-    @Request() req: RequestWithAllowedCustomers,
+    @Request() req: OrgScopedRequest,
   ): Promise<void> {
     await this.vehiclesService.findByOrganizationAndId(
       organizationId,

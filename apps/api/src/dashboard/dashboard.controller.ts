@@ -8,12 +8,8 @@ import {
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganizationMemberGuard } from "../organizations/guards/organization-member.guard";
 import { DashboardService } from "./dashboard.service";
-import { Request as ExpressRequest } from "express";
+import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { DashboardResponseDto } from "./dto/dashboard-stats.dto";
-
-interface DashboardRequest extends ExpressRequest {
-  allowedCustomerIds: string[] | null;
-}
 
 @ApiTags("dashboard")
 @ApiBearerAuth()
@@ -32,7 +28,7 @@ export class DashboardController {
   async getDashboardStats(
     @Param("organizationId") organizationId: string,
     @Query("customerId") customerId: string | undefined,
-    @Request() req: DashboardRequest,
+    @Request() req: OrgScopedRequest,
   ): Promise<DashboardResponseDto> {
     const data = await this.dashboardService.getDashboardStats(
       organizationId,

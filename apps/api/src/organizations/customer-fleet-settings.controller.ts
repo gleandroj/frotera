@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Patch, Body, Request, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Request as ExpressRequest } from "express";
+import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { PermissionGuard } from "@/auth/guards/permission.guard";
 import { Permission } from "@/auth/decorators/permission.decorator";
@@ -11,11 +11,6 @@ import {
 } from "@/customers/customer-fleet-settings.dto";
 import { OrganizationMemberGuard } from "@/organizations/guards/organization-member.guard";
 import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
-
-interface RequestWithFleet extends ExpressRequest {
-  user: { userId: string; isSuperAdmin?: boolean };
-  allowedCustomerIds: string[] | null;
-}
 
 @ApiTags("organizations")
 @Controller("organizations/:organizationId/customer-fleet-settings")
@@ -32,7 +27,7 @@ export class CustomerFleetSettingsController {
   @ApiResponse({ status: 200, type: ListCustomerFleetSettingsResponseDto })
   async list(
     @Param("organizationId") organizationId: string,
-    @Request() req: RequestWithFleet,
+    @Request() req: OrgScopedRequest,
   ): Promise<ListCustomerFleetSettingsResponseDto> {
     return this.fleetSettings.getList(organizationId, {
       userId: req.user.userId,
@@ -48,7 +43,7 @@ export class CustomerFleetSettingsController {
   async patch(
     @Param("organizationId") organizationId: string,
     @Body() body: UpdateCustomerFleetSettingsDto,
-    @Request() req: RequestWithFleet,
+    @Request() req: OrgScopedRequest,
   ): Promise<ListCustomerFleetSettingsResponseDto> {
     return this.fleetSettings.patch(organizationId, body, {
       userId: req.user.userId,

@@ -26,6 +26,7 @@ import {
   ApiTags,
   ApiNoContentResponse,
 } from '@nestjs/swagger';
+import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { FuelService } from './fuel.service';
 import { FuelGeoService } from './fuel-geo.service';
@@ -68,7 +69,7 @@ export class FuelController {
   @Get('stats')
   @ApiOkResponse({ type: FuelStatsResponseDto })
   async getStats(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: FuelStatsQueryDto,
   ): Promise<FuelStatsResponseDto> {
@@ -86,7 +87,7 @@ export class FuelController {
     },
   })
   async listGeoStates(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
   ): Promise<Array<{ sigla: string; nome: string }>> {
     const userId = req.user.userId;
@@ -103,7 +104,7 @@ export class FuelController {
     },
   })
   async listGeoMunicipios(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query('uf') uf: string,
   ): Promise<Array<{ id: number; nome: string }>> {
@@ -137,7 +138,7 @@ export class FuelController {
     FileInterceptor('file', { limits: { fileSize: FUEL_RECEIPT_UPLOAD_MAX_BYTES } }),
   )
   async uploadReceipt(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @UploadedFile(
       new ParseFilePipe({
@@ -166,7 +167,7 @@ export class FuelController {
   @Get()
   @ApiOkResponse({ type: [FuelLogResponseDto] })
   async list(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ListFuelLogsQueryDto,
   ): Promise<FuelLogResponseDto[]> {
@@ -180,7 +181,7 @@ export class FuelController {
   @Post()
   @ApiCreatedResponse({ type: FuelLogResponseDto })
   async create(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Body() body: CreateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
@@ -194,7 +195,7 @@ export class FuelController {
   @Get(':id')
   @ApiOkResponse({ type: FuelLogResponseDto })
   async getOne(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<FuelLogResponseDto> {
@@ -208,7 +209,7 @@ export class FuelController {
   @Patch(':id')
   @ApiOkResponse({ type: FuelLogResponseDto })
   async update(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() body: UpdateFuelLogDto,
@@ -224,7 +225,7 @@ export class FuelController {
   @HttpCode(200)
   @ApiOkResponse({ schema: { example: { message: 'Fuel log deleted successfully' } } })
   async delete(
-    @Request() req: any,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<{ message: string }> {

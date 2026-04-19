@@ -16,7 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
-import { Request as ExpressRequest } from "express";
+import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { PermissionGuard } from "@/auth/guards/permission.guard";
 import { Permission } from "@/auth/decorators/permission.decorator";
@@ -32,12 +32,6 @@ import {
 } from "./telemetry.dto";
 import { TelemetryService } from "./telemetry.service";
 
-interface TelemetryRequest extends ExpressRequest {
-  user: { userId: string; isSuperAdmin?: boolean };
-  organizationMember: { id: string; organizationId: string };
-  allowedCustomerIds: string[] | null;
-}
-
 @ApiTags("telemetry")
 @Controller("organizations/:organizationId/telemetry")
 @UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
@@ -45,7 +39,7 @@ interface TelemetryRequest extends ExpressRequest {
 export class TelemetryController {
   constructor(private readonly telemetryService: TelemetryService) {}
 
-  private ackMemberId(req: TelemetryRequest): string | null {
+  private ackMemberId(req: OrgScopedRequest): string | null {
     const id = req.organizationMember?.id;
     if (!id) return null;
     return id;
@@ -58,7 +52,7 @@ export class TelemetryController {
   listAlerts(
     @Param("organizationId") organizationId: string,
     @Query() query: ListAlertsQueryDto,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.listAlerts(
       organizationId,
@@ -74,7 +68,7 @@ export class TelemetryController {
   getAlertStats(
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.getAlertStats(
       organizationId,
@@ -90,7 +84,7 @@ export class TelemetryController {
   acknowledgeAlert(
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.acknowledgeAlert(
       organizationId,
@@ -108,7 +102,7 @@ export class TelemetryController {
     @Query("customerId") filterCustomerId: string | undefined,
     @Query("activeOnly") activeOnlyRaw: string | undefined,
     @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
     const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
@@ -128,7 +122,7 @@ export class TelemetryController {
   createGeofence(
     @Param("organizationId") organizationId: string,
     @Body() dto: CreateGeofenceDto,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.createGeofence(
       organizationId,
@@ -145,7 +139,7 @@ export class TelemetryController {
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
     @Body() dto: UpdateGeofenceDto,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.updateGeofence(
       organizationId,
@@ -162,7 +156,7 @@ export class TelemetryController {
   deleteGeofence(
     @Param("organizationId") organizationId: string,
     @Param("id") id: string,
-    @Request() req: TelemetryRequest,
+    @Request() req: OrgScopedRequest,
   ) {
     return this.telemetryService.deleteGeofence(
       organizationId,

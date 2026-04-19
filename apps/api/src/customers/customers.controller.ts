@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Request as ExpressRequest } from "express";
+import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { PermissionGuard } from "@/auth/guards/permission.guard";
 import { Permission } from "@/auth/decorators/permission.decorator";
@@ -24,12 +24,6 @@ import {
   CustomersListResponseDto,
   UpdateCustomerDto,
 } from "./customers.dto";
-
-interface RequestWithMember extends ExpressRequest {
-  user: { userId: string; isSuperAdmin?: boolean };
-  organizationMember: { id: string; organizationId: string; customerRestricted: boolean };
-  allowedCustomerIds: string[] | null;
-}
 
 @ApiTags("customers")
 @Controller("organizations/:organizationId/customers")
@@ -47,7 +41,7 @@ export class CustomersController {
     @Query("customerId") filterCustomerId: string | undefined,
     @Query("activeOnly") activeOnlyRaw: string | undefined,
     @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
-    @Request() req: RequestWithMember,
+    @Request() req: OrgScopedRequest,
   ): Promise<CustomersListResponseDto> {
     const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
     const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
@@ -80,7 +74,7 @@ export class CustomersController {
   async create(
     @Param("organizationId") organizationId: string,
     @Body() body: CreateCustomerDto,
-    @Request() req: RequestWithMember,
+    @Request() req: OrgScopedRequest,
   ): Promise<CustomerResponseDto> {
     return this.customersService.create(
       organizationId,
@@ -97,7 +91,7 @@ export class CustomersController {
   async get(
     @Param("organizationId") organizationId: string,
     @Param("customerId") customerId: string,
-    @Request() req: RequestWithMember,
+    @Request() req: OrgScopedRequest,
   ): Promise<CustomerResponseDto> {
     return this.customersService.getById(
       customerId,
@@ -116,7 +110,7 @@ export class CustomersController {
     @Param("organizationId") organizationId: string,
     @Param("customerId") customerId: string,
     @Body() body: UpdateCustomerDto,
-    @Request() req: RequestWithMember,
+    @Request() req: OrgScopedRequest,
   ): Promise<CustomerResponseDto> {
     return this.customersService.update(
       customerId,
@@ -138,7 +132,7 @@ export class CustomersController {
   async delete(
     @Param("organizationId") organizationId: string,
     @Param("customerId") customerId: string,
-    @Request() req: RequestWithMember,
+    @Request() req: OrgScopedRequest,
   ): Promise<void> {
     await this.customersService.delete(
       customerId,

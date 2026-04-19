@@ -1,16 +1,10 @@
 import { Body, Controller, Patch, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateProfileResponseDto } from './dto/profile-response.dto';
 import { UsersService } from './users.service';
-
-interface RequestWithUser extends ExpressRequest {
-  user: {
-    userId: string;
-  };
-}
 
 @ApiTags('users')
 @Controller('users')
@@ -52,7 +46,7 @@ export class UsersController {
     }
   })
   async updateProfile(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Body() updateProfileDto: UpdateProfileDto,
   ): Promise<UpdateProfileResponseDto> {
     return this.usersService.updateProfile(req.user.userId, updateProfileDto);

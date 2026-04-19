@@ -1,8 +1,8 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import { OrganizationMember as OrganizationMemberType } from "@prisma/client";
+import type { OrganizationMemberContext } from "@/organizations/organization-member-context.type";
 
 export const OrganizationMember = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): OrganizationMemberType => {
+  (_data: unknown, ctx: ExecutionContext): OrganizationMemberContext => {
     const request = ctx.switchToHttp().getRequest();
     return request.organizationMember;
   }

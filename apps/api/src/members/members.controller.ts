@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CreateMemberDto,
@@ -11,12 +11,6 @@ import {
   UpdateMemberResponseDto,
 } from './members.dto';
 import { MembersService } from './members.service';
-
-interface RequestWithUser extends ExpressRequest {
-  user: {
-    userId: string;
-  };
-}
 
 @ApiTags('members')
 @Controller('organizations/:organizationId/members')
@@ -30,7 +24,7 @@ export class MembersController {
   @ApiResponse({ status: 200, type: MembersListResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getMembers(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
   ): Promise<MembersListResponseDto> {
@@ -43,7 +37,7 @@ export class MembersController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async createMember(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Body() body: CreateMemberDto,
   ): Promise<CreateMemberResponseDto> {
@@ -57,7 +51,7 @@ export class MembersController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Member not found' })
   async updateMember(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('memberId') memberId: string,
     @Body() body: UpdateMemberDto,
@@ -77,7 +71,7 @@ export class MembersController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Member not found' })
   async removeMember(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('memberId') memberId: string,
   ): Promise<DeleteMemberResponseDto> {

@@ -7,13 +7,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { OrganizationMemberContext } from '@/organizations/organization-member-context.type';
 import { PERMISSION_KEY, RequiredPermission } from '../decorators/permission.decorator';
-
-type OrganizationMemberWithRolePermissions = Prisma.OrganizationMemberGetPayload<{
-  include: { role: { include: { permissions: true } } };
-}>;
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -49,7 +45,7 @@ export class PermissionGuard implements CanActivate {
     });
     if (userRecord?.isSuperAdmin) return true;
 
-    const reqAny = request as Request & { organizationMember?: OrganizationMemberWithRolePermissions };
+    const reqAny = request as Request & { organizationMember?: OrganizationMemberContext };
     const cached = reqAny.organizationMember;
     const cachedPerms = cached?.role?.permissions;
     const reuseMembership =
@@ -57,7 +53,7 @@ export class PermissionGuard implements CanActivate {
       cached?.organizationId === organizationId &&
       Array.isArray(cachedPerms);
 
-    const membership: OrganizationMemberWithRolePermissions | null = reuseMembership
+    const membership: OrganizationMemberContext | null = reuseMembership
       ? cached!
       : await this.prisma.organizationMember.findFirst({
           where: { userId: user.userId, organizationId },

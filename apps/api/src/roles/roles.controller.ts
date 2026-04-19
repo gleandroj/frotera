@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CreateRoleDto,
@@ -28,10 +28,6 @@ import {
 } from './roles.dto';
 import { RolesService } from './roles.service';
 
-interface RequestWithUser extends ExpressRequest {
-  user: { userId: string };
-}
-
 @ApiTags('roles')
 @Controller('organizations/:organizationId/roles')
 @UseGuards(JwtAuthGuard)
@@ -43,7 +39,7 @@ export class RolesController {
   @ApiOperation({ summary: 'List all roles for an organization (system + custom)' })
   @ApiResponse({ status: 200, type: RolesListResponseDto })
   async getRoles(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
   ): Promise<RolesListResponseDto> {
     return this.rolesService.getRoles(req.user.userId, organizationId);
@@ -53,7 +49,7 @@ export class RolesController {
   @ApiOperation({ summary: 'Get a specific role' })
   @ApiResponse({ status: 200, type: RoleResponseDto })
   async getRole(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('roleId') roleId: string,
   ): Promise<RoleResponseDto> {
@@ -64,7 +60,7 @@ export class RolesController {
   @ApiOperation({ summary: 'Create a custom role for the organization' })
   @ApiResponse({ status: 201, type: RoleCreatedResponseDto })
   async createRole(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Body() body: CreateRoleDto,
   ): Promise<RoleCreatedResponseDto> {
@@ -75,7 +71,7 @@ export class RolesController {
   @ApiOperation({ summary: 'Update a custom role' })
   @ApiResponse({ status: 200, type: RoleUpdatedResponseDto })
   async updateRole(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('roleId') roleId: string,
     @Body() body: UpdateRoleDto,
@@ -87,7 +83,7 @@ export class RolesController {
   @ApiOperation({ summary: 'Delete a custom role (cannot delete system roles)' })
   @ApiResponse({ status: 200, type: RoleDeletedResponseDto })
   async deleteRole(
-    @Request() req: RequestWithUser,
+    @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Param('roleId') roleId: string,
   ): Promise<RoleDeletedResponseDto> {

@@ -5,8 +5,8 @@ import {
 import {
   ApiBearerAuth, ApiOperation, ApiResponse, ApiTags,
 } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
 import type { OrganizationMember } from '@prisma/client';
+import type { OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '@/auth/guards/permission.guard';
 import { Permission } from '@/auth/decorators/permission.decorator';
@@ -21,17 +21,7 @@ import {
   UpdateDriverDto,
 } from './drivers.dto';
 
-interface DriversRequest extends ExpressRequest {
-  user: { userId: string; isSuperAdmin?: boolean };
-  allowedCustomerIds: string[] | null;
-  organizationMember: {
-    id: string;
-    organizationId: string;
-    customerRestricted: boolean;
-  };
-}
-
-function memberFromRequest(req: DriversRequest): Pick<OrganizationMember, 'id' | 'customerRestricted'> {
+function memberFromRequest(req: OrgScopedRequest): Pick<OrganizationMember, 'id' | 'customerRestricted'> {
   return {
     id: req.organizationMember.id,
     customerRestricted: req.organizationMember.customerRestricted,
@@ -50,7 +40,7 @@ export class DriversController {
   @ApiOperation({ summary: 'List drivers in an organization' })
   @ApiResponse({ status: 200, type: DriversListResponseDto })
   async list(
-    @Request() req: DriversRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
     @Query('activeOnly') activeOnlyRaw?: string,
@@ -74,7 +64,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Create a new driver' })
   @ApiResponse({ status: 201, type: DriverResponseDto })
   async create(
-    @Request() req: DriversRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Body() dto: CreateDriverDto,
   ): Promise<DriverResponseDto> {
@@ -87,7 +77,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Get a driver by ID' })
   @ApiResponse({ status: 200, type: DriverResponseDto })
   async getById(
-    @Request() req: DriversRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
   ): Promise<DriverResponseDto> {
@@ -100,7 +90,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Update a driver' })
   @ApiResponse({ status: 200, type: DriverResponseDto })
   async update(
-    @Request() req: DriversRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
     @Body() dto: UpdateDriverDto,
@@ -114,7 +104,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Soft-delete a driver (sets active = false)' })
   @ApiResponse({ status: 204, description: 'Driver deactivated' })
   async delete(
-    @Request() req: DriversRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
   ): Promise<void> {

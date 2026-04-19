@@ -11,7 +11,7 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import type { OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
 import { FuelReportsService } from './fuel-reports.service';
@@ -28,10 +28,6 @@ import {
   PeriodSummaryDto,
 } from './fuel-reports.dto';
 
-interface FuelReportsRequest extends ExpressRequest {
-  organizationMember: { id: string };
-}
-
 @ApiTags('fuel-reports')
 @Controller('organizations/:organizationId/fuel/reports')
 @UseGuards(JwtAuthGuard, OrganizationMemberGuard)
@@ -42,7 +38,7 @@ export class FuelReportsController {
   @Get('consumption')
   @ApiOkResponse({ type: [VehicleConsumptionDto] })
   async getConsumption(
-    @Request() req: FuelReportsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ConsumptionReportQueryDto,
   ): Promise<VehicleConsumptionDto[]> {
@@ -57,7 +53,7 @@ export class FuelReportsController {
   @Get('costs')
   @ApiOkResponse({ type: [CostsPeriodDto] })
   async getCosts(
-    @Request() req: FuelReportsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: CostsReportQueryDto,
   ): Promise<CostsPeriodDto[]> {
@@ -72,7 +68,7 @@ export class FuelReportsController {
   @Get('benchmark')
   @ApiOkResponse({ type: BenchmarkSummaryDto })
   async getBenchmark(
-    @Request() req: FuelReportsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: BenchmarkReportQueryDto,
   ): Promise<BenchmarkSummaryDto> {
@@ -87,7 +83,7 @@ export class FuelReportsController {
   @Get('efficiency')
   @ApiOkResponse({ type: [VehicleEfficiencyDto] })
   async getEfficiency(
-    @Request() req: FuelReportsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: EfficiencyReportQueryDto,
   ): Promise<VehicleEfficiencyDto[]> {
@@ -102,7 +98,7 @@ export class FuelReportsController {
   @Get('summary')
   @ApiOkResponse({ type: PeriodSummaryDto })
   async getSummary(
-    @Request() req: FuelReportsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: SummaryReportQueryDto,
   ): Promise<PeriodSummaryDto> {

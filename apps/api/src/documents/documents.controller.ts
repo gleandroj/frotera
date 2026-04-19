@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import type { OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '@/auth/guards/permission.guard';
 import { Permission } from '@/auth/decorators/permission.decorator';
@@ -34,12 +34,6 @@ import {
   ExpiringQueryDto,
 } from './documents.dto';
 
-interface DocumentsRequest extends ExpressRequest {
-  user: { userId: string; email?: string };
-  allowedCustomerIds: string[] | null;
-  organizationMember: { id: string };
-}
-
 const MAX_DOCUMENT_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 @ApiTags('documents')
@@ -52,7 +46,7 @@ export class DocumentsController {
   @Get()
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async list(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ListDocumentsQueryDto,
   ): Promise<DocumentsListResponseDto> {
@@ -66,7 +60,7 @@ export class DocumentsController {
   @Get('expiring')
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async listExpiring(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ExpiringQueryDto,
   ): Promise<DocumentsListResponseDto> {
@@ -118,7 +112,7 @@ export class DocumentsController {
   @HttpCode(201)
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.CREATE)
   async create(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Body() dto: CreateDocumentDto,
   ): Promise<DocumentResponseDto> {
@@ -133,7 +127,7 @@ export class DocumentsController {
   @Get(':id')
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.VIEW)
   async getOne(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<DocumentResponseDto> {
@@ -147,7 +141,7 @@ export class DocumentsController {
   @Patch(':id')
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.EDIT)
   async update(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() dto: UpdateDocumentDto,
@@ -164,7 +158,7 @@ export class DocumentsController {
   @HttpCode(204)
   @Permission(RoleModuleEnum.DOCUMENTS, RoleActionEnum.DELETE)
   async remove(
-    @Request() req: DocumentsRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<void> {
