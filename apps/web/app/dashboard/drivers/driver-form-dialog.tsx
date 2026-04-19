@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -98,12 +98,13 @@ interface DriverFormDialogProps {
   hideOverlay?: boolean;
 }
 
-const buildSchema = (t: (k: string) => string) =>
-  z.object({
-    name: z.string().min(1, t("drivers.nameRequired")),
-    customerId: z.string().default(""),
-    cpf: z.string().default(""),
-    cnh: z.string().default(""),
+const buildSchema = (t: (k: string) => string, isEdit: boolean) =>
+  z
+    .object({
+      name: z.string().min(1, t("drivers.nameRequired")),
+      customerId: z.string().default(""),
+      cpf: z.string().default(""),
+      cnh: z.string().default(""),
     cnhCategory: z.string().default(""),
     cnhExpiry: z.string().default(""),
     phone: z.string().default(""),
@@ -113,7 +114,16 @@ const buildSchema = (t: (k: string) => string) =>
     photo: z.string().default(""),
     notes: z.string().default(""),
     active: z.boolean().default(true),
-  });
+    })
+    .superRefine((data, ctx) => {
+      if (!isEdit && !data.customerId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("drivers.customerRequired"),
+          path: ["customerId"],
+        });
+      }
+    });
 
 type DriverFormValues = z.infer<ReturnType<typeof buildSchema>>;
 
@@ -136,14 +146,13 @@ function getDefaultValues(
   };
 }
 
-export function DriverFormDialog({
+function DriverFormDialogBody({
   open,
   onOpenChange,
   driver,
   organizationId,
   onSuccess,
   defaultCustomerId,
-  hideOverlay = false,
 }: DriverFormDialogProps) {
   const { t } = useTranslation();
   const { user, selectedCustomerId } = useAuth();
@@ -155,8 +164,10 @@ export function DriverFormDialog({
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
   const [customerFormOpen, setCustomerFormOpen] = useState(false);
 
+  const driverSchema = useMemo(() => buildSchema(t, isEdit), [t, isEdit]);
+
   const form = useForm<DriverFormValues>({
-    resolver: zodResolver(buildSchema(t)),
+    resolver: zodResolver(driverSchema),
     defaultValues: getDefaultValues(driver, defaultCustomerId),
   });
 
@@ -166,7 +177,8 @@ export function DriverFormDialog({
   useEffect(() => {
     if (!open) return;
     form.reset(getDefaultValues(driver, defaultCustomerId));
-  }, [open, driver?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- form.reset is stable; avoid re-running on every form reference
+  }, [open, driver?.id, defaultCustomerId]);
 
   useEffect(() => {
     if (!open || !organizationId) return;
@@ -227,18 +239,13 @@ export function DriverFormDialog({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        hideOverlay={hideOverlay}
-        className="sm:max-w-[560px] flex flex-col p-0"
-      >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
-          <SheetTitle>
-            {isEdit ? t("drivers.editDriver") : t("drivers.createDriver")}
-          </SheetTitle>
-        </SheetHeader>
+      <SheetHeader className="px-6 pt-6 pb-4 border-b">
+        <SheetTitle>
+          {isEdit ? t("drivers.editDriver") : t("drivers.createDriver")}
+        </SheetTitle>
+      </SheetHeader>
 
-        <Form {...form}>
+      <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
@@ -328,7 +335,10 @@ export function DriverFormDialog({
                   name="customerId"
                   render={() => (
                     <FormItem>
-                      <FormLabel>{t("drivers.customer")}</FormLabel>
+                      <FormLabel>
+                        {t("drivers.customer")}
+                        {!isEdit ? " *" : ""}
+                      </FormLabel>
                       <ResourceSelectCreateRow
                         showCreate={canCreateCompany}
                         createLabel={t("common.createNewCompany")}
@@ -371,17 +381,19 @@ export function DriverFormDialog({
                               <CommandList>
                                 <CommandEmpty>{t("common.noResults")}</CommandEmpty>
                                 <CommandGroup>
-                                  <CommandItem
-                                    value=""
-                                    onSelect={() => {
-                                      form.setValue("customerId", "", {
-                                        shouldValidate: true,
-                                      });
-                                      setCustomerComboboxOpen(false);
-                                    }}
-                                  >
-                                    {t("drivers.noCustomer")}
-                                  </CommandItem>
+                                  {isEdit && (
+                                    <CommandItem
+                                      value=""
+                                      onSelect={() => {
+                                        form.setValue("customerId", "", {
+                                          shouldValidate: true,
+                                        });
+                                        setCustomerComboboxOpen(false);
+                                      }}
+                                    >
+                                      {t("drivers.noCustomer")}
+                                    </CommandItem>
+                                  )}
                                   {customers.map((c) => (
                                     <CommandItem
                                       key={c.id}
@@ -540,31 +552,54 @@ export function DriverFormDialog({
               </Button>
             </div>
           </form>
-        </Form>
-        <DrawerStackParentDim show={customerFormOpen} />
+      </Form>
+      <DrawerStackParentDim show={customerFormOpen} />
+
+      <CustomerFormDialog
+        open={customerFormOpen}
+        onOpenChange={setCustomerFormOpen}
+        customer={null}
+        organizationId={organizationId}
+        customers={customers}
+        defaultParentId={
+          selectedCustomerId ??
+          (customerId?.trim() ? customerId.trim() : null) ??
+          undefined
+        }
+        allowRootCreation={user?.isSuperAdmin ?? false}
+        hideOverlay
+        onSuccess={(created) => {
+          refreshCustomersList();
+          if (created?.id) {
+            form.setValue("customerId", created.id, { shouldValidate: true });
+          }
+        }}
+      />
+    </>
+  );
+}
+
+export function DriverFormDialog({
+  open,
+  onOpenChange,
+  hideOverlay = false,
+  ...bodyProps
+}: DriverFormDialogProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        hideOverlay={hideOverlay}
+        className="sm:max-w-[560px] flex flex-col p-0"
+      >
+        {open ? (
+          <DriverFormDialogBody
+            key={bodyProps.driver?.id ?? "__create__"}
+            open={open}
+            onOpenChange={onOpenChange}
+            {...bodyProps}
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
-
-    <CustomerFormDialog
-      open={customerFormOpen}
-      onOpenChange={setCustomerFormOpen}
-      customer={null}
-      organizationId={organizationId}
-      customers={customers}
-      defaultParentId={
-        selectedCustomerId ??
-        (customerId?.trim() ? customerId.trim() : null) ??
-        undefined
-      }
-      allowRootCreation={user?.isSuperAdmin ?? false}
-      hideOverlay
-      onSuccess={(created) => {
-        refreshCustomersList();
-        if (created?.id) {
-          form.setValue("customerId", created.id, { shouldValidate: true });
-        }
-      }}
-    />
-    </>
   );
 }

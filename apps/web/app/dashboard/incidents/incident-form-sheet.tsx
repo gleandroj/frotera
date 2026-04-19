@@ -292,7 +292,12 @@ export function IncidentFormSheet({
 
               {!isEdit ? (
                 <div className="space-y-2">
-                  <Label>{t("incidents.fields.type")}</Label>
+                  <Label>
+                    {t("incidents.fields.type")}
+                    <span className="ml-1 text-destructive" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                   <Select value={type} onValueChange={setType}>
                     <SelectTrigger>
                       <SelectValue placeholder={t("incidents.form.selectType")} />
@@ -309,7 +314,12 @@ export function IncidentFormSheet({
               ) : null}
 
               <div className="space-y-2">
-                <Label htmlFor="incident-title">{t("incidents.fields.title")}</Label>
+                <Label htmlFor="incident-title">
+                  {t("incidents.fields.title")}
+                  <span className="ml-1 text-destructive" aria-hidden>
+                    *
+                  </span>
+                </Label>
                 <Input
                   id="incident-title"
                   value={title}
@@ -336,7 +346,12 @@ export function IncidentFormSheet({
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="incident-date">{t("incidents.fields.date")}</Label>
+                      <Label htmlFor="incident-date">
+                        {t("incidents.fields.date")}
+                        <span className="ml-1 text-destructive" aria-hidden>
+                          *
+                        </span>
+                      </Label>
                       <Input
                         id="incident-date"
                         type="date"
@@ -346,7 +361,12 @@ export function IncidentFormSheet({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="incident-severity">{t("incidents.fields.severity")}</Label>
+                      <Label htmlFor="incident-severity">
+                        {t("incidents.fields.severity")}
+                        <span className="ml-1 text-destructive" aria-hidden>
+                          *
+                        </span>
+                      </Label>
                       <Select value={severity} onValueChange={setSeverity}>
                         <SelectTrigger id="incident-severity">
                           <SelectValue placeholder={t("incidents.form.selectSeverity")} />

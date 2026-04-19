@@ -42,9 +42,11 @@ import {
 import { GripVertical, Trash2, Plus } from "lucide-react";
 import {
   checklistAPI,
+  customersAPI,
   type ChecklistDriverRequirement,
   type ChecklistTemplate,
   type CreateChecklistTemplatePayload,
+  type Customer,
   type ItemType,
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
@@ -200,6 +202,9 @@ export function ChecklistTemplateFormDialog({
     useState<ChecklistDriverRequirement>("OPTIONAL");
   const [items, setItems] = useState<FormItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerId, setCustomerId] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -215,6 +220,7 @@ export function ChecklistTemplateFormDialog({
       setActive(template.active);
       setVehicleRequired(template.vehicleRequired);
       setDriverRequirement(template.driverRequirement);
+      setCustomerId(template.customerId ?? "");
       setItems(
         template.items.map((item) => ({
           tempId: item.id,
@@ -230,9 +236,37 @@ export function ChecklistTemplateFormDialog({
       setActive(true);
       setVehicleRequired(true);
       setDriverRequirement("OPTIONAL");
+      setCustomerId(defaultCustomerId ?? "");
       setItems([]);
     }
+    // defaultCustomerId omitted: avoid wiping the form when the header filter changes while the sheet is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset on open / template identity
   }, [open, template?.id]);
+
+  useEffect(() => {
+    if (!open || !organizationId) return;
+    setLoadingCustomers(true);
+    customersAPI
+      .list(organizationId)
+      .then((res) => {
+        const list = res.data?.customers ?? [];
+        setCustomers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCustomers([]))
+      .finally(() => setLoadingCustomers(false));
+  }, [open, organizationId]);
+
+  useEffect(() => {
+    if (!open || template || customers.length === 0) return;
+    setCustomerId((prev) => {
+      if (prev && customers.some((c) => c.id === prev)) return prev;
+      if (defaultCustomerId && customers.some((c) => c.id === defaultCustomerId)) {
+        return defaultCustomerId;
+      }
+      if (customers.length === 1) return customers[0].id;
+      return "";
+    });
+  }, [open, template, customers, defaultCustomerId]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -268,16 +302,14 @@ export function ChecklistTemplateFormDialog({
 
   async function handleSubmit() {
     if (!name.trim()) return;
-    if (!isEdit && !defaultCustomerId) {
+    if (!isEdit && !customerId) {
       toast.error(t("checklist.templateCustomerRequired"));
       return;
     }
 
     const payload: CreateChecklistTemplatePayload = {
       name: name.trim(),
-      ...(!isEdit && defaultCustomerId
-        ? { customerId: defaultCustomerId }
-        : {}),
+      ...(!isEdit && customerId ? { customerId } : {}),
       description: description.trim() || undefined,
       active,
       vehicleRequired,
@@ -322,6 +354,43 @@ export function ChecklistTemplateFormDialog({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {isEdit ? (
+            <div className="space-y-1.5">
+              <Label>{t("checklist.templateCompanyLabel")}</Label>
+              <p className="text-sm rounded-md border bg-muted/30 px-3 py-2">
+                {loadingCustomers
+                  ? "—"
+                  : customers.find((c) => c.id === template?.customerId)?.name ??
+                    template?.customerId ??
+                    "—"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="template-customer">
+                {t("checklist.templateCompanyLabel")}
+                <span className="text-destructive ml-1">*</span>
+              </Label>
+              <Select
+                value={customerId}
+                onValueChange={setCustomerId}
+                disabled={loading || loadingCustomers}
+              >
+                <SelectTrigger id="template-customer" className="w-full">
+                  <SelectValue placeholder={t("checklist.templateCompanyPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("checklist.templateCompanyHint")}</p>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="template-name">
               {t("checklist.templateName")}
@@ -451,7 +520,7 @@ export function ChecklistTemplateFormDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !name.trim()}
+            disabled={loading || !name.trim() || (!isEdit && (!customerId || loadingCustomers))}
           >
             {loading ? t("common.saving") : t("common.save")}
           </Button>
