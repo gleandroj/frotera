@@ -151,6 +151,8 @@ export default function FuelPage() {
           columns={columns}
           data={logs}
           initialSorting={[{ id: "date", desc: true }]}
+          initialColumnVisibility={{ station: false }}
+          tableClassName="min-w-[640px] sm:min-w-0"
         />
       )}
 

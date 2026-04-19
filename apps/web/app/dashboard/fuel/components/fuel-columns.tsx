@@ -40,13 +40,17 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.date"),
       cell: ({ row }) => {
         const date = new Date(row.getValue("date"));
-        return date.toLocaleDateString(intlLocale, {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        return (
+          <span className="whitespace-nowrap">
+            {date.toLocaleDateString(intlLocale, {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        );
       },
     },
     {
@@ -55,7 +59,12 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.vehicle"),
       cell: ({ row }) => {
         const vehicle = row.original.vehicle;
-        return vehicle ? `${vehicle.name || "N/A"} (${vehicle.plate || "N/A"})` : "N/A";
+        const plate = vehicle?.plate?.trim();
+        return (
+          <span className="block max-w-[7.5rem] truncate font-medium tabular-nums sm:max-w-none">
+            {plate || "—"}
+          </span>
+        );
       },
     },
     {
@@ -64,7 +73,7 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       meta: { labelKey: "fuel.fields.customer" },
       header: t("fuel.fields.customer"),
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
+        <span className="block max-w-[10rem] truncate text-muted-foreground sm:max-w-[14rem]">
           {row.original.vehicle?.customer?.name ?? "—"}
         </span>
       ),
@@ -75,10 +84,14 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.odometer"),
       cell: ({ row }) => {
         const km = row.getValue("odometer") as number;
-        return formatLocaleDecimal(km, intlLocale, {
-          minFractionDigits: 0,
-          maxFractionDigits: 0,
-        });
+        return (
+          <span className="whitespace-nowrap tabular-nums">
+            {formatLocaleDecimal(km, intlLocale, {
+              minFractionDigits: 0,
+              maxFractionDigits: 0,
+            })}
+          </span>
+        );
       },
     },
     {
@@ -87,7 +100,9 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.driver"),
       cell: ({ row }) => {
         const d = row.original.driver;
-        return d?.name ?? "—";
+        return (
+          <span className="block max-w-[8rem] truncate sm:max-w-[12rem]">{d?.name ?? "—"}</span>
+        );
       },
     },
     {
@@ -96,7 +111,9 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.fuelType"),
       cell: ({ row }) => {
         const fuelType = row.getValue("fuelType") as FuelType;
-        return fuelTypeLabels[fuelType] || fuelType;
+        return (
+          <span className="whitespace-nowrap">{fuelTypeLabels[fuelType] || fuelType}</span>
+        );
       },
     },
     {
@@ -105,10 +122,14 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.liters"),
       cell: ({ row }) => {
         const liters = row.getValue("liters") as number;
-        return formatLocaleDecimal(liters, intlLocale, {
-          minFractionDigits: 2,
-          maxFractionDigits: 3,
-        });
+        return (
+          <span className="whitespace-nowrap tabular-nums">
+            {formatLocaleDecimal(liters, intlLocale, {
+              minFractionDigits: 2,
+              maxFractionDigits: 3,
+            })}
+          </span>
+        );
       },
     },
     {
@@ -117,7 +138,11 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.totalCost"),
       cell: ({ row }) => {
         const totalCost = row.getValue("totalCost") as number;
-        return formatLocaleCurrency(totalCost, intlLocale, "BRL");
+        return (
+          <span className="whitespace-nowrap tabular-nums">
+            {formatLocaleCurrency(totalCost, intlLocale, "BRL")}
+          </span>
+        );
       },
     },
     {
@@ -126,19 +151,28 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       header: t("fuel.fields.consumption"),
       cell: ({ row }) => {
         const consumption = row.getValue("consumption") as number | null;
-        return consumption
-          ? `${formatLocaleDecimal(consumption, intlLocale, {
+        return consumption ? (
+          <span className="whitespace-nowrap tabular-nums">
+            {`${formatLocaleDecimal(consumption, intlLocale, {
               minFractionDigits: 2,
               maxFractionDigits: 2,
-            })} km/l`
-          : "—";
+            })} km/l`}
+          </span>
+        ) : (
+          "—"
+        );
       },
     },
     {
-      accessorKey: "station",
+      id: "station",
+      accessorFn: (row) => row.station ?? "",
       meta: { labelKey: "fuel.fields.station" },
       header: t("fuel.fields.station"),
-      cell: ({ row }) => row.getValue("station") || "—",
+      cell: ({ row }) => (
+        <span className="block max-w-[10rem] truncate sm:max-w-[16rem]">
+          {row.original.station?.trim() || "—"}
+        </span>
+      ),
     },
     {
       id: "actions",

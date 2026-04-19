@@ -45,6 +45,10 @@ export interface DataTableProps<TData, TValue> {
   toolbarLeading?: React.ReactNode;
   /** Default client-side sort (column `id` / `accessorKey`, e.g. `{ id: "date", desc: true }`). */
   initialSorting?: SortingState;
+  /** Default column visibility (e.g. hide secondary columns until the user enables them in View). */
+  initialColumnVisibility?: VisibilityState;
+  /** Optional class on the inner `<table>` (e.g. min-width for horizontal scroll on narrow screens). */
+  tableClassName?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -55,13 +59,17 @@ export function DataTable<TData, TValue>({
   noResultsLabel,
   toolbarLeading,
   initialSorting,
+  initialColumnVisibility,
+  tableClassName,
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation();
   const [sorting, setSorting] = React.useState<SortingState>(
     () => initialSorting ?? [],
   );
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
+    () => initialColumnVisibility ?? {},
+  );
 
   const table = useReactTable({
     data,
@@ -105,10 +113,7 @@ export function DataTable<TData, TValue>({
             <DropdownMenuContent align="end" className="w-[150px]">
               {table
                 .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" && column.getCanHide()
-                )
+                .filter((column) => column.getCanHide())
                 .map((column) => {
                   const labelKey = (column.columnDef.meta as { labelKey?: string } | undefined)?.labelKey;
                   const label = labelKey ? t(labelKey) : column.id;
@@ -128,8 +133,8 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border">
-        <Table>
+      <div className="-mx-1 overflow-x-auto rounded-md border sm:mx-0">
+        <Table className={tableClassName}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
