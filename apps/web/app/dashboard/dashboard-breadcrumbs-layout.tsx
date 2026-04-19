@@ -19,6 +19,9 @@ function getBreadcrumbsForPathname(pathname: string | null): BreadcrumbItem[] {
   if (pathname === "/dashboard/customers") {
     return [{ label: "navigation.items.customers" }];
   }
+  if (pathname.startsWith("/dashboard/tracking")) {
+    return [{ label: "navigation.items.tracking" }];
+  }
   if (pathname === "/dashboard/settings/company") {
     return [{ label: "navigation.items.companyFleetSettings" }];
   }
