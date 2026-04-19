@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Truck } from "lucide-react";
 import "leaflet/dist/leaflet.css";
@@ -140,8 +140,10 @@ export function FleetMap({ vehicles, positionMap, selectedVehicleId, onSelectVeh
       center={DEFAULT_CENTER}
       zoom={5}
       scrollWheelZoom
+      zoomControl={false}
       className="h-full w-full"
     >
+      <ZoomControl position="bottomleft" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

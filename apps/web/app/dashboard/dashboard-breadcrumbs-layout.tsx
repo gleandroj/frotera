@@ -28,6 +28,8 @@ function getBreadcrumbsForPathname(pathname: string | null): BreadcrumbItem[] {
   return [];
 }
 
+const FULLSCREEN_PATHS = ["/dashboard/tracking"];
+
 export function DashboardBreadcrumbsLayout({
   children,
 }: {
@@ -38,5 +40,6 @@ export function DashboardBreadcrumbsLayout({
     () => getBreadcrumbsForPathname(pathname),
     [pathname]
   );
-  return <AppLayout breadcrumbs={breadcrumbs}>{children}</AppLayout>;
+  const fullscreen = FULLSCREEN_PATHS.some((p) => pathname?.startsWith(p));
+  return <AppLayout breadcrumbs={breadcrumbs} fullscreen={fullscreen}>{children}</AppLayout>;
 }

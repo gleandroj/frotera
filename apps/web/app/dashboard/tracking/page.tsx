@@ -55,7 +55,10 @@ export default function TrackingPage() {
     setLoading(true);
     vehiclesAPI
       .fleetStatus(orgId, { customerId: selectedCustomerId })
-      .then((res) => setVehicles(Array.isArray(res.data) ? res.data : []))
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : []
+        setVehicles(data);
+      })
       .catch(() => setVehicles([]))
       .finally(() => setLoading(false));
   }, [orgId, selectedCustomerId]);
@@ -93,9 +96,8 @@ export default function TrackingPage() {
 
       {/* Floating vehicle panel */}
       <div
-        className={`absolute top-3 left-3 z-[400] flex flex-col transition-all duration-200 ${
-          panelOpen ? "w-72" : "w-10"
-        }`}
+        className={`absolute top-3 left-3 z-[400] flex flex-col transition-all duration-200 ${panelOpen ? "w-72" : "w-10"
+          }`}
       >
         {panelOpen ? (
           <div className="rounded-xl border border-border/60 bg-background/95 shadow-lg backdrop-blur-sm flex flex-col max-h-[calc(100svh-5rem)] overflow-hidden">
@@ -143,9 +145,8 @@ export default function TrackingPage() {
                   <button
                     key={vehicle.id}
                     type="button"
-                    className={`w-full text-left px-3 py-2.5 border-b border-border/30 hover:bg-muted/50 transition-colors ${
-                      isSelected ? "bg-muted" : ""
-                    }`}
+                    className={`w-full text-left px-3 py-2.5 border-b border-border/30 hover:bg-muted/50 transition-colors ${isSelected ? "bg-muted" : ""
+                      }`}
                     onClick={() => setSelectedId(isSelected ? null : vehicle.id)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -162,21 +163,20 @@ export default function TrackingPage() {
                       {vehicle.trackerDevice ? (
                         <Badge
                           variant="secondary"
-                          className={`text-xs shrink-0 ${
-                            ignitionOn === true
-                              ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                              : ignitionOn === false
+                          className={`text-xs shrink-0 ${ignitionOn === true
+                            ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                            : ignitionOn === false
                               ? "bg-muted text-muted-foreground"
                               : "bg-muted text-muted-foreground"
-                          }`}
+                            }`}
                         >
                           {ignitionOn === true
                             ? t("tracking.ignitionOn")
                             : ignitionOn === false
-                            ? t("tracking.ignitionOff")
-                            : position
-                            ? t("tracking.ignitionOff")
-                            : t("tracking.noPosition")}
+                              ? t("tracking.ignitionOff")
+                              : position
+                                ? t("tracking.ignitionOff")
+                                : t("tracking.noPosition")}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs shrink-0 text-muted-foreground">
