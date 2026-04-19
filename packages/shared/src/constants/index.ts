@@ -57,3 +57,5 @@ export type BrazilUfSigla = (typeof BRAZIL_UF_SIGLAS)[number];
 export function isBrazilUfSigla(s: string): s is BrazilUfSigla {
   return (BRAZIL_UF_SIGLAS as readonly string[]).includes(s);
 }
+
+export * from "./vehicle-classification";
