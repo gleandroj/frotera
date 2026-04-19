@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { buildTrackerPositionsSocket, getAccessToken } from "@/lib/frontend/api-client";
 
 export interface StreamPosition {
+  deviceId?: string;
   latitude: number;
   longitude: number;
   altitude: number | null;
