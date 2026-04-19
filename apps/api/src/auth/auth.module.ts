@@ -1,7 +1,7 @@
 import { Global, Module, forwardRef } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
+import { AppJwtModule } from './app-jwt.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SettingsModule } from '../settings/settings.module';
 import { TokenService } from '../utils/tokens';
@@ -18,21 +18,12 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     ConfigModule,
     SettingsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET'),
-        signOptions: {
-          expiresIn: '15m',
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    AppJwtModule,
     EmailModule,
     forwardRef(() => OrganizationsModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, JwtService, PermissionGuard],
-  exports: [AuthService, JwtService, PermissionGuard],
+  providers: [AuthService, TokenService, PermissionGuard],
+  exports: [AppJwtModule, AuthService, PermissionGuard],
 })
 export class AuthModule {}
