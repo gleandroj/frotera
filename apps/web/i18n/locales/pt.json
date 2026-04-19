@@ -476,6 +476,36 @@
       "noOrganizationsFound": "Nenhuma organização encontrada",
       "noOrganizationsDescription": "Você ainda não é membro de nenhuma organização. Crie sua primeira organização para começar.",
       "createFirstOrganization": "Criar Sua Primeira Organização"
+    },
+    "trackerDiscoveries": {
+      "title": "Rastreadores sem cadastro",
+      "description": "IMEIs que fizeram login no servidor TCP antes de existir um dispositivo cadastrado. Vincule a um veículo para criar o rastreador na organização e empresa (cliente) desse veículo.",
+      "refresh": "Atualizar",
+      "loadFailed": "Não foi possível carregar a lista.",
+      "loadOrgsFailed": "Não foi possível carregar as organizações.",
+      "loadVehiclesFailed": "Não foi possível carregar os veículos.",
+      "linkSuccess": "Rastreador vinculado ao veículo com sucesso.",
+      "linkFailed": "Não foi possível concluir o vínculo.",
+      "empty": "Nenhum login de IMEI não cadastrado registrado ainda.",
+      "colImei": "IMEI",
+      "colFirstSeen": "Primeiro login",
+      "colLastSeen": "Último login",
+      "colLogins": "Logins",
+      "colIp": "Último IP",
+      "colActions": "Ações",
+      "link": "Vincular",
+      "dialogTitle": "Vincular a veículo",
+      "dialogDescription": "IMEI {{imei}}. Será criado um rastreador na organização do veículo escolhido e associado a ele (empresa/cliente segue o cadastro do veículo).",
+      "selectOrg": "Organização",
+      "orgPlaceholder": "Selecione a organização",
+      "vehicleLabel": "Veículo sem rastreador",
+      "vehiclePlaceholder": "Selecione o veículo",
+      "loadingVehicles": "Carregando veículos…",
+      "noVehiclesWithoutTracker": "Não há veículos sem rastreador nesta organização.",
+      "chooseVehicleToast": "Selecione um veículo.",
+      "cancel": "Cancelar",
+      "confirmLink": "Confirmar vínculo",
+      "linking": "Vinculando…"
     }
   },
   "errors": {
@@ -875,7 +905,8 @@
       "checklist": "Checklists",
       "incidents": "Ocorrências",
       "telemetry": "Telemetria",
-      "companyFleetSettings": "Empresa e telemetria"
+      "companyFleetSettings": "Empresa e telemetria",
+      "trackerDiscoveries": "Rastreadores Conectados"
     },
     "footer": {
       "copyright": "© {{year}} Rotera",
@@ -950,6 +981,7 @@
     "acceptInvitation": "Aceitar Convite",
     "profile": "Configurações de Perfil",
     "organizations": "Configurações da Organização",
+    "trackerDiscoveries": "Rastreadores sem cadastro",
     "resetPassword": "Redefinir Senha",
     "forgotPassword": "Esqueci a Senha",
     "notifications": "Notificações",

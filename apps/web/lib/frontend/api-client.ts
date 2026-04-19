@@ -271,6 +271,46 @@ export const authAPI = {
     externalApi.patch("/api/auth/language", { language }),
 };
 
+export type TrackerDiscoveryLoginRow = {
+  id: string;
+  imei: string;
+  protocol: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  loginCount: number;
+  lastRemoteAddress: string | null;
+};
+
+export type SuperadminVehicleWithoutTrackerRow = {
+  id: string;
+  plate: string | null;
+  name: string | null;
+  customer: { id: string; name: string };
+};
+
+/** Superadmin: IMEIs seen on TCP before device registration */
+export const superadminTrackerDiscoveryAPI = {
+  list: () =>
+    externalApi.get<TrackerDiscoveryLoginRow[]>("/api/superadmin/tracker-discoveries"),
+  listOrganizations: () =>
+    externalApi.get<{ id: string; name: string }[]>(
+      "/api/superadmin/tracker-discoveries/lookup/organizations",
+    ),
+  listVehiclesWithoutTracker: (organizationId: string) =>
+    externalApi.get<SuperadminVehicleWithoutTrackerRow[]>(
+      `/api/superadmin/tracker-discoveries/lookup/organizations/${organizationId}/vehicles-without-tracker`,
+    ),
+  registerToVehicle: (imei: string, vehicleId: string) =>
+    externalApi.post<{
+      deviceId: string;
+      vehicleId: string;
+      organizationId: string;
+    }>(
+      `/api/superadmin/tracker-discoveries/${encodeURIComponent(imei)}/register-to-vehicle`,
+      { vehicleId },
+    ),
+};
+
 // Organization-specific API calls
 export const organizationAPI = {
   create: (

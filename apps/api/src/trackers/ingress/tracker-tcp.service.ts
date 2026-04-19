@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import * as net from "net";
 import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
+import { TrackerDiscoveryService } from "../discovery/tracker-discovery.service";
 import { NormalizedPosition } from "../dto/index";
 import { TrackerRedisWriterService } from "./tracker-redis-writer.service";
 import { TelemetryAlertsService } from "@/telemetry/telemetry-alerts.service";
@@ -57,6 +58,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly trackerDevices: TrackerDevicesService,
+    private readonly trackerDiscovery: TrackerDiscoveryService,
     private readonly redisWriter: TrackerRedisWriterService,
     private readonly telemetryAlerts: TelemetryAlertsService,
   ) {
@@ -219,6 +221,12 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(
           `[GT06] Login | IMEI=${imei} | rejected (device must be pre-registered)`,
         );
+        const remote = socket.remoteAddress ?? null;
+        void this.trackerDiscovery
+          .recordUnknownLogin(imei, remote)
+          .catch((err: Error) =>
+            this.logger.warn(`Tracker discovery record failed: ${err.message}`),
+          );
       }
       return;
     }

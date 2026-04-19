@@ -220,6 +220,20 @@ model TrackerDevice {
   @@map("tracker_devices")
 }
 
+/// IMEI seen on TCP login before a TrackerDevice exists (superadmin onboarding).
+model TrackerDiscoveryLogin {
+  id                String   @id @default(cuid())
+  imei              String   @unique
+  protocol          String?
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime
+  loginCount        Int      @default(1)
+  lastRemoteAddress String?
+
+  @@index([lastSeenAt])
+  @@map("tracker_discovery_logins")
+}
+
 model DevicePosition {
   id          String   @id @default(cuid())
   deviceId    String

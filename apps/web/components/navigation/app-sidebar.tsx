@@ -26,6 +26,7 @@ import {
   FileText,
   Fuel,
   Home,
+  Radio,
   SlidersHorizontal,
   User,
   UserRound,
@@ -75,6 +76,12 @@ export function AppSidebar() {
             href: "/settings/organizations",
             icon: Building2,
             current: pathname.startsWith("/settings/organizations"),
+          },
+          {
+            name: t("navigation.items.trackerDiscoveries"),
+            href: "/settings/tracker-discoveries",
+            icon: Radio,
+            current: pathname.startsWith("/settings/tracker-discoveries"),
           },
         ]
       : []),

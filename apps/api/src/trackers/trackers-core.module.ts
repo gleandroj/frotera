@@ -9,6 +9,7 @@ import type { RedisClientType } from "redis";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { TRACKER_REDIS, TrackerRedisWriterService } from "./ingress/tracker-redis-writer.service";
 import { TrackerDevicesService } from "./devices/tracker-devices.service";
+import { TrackerDiscoveryService } from "./discovery/tracker-discovery.service";
 import { VehiclesService } from "./vehicles/vehicles.service";
 import { TRACKER_REDIS_SUB } from "./positions/tracker-positions-stream.service";
 
@@ -37,10 +38,12 @@ import { TRACKER_REDIS_SUB } from "./positions/tracker-positions-stream.service"
     },
     TrackerRedisWriterService,
     TrackerDevicesService,
+    TrackerDiscoveryService,
     VehiclesService,
   ],
   exports: [
     TrackerDevicesService,
+    TrackerDiscoveryService,
     VehiclesService,
     TrackerRedisWriterService,
     TRACKER_REDIS,
