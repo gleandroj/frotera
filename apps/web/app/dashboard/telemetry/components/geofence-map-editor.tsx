@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Circle,
   MapContainer,
@@ -21,6 +21,7 @@ const DEFAULT_CENTER: [number, number] = [-15.77972, -47.92972];
 const MIN_RADIUS_M = 5;
 const MAX_RADIUS_M = 5_000;
 const STEP_RADIUS_M = 5;
+const MAP_EDIT_ZOOM = 14;
 
 function parseCenter(raw: unknown): [number, number] {
   if (!Array.isArray(raw) || raw.length < 2) return DEFAULT_CENTER;
@@ -61,17 +62,29 @@ function isDefaultCenter(c: [number, number]): boolean {
   );
 }
 
-function MapCenterSync({
+function mergeCoordinates(
+  prev: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  return { ...prev, ...patch };
+}
+
+/** Applies `setView` only when `nonce` bumps — not on radius drags or circle geometry updates. */
+function MapCameraApply({
+  nonce,
   center,
   zoom,
 }: {
+  nonce: number;
   center: [number, number];
   zoom: number;
 }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
-  }, [map, center, zoom]);
+    // `center` / `zoom` are intentionally omitted: only explicit `nonce` bumps should move the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, nonce]);
   return null;
 }
 
@@ -98,13 +111,11 @@ export function GeofenceMapEditor({
   type: GeofenceTypeApi;
   coordinates: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
-  /** When this value changes, internal map state resets from `coordinates`. */
   syncKey: string;
-  /** When true (e.g. new zone), center the map on `navigator.geolocation` if still at the default. */
   preferBrowserCenter?: boolean;
 }) {
   const { t } = useTranslation();
-  const [center, setCenter] = useState<[number, number]>(() =>
+  const [circleCenter, setCircleCenter] = useState<[number, number]>(() =>
     parseCenter(coordinates.center),
   );
   const [radiusM, setRadiusM] = useState(() =>
@@ -113,25 +124,76 @@ export function GeofenceMapEditor({
   const [points, setPoints] = useState<[number, number][]>(() =>
     parsePoints(coordinates.points),
   );
+
+  /** MapContainer initial center (stable props — avoids Leaflet resetting view on parent re-renders). */
+  const [mapBootstrapCenter] = useState<[number, number]>(() =>
+    parseCenter(coordinates.center),
+  );
+  /** Bumps only when we intentionally move the camera (open zone, type→circle, geolocation). */
+  const [cameraNonce, setCameraNonce] = useState(0);
+  const [cameraTarget, setCameraTarget] = useState<[number, number]>(() =>
+    parseCenter(coordinates.center),
+  );
+  const [cameraZoom] = useState(MAP_EDIT_ZOOM);
+
+  const bumpCamera = useCallback((center: [number, number], zoom = MAP_EDIT_ZOOM) => {
+    setCameraTarget(center);
+    setCameraNonce((n) => n + 1);
+  }, []);
+
   const radiusMRef = useRef(radiusM);
   radiusMRef.current = radiusM;
   const coordinatesRef = useRef(coordinates);
   coordinatesRef.current = coordinates;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const typeRef = useRef(type);
+  typeRef.current = type;
 
   const browserGeoAttemptRef = useRef<string | null>(null);
+  const prevTypeRef = useRef<GeofenceTypeApi>(type);
 
   useEffect(() => {
     browserGeoAttemptRef.current = null;
   }, [syncKey]);
 
+  /** Full hydrate when the dialog / zone instance changes. */
   useEffect(() => {
     if (type === "CIRCLE") {
-      setCenter(parseCenter(coordinates.center));
+      const cc = parseCenter(coordinates.center);
+      setCircleCenter(cc);
       setRadiusM(clampRadiusMeters(parseRadiusMeters(coordinates.radius)));
+      setPoints([]);
+      bumpCamera(cc, MAP_EDIT_ZOOM);
     } else {
-      setPoints(parsePoints(coordinates.points));
+      const pts = parsePoints(coordinates.points);
+      setPoints(pts);
+      const hint = parseCenter(coordinates.center);
+      if (!isDefaultCenter(hint)) bumpCamera(hint, MAP_EDIT_ZOOM);
+      else if (pts.length > 0) bumpCamera(pts[0]!, MAP_EDIT_ZOOM);
+      else bumpCamera(DEFAULT_CENTER, MAP_EDIT_ZOOM);
     }
-  }, [type, coordinates, syncKey]);
+    prevTypeRef.current = type;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when syncKey changes
+  }, [syncKey]);
+
+  /** Circle ↔ polygon: sync geometry; move camera only when switching to circle. */
+  useEffect(() => {
+    const prev = prevTypeRef.current;
+    if (prev === type) return;
+    prevTypeRef.current = type;
+
+    if (type === "POLYGON") {
+      setPoints(parsePoints(coordinates.points));
+      return;
+    }
+
+    const cc = parseCenter(coordinates.center);
+    setCircleCenter(cc);
+    setRadiusM(clampRadiusMeters(parseRadiusMeters(coordinates.radius)));
+    setPoints([]);
+    bumpCamera(cc, MAP_EDIT_ZOOM);
+  }, [type, coordinates, bumpCamera]);
 
   useEffect(() => {
     if (!preferBrowserCenter) return;
@@ -140,11 +202,12 @@ export function GeofenceMapEditor({
     const attemptKey = `${syncKey}:${type}`;
     if (browserGeoAttemptRef.current === attemptKey) return;
 
-    if (type === "CIRCLE") {
-      if (!isDefaultCenter(parseCenter(coordinates.center))) return;
+    const coords = coordinatesRef.current;
+    if (typeRef.current === "CIRCLE") {
+      if (!isDefaultCenter(parseCenter(coords.center))) return;
     } else {
-      if (parsePoints(coordinates.points).length > 0) return;
-      if (!isDefaultCenter(parseCenter(coordinates.center))) return;
+      if (parsePoints(coords.points).length > 0) return;
+      if (!isDefaultCenter(parseCenter(coords.center))) return;
     }
 
     browserGeoAttemptRef.current = attemptKey;
@@ -157,24 +220,23 @@ export function GeofenceMapEditor({
           pos.coords.latitude,
           pos.coords.longitude,
         ];
-        if (type === "CIRCLE") {
-          const c = parseCenter(coordinatesRef.current.center);
-          if (!isDefaultCenter(c)) return;
-          setCenter(next);
-          onChange({
+        const c = coordinatesRef.current;
+        const tMode = typeRef.current;
+        if (tMode === "CIRCLE") {
+          if (!isDefaultCenter(parseCenter(c.center))) return;
+          setCircleCenter(next);
+          bumpCamera(next, MAP_EDIT_ZOOM);
+          onChangeRef.current({
             center: next,
             radius: radiusMRef.current,
           });
         } else {
-          const pts = parsePoints(coordinatesRef.current.points);
-          if (pts.length > 0) return;
-          const c = parseCenter(coordinatesRef.current.center);
-          if (!isDefaultCenter(c)) return;
-          setCenter(next);
+          if (parsePoints(c.points).length > 0) return;
+          if (!isDefaultCenter(parseCenter(c.center))) return;
+          bumpCamera(next, MAP_EDIT_ZOOM);
         }
       },
       () => {
-        /* permission denied or timeout: keep default center */
         browserGeoAttemptRef.current = null;
       },
       {
@@ -186,51 +248,37 @@ export function GeofenceMapEditor({
     return () => {
       cancelled = true;
     };
-  }, [
-    type,
-    preferBrowserCenter,
-    syncKey,
-    coordinates.center,
-    coordinates.points,
-    onChange,
-  ]);
-
-  const mapCenter = useMemo(() => {
-    if (type === "POLYGON" && points.length > 0) return points[0]!;
-    return center;
-  }, [type, points, center]);
-
-  const mapZoom = type === "POLYGON" && points.length > 1 ? 14 : 13;
+  }, [type, preferBrowserCenter, syncKey, bumpCamera]);
 
   const setCircleRadiusM = useCallback(
     (nextM: number) => {
       const m = clampRadiusMeters(nextM);
       setRadiusM(m);
-      onChange({ center, radius: m });
+      onChange({ center: circleCenter, radius: m });
     },
-    [center, onChange],
+    [circleCenter, onChange],
   );
 
   const onMapClick = useCallback(
     (lat: number, lng: number) => {
       if (type === "CIRCLE") {
         const next: [number, number] = [lat, lng];
-        setCenter(next);
+        setCircleCenter(next);
         onChange({ center: next, radius: radiusM });
       } else {
-        setPoints((prev) => {
-          const next = [...prev, [lat, lng] as [number, number]];
-          onChange({ points: next });
-          return next;
-        });
+        const nextPts = [...points, [lat, lng] as [number, number]];
+        setPoints(nextPts);
+        onChange(
+          mergeCoordinates(coordinatesRef.current, { points: nextPts }),
+        );
       }
     },
-    [type, onChange, radiusM],
+    [type, onChange, radiusM, points],
   );
 
   const closePolygon = useCallback(() => {
     if (points.length < 3) return;
-    onChange({ points });
+    onChange(mergeCoordinates(coordinatesRef.current, { points }));
   }, [points, onChange]);
 
   return (
@@ -242,17 +290,21 @@ export function GeofenceMapEditor({
       </p>
       <div className="h-[280px] w-full overflow-hidden rounded-md border">
         <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
+          center={mapBootstrapCenter}
+          zoom={MAP_EDIT_ZOOM}
           className="h-full w-full"
           scrollWheelZoom
         >
-          <MapCenterSync center={mapCenter} zoom={mapZoom} />
+          <MapCameraApply
+            nonce={cameraNonce}
+            center={cameraTarget}
+            zoom={cameraZoom}
+          />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClick onClick={onMapClick} />
           {type === "CIRCLE" && (
             <Circle
-              center={center}
+              center={circleCenter}
               radius={radiusM}
               pathOptions={{ color: "#2563eb" }}
             />
@@ -314,7 +366,9 @@ export function GeofenceMapEditor({
             className="rounded-md border bg-muted px-3 py-1.5 text-sm"
             onClick={() => {
               setPoints([]);
-              onChange({ points: [] });
+              onChange(
+                mergeCoordinates(coordinatesRef.current, { points: [] }),
+              );
             }}
           >
             {t("telemetry.geofences.form.resetPolygon")}

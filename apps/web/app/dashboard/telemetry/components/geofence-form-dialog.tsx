@@ -170,11 +170,15 @@ export function GeofenceFormDialog({
     }
     setSaving(true);
     try {
+      const coordsForApi =
+        type === "POLYGON"
+          ? { points: coordinates.points }
+          : coordinates;
       const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
         type,
-        coordinates,
+        coordinates: coordsForApi,
         vehicleIds: [...vehicleIds],
         alertOnEnter,
         alertOnExit,
@@ -326,9 +330,43 @@ export function GeofenceFormDialog({
                 const nt = v as GeofenceTypeApi;
                 setType(nt);
                 if (nt === "CIRCLE") {
-                  setCoordinates({ center: [-15.77972, -47.92972], radius: 500 });
+                  const prev = coordinates;
+                  const pts = Array.isArray(prev.points)
+                    ? (prev.points as unknown[][])
+                    : [];
+                  if (pts.length > 0) {
+                    const p0 = pts[0]!;
+                    setCoordinates({
+                      center: [Number(p0[0]), Number(p0[1])],
+                      radius: 500,
+                    });
+                  } else if (Array.isArray(prev.center) && prev.center.length >= 2) {
+                    setCoordinates({
+                      center: [Number(prev.center[0]), Number(prev.center[1])],
+                      radius:
+                        typeof prev.radius === "number" && Number.isFinite(prev.radius)
+                          ? prev.radius
+                          : 500,
+                    });
+                  } else {
+                    setCoordinates({
+                      center: [-15.77972, -47.92972],
+                      radius: 500,
+                    });
+                  }
                 } else {
-                  setCoordinates({ points: [] });
+                  setCoordinates({
+                    points: [],
+                    ...(Array.isArray(coordinates.center) && coordinates.center.length >= 2
+                      ? {
+                          center: coordinates.center,
+                          radius:
+                            typeof coordinates.radius === "number"
+                              ? coordinates.radius
+                              : 500,
+                        }
+                      : {}),
+                  });
                 }
               }}
             >
