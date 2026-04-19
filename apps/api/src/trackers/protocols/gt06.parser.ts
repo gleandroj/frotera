@@ -15,6 +15,8 @@ const PROTOCOL_LOGIN = 0x01;
 const PROTOCOL_LOCATION_STD = 0x12;   // GPS standard (divisor 1_800_000, bits 12/11/10)
 const PROTOCOL_LOCATION_2G = 0x22;
 const PROTOCOL_LOCATION_4G = 0xa0;
+/** Concox / Traccar: raw latitude & longitude are unsigned; degrees = raw / 30000 / 60. */
+const GT06_CONCOX_LATLNG_DIVISOR = 30000 * 60;
 const PROTOCOL_LOCATION_ADVANCED = 0x94; // GPS + LBS + status
 const PROTOCOL_LOCATION_ON_DEMAND = 0x1a; // trigger via SMS, response via TCP
 const PROTOCOL_HEARTBEAT = 0x36;
@@ -218,6 +220,121 @@ export function findGpsOffset(buf: Buffer): number | null {
 }
 
 /**
+ * NT20 / VL100 style 0x22 (GPS+LBS): leading location source (0x01) + 8-byte terminal ID +
+ * 6-byte device time, then the same 18-byte GPS block as {@link decodeGpsBlockTraccarStyle}
+ * (6-byte GPS time binary, 1B info, 4+4 lat/lng, 1B speed, 2B course/status).
+ * See Traccar Gt06ProtocolDecoder (modelNT && MSG_GPS_LBS_2).
+ */
+export function getGT06Location22GpsBlockStart(content: Buffer): number {
+  if (content.length >= 33 && content[0] === 0x01) {
+    return 1 + 8 + 6;
+  }
+  return findGpsOffset(content) ?? 0;
+}
+
+function isPlausibleGt06BcdDate(content: Buffer, o: number): boolean {
+  if (content.length < o + 6) return false;
+  for (let i = 0; i < 6; i++) {
+    const b = content[o + i];
+    if (((b >> 4) & 0x0f) > 9 || (b & 0x0f) > 9) return false;
+  }
+  const year =
+    ((content[o] >> 4) & 0x0f) * 10 + (content[o] & 0x0f);
+  const month =
+    ((content[o + 1] >> 4) & 0x0f) * 10 + (content[o + 1] & 0x0f);
+  const day =
+    ((content[o + 2] >> 4) & 0x0f) * 10 + (content[o + 2] & 0x0f);
+  const hour =
+    ((content[o + 3] >> 4) & 0x0f) * 10 + (content[o + 3] & 0x0f);
+  const min =
+    ((content[o + 4] >> 4) & 0x0f) * 10 + (content[o + 4] & 0x0f);
+  const sec =
+    ((content[o + 5] >> 4) & 0x0f) * 10 + (content[o + 5] & 0x0f);
+  return (
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= 31 &&
+    hour <= 23 &&
+    min <= 59 &&
+    sec <= 59 &&
+    year <= 99
+  );
+}
+
+function parseGt06Datetime6Binary(content: Buffer, o: number): string | null {
+  if (content.length < o + 6) return null;
+  const y = content[o];
+  const month = content[o + 1];
+  const day = content[o + 2];
+  const hour = content[o + 3];
+  const min = content[o + 4];
+  const sec = content[o + 5];
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour > 23 ||
+    min > 59 ||
+    sec > 59
+  ) {
+    return null;
+  }
+  const year = 2000 + y;
+  return new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
+}
+
+/**
+ * Decode 18-byte GPS block (same order as Traccar {@code decodeGps} with hasLength=false,
+ * hasSatellites=true): 6B date (binary YY MM DD HH mm ss), 1B GPS info, 4B lat, 4B lng,
+ * 1B speed, 2B course/status. Lat/lng: unsigned / (30000*60). Course: bit12=valid,
+ * bit10 north when set (else south), bit11 west when set.
+ */
+function decodeGpsBlockTraccarStyle(
+  content: Buffer,
+  o: number,
+  requireGpsFix: boolean,
+): NormalizedPosition | null {
+  if (content.length < o + 18) return null;
+
+  const recordedAtBin = parseGt06Datetime6Binary(content, o);
+  if (!recordedAtBin) return null;
+
+  const gpsInfo = content[o + 6];
+  const latRaw = content.readUInt32BE(o + 7);
+  const lngRaw = content.readUInt32BE(o + 11);
+  let lat = latRaw / GT06_CONCOX_LATLNG_DIVISOR;
+  let lng = lngRaw / GT06_CONCOX_LATLNG_DIVISOR;
+  const speed = (content[o + 15] ?? 0) * 1.852;
+  const courseStatus = content.readUInt16BE(o + 16);
+  const course = courseStatus & 0x03ff;
+
+  const gpsFixed = (courseStatus & 0x1000) !== 0;
+  if (!(courseStatus & 0x0400)) lat = -Math.abs(lat);
+  if ((courseStatus & 0x0800) !== 0) lng = -Math.abs(lng);
+
+  const satellites = gpsInfo & 0x0f;
+  const fixFromInfo = (gpsInfo & 0x80) !== 0;
+  if (
+    requireGpsFix &&
+    !gpsFixed &&
+    !fixFromInfo &&
+    satellites === 0
+  ) {
+    return null;
+  }
+
+  return {
+    latitude: lat,
+    longitude: lng,
+    speed,
+    heading: course,
+    recordedAt: recordedAtBin,
+  };
+}
+
+/**
  * Parse 1-byte GT06 terminal information field.
  * Bit 6 (0x40) = ACC/ignition on, bit 5 (0x20) = charge on, bits 2-0 = alarm type
  * (0=normal, 1=SOS, 2=power cut, 3=shock/vibration).
@@ -391,11 +508,15 @@ export function nmeaDdmmToDecimal(value: number, negate: boolean): number {
 
 /**
  * Parse GT06 location content (0x22 Location 2G, 0xA0 4G) to normalized position.
- * Format at startOffset: 6B date BCD (YYMMDDHHmmss), 1B satellites, 4B latitude, 4B longitude, 1B speed, 2B course/status.
- * GT06 order: LATITUDE at startOffset+7, LONGITUDE at startOffset+11. Divisor 300000 (X3Tech/Concox).
- * course/status: bit15=GPS fix, bit14=lat south, bit13=lng west, bits0-9=course.
- * For long 0x22 (e.g. 65 bytes), use findGpsOffset(content) and pass result as startOffset.
- * For 0x1A (on-demand), some firmwares do not set the GPS fix bit; pass requireGpsFix: false.
+ *
+ * **NT20 / VL100 long 0x22** (Traccar `modelNT`): `0x01` + 8-byte terminal + 6-byte device time (binary),
+ * then this same 18-byte block: 6B date **binary**, 1B GPS info, 4B+4B lat/lng **unsigned** / (30000×60),
+ * 1B speed, 2B course/status (bit12=valid, bit10=north, bit11=west).
+ *
+ * **Short 18-byte** frames (e.g. internal simulator): 6B date **BCD**, signed int32 lat/lng scaled by
+ * 30000 in the wire format, 1B speed (knots), 2B course (heading only is OK).
+ *
+ * **Other** devices: 6B BCD date, signed int32 / 300000, course bit15=fix, bit14=south, bit13=west.
  */
 export function getPositionFromGT06Location(
   content: Buffer,
@@ -405,32 +526,66 @@ export function getPositionFromGT06Location(
   if (content.length < startOffset + 18) return null;
 
   const o = startOffset;
-  const year = 2000 + ((content[o + 0] >> 4) * 10 + (content[o + 0] & 0x0f));
-  const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
-  const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
-  const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
-  const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
-  const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
+  const ntLike =
+    o === 1 + 8 + 6 &&
+    content.length >= 33 &&
+    content[0] === 0x01;
+  if (ntLike) {
+    return decodeGpsBlockTraccarStyle(content, o, requireGpsFix);
+  }
 
-  const recordedAt = new Date(
-    Date.UTC(year, month - 1, day, hour, min, sec),
-  ).toISOString();
+  const useBcdDate = isPlausibleGt06BcdDate(content, o);
+  let recordedAt: string;
+  if (useBcdDate) {
+    const year =
+      2000 + ((content[o + 0] >> 4) * 10 + (content[o + 0] & 0x0f));
+    const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
+    const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
+    const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
+    const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
+    const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
+    recordedAt = new Date(
+      Date.UTC(year, month - 1, day, hour, min, sec),
+    ).toISOString();
+  } else {
+    const bin = parseGt06Datetime6Binary(content, o);
+    if (!bin) return null;
+    recordedAt = bin;
+  }
 
-  let lat = content.readInt32BE(o + 7) / 300000;
-  let lng = content.readInt32BE(o + 11) / 300000;
+  const latRaw = content.readInt32BE(o + 7);
+  const lngRaw = content.readInt32BE(o + 11);
+  const isShort18 = content.length === 18;
+  const divisor = isShort18 ? 30_000 : 300_000;
+  let lat = latRaw / divisor;
+  let lng = lngRaw / divisor;
 
   const speed = (content[o + 15] ?? 0) * 1.852;
 
   const courseStatus = content.readUInt16BE(o + 16);
-  const gpsFixed = (courseStatus & 0x8000) !== 0;
-  const latSouth = (courseStatus & 0x4000) !== 0;
-  const lngWest = (courseStatus & 0x2000) !== 0;
   const course = courseStatus & 0x03ff;
+  const gpsFixed =
+    (courseStatus & 0x8000) !== 0 || (courseStatus & 0x1000) !== 0;
+  const gpsInfo = content[o + 6];
+  const satellites = gpsInfo & 0x0f;
+  const fixFromInfo = (gpsInfo & 0x80) !== 0;
 
-  if (latSouth) lat = -lat;
-  if (lngWest) lng = -lng;
+  const statusBits = courseStatus & 0xfc00;
+  if (statusBits !== 0) {
+    const latSouth = (courseStatus & 0x4000) !== 0;
+    const lngWest = (courseStatus & 0x2000) !== 0;
+    if (latSouth) lat = -Math.abs(lat);
+    if (lngWest) lng = -Math.abs(lng);
+  }
 
-  if (requireGpsFix && !gpsFixed) return null;
+  if (
+    requireGpsFix &&
+    !gpsFixed &&
+    !fixFromInfo &&
+    satellites === 0
+  ) {
+    return null;
+  }
 
   return {
     latitude: lat,
@@ -588,8 +743,7 @@ export function parseGT06LocationToPosition(
     protocolNumber === PROTOCOL_LOCATION_2G ||
     protocolNumber === PROTOCOL_LOCATION_4G
   ) {
-    const isLong0x22 = protocolNumber === PROTOCOL_LOCATION_2G && content.length > 40;
-    const startOffset = isLong0x22 ? (findGpsOffset(content) ?? 0) : 0;
+    const startOffset = getGT06Location22GpsBlockStart(content);
     return getPositionFromGT06Location(content, startOffset, true);
   }
   return null;

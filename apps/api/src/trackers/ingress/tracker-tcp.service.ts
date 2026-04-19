@@ -320,7 +320,6 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       }
       return;
     }
-    console.log("parsed", parsed);
     if (isGT06Location(parsed.protocolNumber)) {
       socket.write(buildGT06LocationAck(parsed.serialNumber, parsed.protocolNumber));
       const position = parseGT06LocationToPosition(
