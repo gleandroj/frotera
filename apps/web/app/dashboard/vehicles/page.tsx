@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getVehicleColumns } from "./columns";
 import { VehicleFormDialog } from "./vehicle-form-dialog";
 import { DeleteVehicleDialog } from "./delete-vehicle-dialog";
+import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
 
 export default function VehiclesPage() {
   const { t } = useTranslation();
@@ -21,6 +22,7 @@ export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeOnly, setActiveOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<Vehicle | null>(null);
@@ -32,6 +34,7 @@ export default function VehiclesPage() {
     vehiclesAPI
       .list(currentOrganization.id, {
         customerId: selectedCustomerId ?? undefined,
+        activeOnly: activeOnly ? true : undefined,
       })
       .then((res) => {
         if (Array.isArray(res.data)) setVehicles(res.data);
@@ -40,7 +43,7 @@ export default function VehiclesPage() {
         setError(getApiErrorMessage(err, t));
       })
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, t]);
+  }, [currentOrganization?.id, selectedCustomerId, activeOnly, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) {
@@ -91,6 +94,12 @@ export default function VehiclesPage() {
           </Button>
         )}
       </div>
+
+      <ActiveOnlyFilter
+        id="vehicles-active-only"
+        checked={activeOnly}
+        onCheckedChange={setActiveOnly}
+      />
 
       {loading && (
         <p className="text-muted-foreground">{t("common.loading")}</p>

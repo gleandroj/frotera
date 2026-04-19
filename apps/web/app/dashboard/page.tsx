@@ -232,7 +232,7 @@ export default function DashboardPage() {
                   <CardTitle className="text-base font-medium">{t("dashboard.home.checklistSection")}</CardTitle>
                   <CardDescription className="text-xs">
                     {t("dashboard.home.checklistPeriodHint")}
-                    {periodLabel ? ` · ${periodLabel}` : ""}
+                    {periodLabel ? `${periodLabel}` : ""}
                   </CardDescription>
                 </div>
               </CardHeader>

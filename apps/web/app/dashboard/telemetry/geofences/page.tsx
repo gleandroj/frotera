@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
 
 export default function GeofencesPage() {
   const { t } = useTranslation();
@@ -47,6 +48,7 @@ export default function GeofencesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GeofenceZone | null>(null);
   const [deleting, setDeleting] = useState<GeofenceZone | null>(null);
+  const [activeOnly, setActiveOnly] = useState(false);
 
   const load = useCallback(async () => {
     if (!orgId) return;
@@ -55,6 +57,7 @@ export default function GeofencesPage() {
     try {
       const res = await telemetryAPI.listGeofences(orgId, {
         customerId: selectedCustomerId ?? undefined,
+        activeOnly: activeOnly ? true : undefined,
       });
       setZones(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
@@ -62,7 +65,7 @@ export default function GeofencesPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, selectedCustomerId, t]);
+  }, [orgId, selectedCustomerId, activeOnly, t]);
 
   useEffect(() => {
     void load();
@@ -113,6 +116,12 @@ export default function GeofencesPage() {
           )}
         </div>
       </div>
+
+      <ActiveOnlyFilter
+        id="geofences-active-only"
+        checked={activeOnly}
+        onCheckedChange={setActiveOnly}
+      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

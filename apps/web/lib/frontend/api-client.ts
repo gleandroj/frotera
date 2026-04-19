@@ -388,13 +388,29 @@ export interface Customer {
 
 export interface ListParams {
   customerId?: string | null;
+  /** Query param `activeOnly=true` — only non-inactive vehicles / active drivers / active geofences (per endpoint). */
+  activeOnly?: boolean;
+}
+
+function buildListQueryParams(
+  params?: ListParams,
+): Record<string, string> | undefined {
+  if (!params) return undefined;
+  const q: Record<string, string> = {};
+  if (params.customerId) q.customerId = params.customerId;
+  if (params.activeOnly === true) q.activeOnly = "true";
+  return Object.keys(q).length ? q : undefined;
 }
 
 export const customersAPI = {
   list: (organizationId: string, params?: ListParams) =>
     externalApi.get<{ customers: Customer[] }>(
       `/api/organizations/${organizationId}/customers`,
-      { params: params?.customerId ? { customerId: params.customerId } : undefined }
+      {
+        params: params?.customerId
+          ? { customerId: params.customerId }
+          : undefined,
+      },
     ),
   create: (organizationId: string, data: { name: string; parentId?: string }) =>
     externalApi.post<Customer>(
@@ -511,7 +527,7 @@ export const vehiclesAPI = {
   list: (organizationId: string, params?: ListParams) =>
     externalApi.get<Vehicle[]>(
       `/api/organizations/${organizationId}/vehicles`,
-      { params: params?.customerId ? { customerId: params.customerId } : undefined }
+      { params: buildListQueryParams(params) },
     ),
   get: (organizationId: string, vehicleId: string) =>
     externalApi.get<Vehicle>(
@@ -766,10 +782,10 @@ export const telemetryAPI = {
       {},
     ),
 
-  listGeofences: (orgId: string, params?: { customerId?: string }) =>
+  listGeofences: (orgId: string, params?: ListParams) =>
     externalApi.get<GeofenceZone[]>(
       `/api/organizations/${orgId}/telemetry/geofences`,
-      { params: params?.customerId ? { customerId: params.customerId } : undefined },
+      { params: buildListQueryParams(params) },
     ),
 
   createGeofence: (orgId: string, data: CreateGeofencePayload) =>
@@ -837,7 +853,7 @@ export interface VehicleDocument {
   customerName?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;
-  createdById: string;
+  createdById: string | null;
   type: DocumentType;
   title: string;
   fileUrl?: string | null;
@@ -985,14 +1001,10 @@ export interface UpdateDriverPayload {
 }
 
 export const driversAPI = {
-  list: (organizationId: string, params?: { customerId?: string | null }) =>
+  list: (organizationId: string, params?: ListParams) =>
     externalApi.get<{ drivers: Driver[] }>(
       `/api/organizations/${organizationId}/drivers`,
-      {
-        params: params?.customerId
-          ? { customerId: params.customerId }
-          : undefined,
-      }
+      { params: buildListQueryParams(params) },
     ),
 
   get: (organizationId: string, driverId: string) =>
@@ -1496,15 +1508,15 @@ export const publicChecklistAPI = {
     externalApi.get<ChecklistTemplate>(`/api/public/checklist/template`, {
       params: { organizationId, templateId },
     }),
-  listVehicles: (organizationId: string) =>
+  listVehicles: (organizationId: string, templateId: string) =>
     externalApi.get<{ id: string; name?: string | null; plate?: string | null }[]>(
       `/api/public/checklist/vehicles`,
-      { params: { organizationId } },
+      { params: { organizationId, templateId } },
     ),
-  listDrivers: (organizationId: string) =>
+  listDrivers: (organizationId: string, templateId: string) =>
     externalApi.get<{ id: string; name: string }[]>(
       `/api/public/checklist/drivers`,
-      { params: { organizationId } },
+      { params: { organizationId, templateId } },
     ),
   createEntry: (payload: {
     organizationId: string;

@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 import { getDriverColumns } from "./columns";
 import { DriverFormDialog } from "./driver-form-dialog";
 import { DeleteDriverDialog } from "./delete-driver-dialog";
+import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
 
 export default function DriversPage() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeOnly, setActiveOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [deleteDriver, setDeleteDriver] = useState<Driver | null>(null);
@@ -26,11 +28,14 @@ export default function DriversPage() {
     setLoading(true);
     setError(null);
     driversAPI
-      .list(currentOrganization.id, { customerId: selectedCustomerId ?? undefined })
+      .list(currentOrganization.id, {
+        customerId: selectedCustomerId ?? undefined,
+        activeOnly: activeOnly ? true : undefined,
+      })
       .then((res) => setDrivers(res.data?.drivers ?? []))
       .catch((err) => setError(err?.response?.data?.message ?? t("common.error")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, t]);
+  }, [currentOrganization?.id, selectedCustomerId, activeOnly, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) { setLoading(false); return; }
@@ -67,6 +72,12 @@ export default function DriversPage() {
           {t("drivers.createDriver")}
         </Button>
       </div>
+
+      <ActiveOnlyFilter
+        id="drivers-active-only"
+        checked={activeOnly}
+        onCheckedChange={setActiveOnly}
+      />
 
       {loading && (
         <p className="text-muted-foreground">{t("common.loading")}</p>
