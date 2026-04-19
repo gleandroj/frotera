@@ -40,7 +40,7 @@ const MARKER_SIZE = 44;
 function LastPositionMarker({ position }: { position: PositionPoint | null }) {
   const { t } = useTranslation();
   if (!position) return null;
-  const heading = position.heading ?? 0;
+  const heading = (position.heading ?? 0) - 90;
   const icon = L.divIcon({
     className: "device-marker device-marker-vehicle",
     html: renderToStaticMarkup(

@@ -36,7 +36,7 @@ function VehicleMarker({
 }) {
   if (!position) return null;
 
-  const heading = (position as FleetPosition).heading ?? 0;
+  const heading = ((position as FleetPosition).heading ?? 0) - 90;
   const color = markerColor(position);
   const size = selected ? MARKER_SIZE + 8 : MARKER_SIZE;
 

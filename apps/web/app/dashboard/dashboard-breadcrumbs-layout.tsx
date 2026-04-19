@@ -6,6 +6,9 @@ import { AppLayout, type BreadcrumbItem } from "@/components/navigation/app-layo
 
 function getBreadcrumbsForPathname(pathname: string | null): BreadcrumbItem[] {
   if (!pathname) return [];
+  if (pathname === "/dashboard/panel") {
+    return [{ label: "navigation.items.dashboard" }];
+  }
   if (pathname === "/dashboard/vehicles") {
     return [{ label: "navigation.items.vehicles" }];
   }

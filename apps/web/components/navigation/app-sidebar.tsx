@@ -106,12 +106,21 @@ export function AppSidebar() {
   ];
 
   const overviewItems = useMemo((): NavigationItem[] => {
-    const items: NavigationItem[] = [
+    const items: NavigationItem[] = [];
+    if (canViewTracking) {
+      items.push({
+        name: t("navigation.items.tracking"),
+        href: "/dashboard/tracking",
+        icon: MapPin,
+        current: pathname.startsWith("/dashboard/tracking"),
+      });
+    }
+    items.push(
       {
         name: t("navigation.items.dashboard"),
-        href: "/dashboard",
+        href: "/dashboard/panel",
         icon: Home,
-        current: pathname === "/dashboard",
+        current: pathname === "/dashboard/panel",
       },
       {
         name: t("navigation.items.vehicles"),
@@ -157,15 +166,7 @@ export function AppSidebar() {
         icon: BarChart3,
         current: pathname.startsWith("/dashboard/fuel/reports"),
       },
-    ];
-    if (canViewTracking) {
-      items.push({
-        name: t("navigation.items.tracking"),
-        href: "/dashboard/tracking",
-        icon: MapPin,
-        current: pathname.startsWith("/dashboard/tracking"),
-      });
-    }
+    );
     if (canViewTelemetry) {
       items.push({
         name: t("navigation.items.telemetry"),
