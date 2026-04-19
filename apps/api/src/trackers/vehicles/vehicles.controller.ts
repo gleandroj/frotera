@@ -20,6 +20,7 @@ import { OrganizationMemberGuard } from "@/organizations/guards/organization-mem
 import { RoleActionEnum, RoleModuleEnum } from "@/roles/roles.dto";
 import {
   CreateVehicleDto,
+  FleetVehicleStatusDto,
   UpdateVehicleDto,
   VehicleResponseDto,
 } from "../dto/index";
@@ -86,6 +87,18 @@ export class VehiclesController {
       activeOnly,
       inactiveOnly,
     );
+  }
+
+  @Get("fleet-status")
+  @Permission(RoleModuleEnum.VEHICLES, RoleActionEnum.VIEW)
+  @ApiOperation({ summary: "List all vehicles with their last known position" })
+  @ApiResponse({ status: 200, type: () => [FleetVehicleStatusDto] })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  async fleetStatus(
+    @Param("organizationId") organizationId: string,
+    @Request() req: OrgScopedRequest,
+  ): Promise<FleetVehicleStatusDto[]> {
+    return this.vehiclesService.listFleetStatus(organizationId, req.allowedCustomerIds);
   }
 
   @Get(":vehicleId")

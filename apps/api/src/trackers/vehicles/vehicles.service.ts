@@ -10,6 +10,7 @@ import { PrismaService } from "@/prisma/prisma.service";
 import { CustomersService } from "@/customers/customers.service";
 import {
   CreateVehicleDto,
+  FleetVehicleStatusDto,
   UpdateVehicleDto,
   VehicleResponseDto,
 } from "../dto/index";
@@ -84,6 +85,10 @@ export class VehiclesService {
         renavam: dto.renavam,
         chassis: dto.chassis,
         vehicleType: dto.vehicleType,
+        vehicleSpecies: dto.vehicleSpecies,
+        vehicleBodyType: dto.vehicleBodyType,
+        vehicleTraction: dto.vehicleTraction,
+        vehicleUseCategory: dto.vehicleUseCategory,
         inactive: dto.inactive ?? false,
         speedLimit: dto.speedLimit ?? undefined,
         initialOdometerKm: dto.initialOdometerKm,
@@ -204,6 +209,48 @@ export class VehiclesService {
     return list.map((v) => this.toResponse(v as VehicleWithDeviceAndCustomer));
   }
 
+  async listFleetStatus(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+  ): Promise<FleetVehicleStatusDto[]> {
+    const where: Prisma.VehicleWhereInput = { organizationId };
+    if (allowedCustomerIds !== null) {
+      if (allowedCustomerIds.length === 0) return [];
+      where.customerId = { in: allowedCustomerIds };
+    }
+    const list = await this.prisma.vehicle.findMany({
+      where,
+      include: { trackerDevice: true, customer: true },
+    });
+
+    const results = await Promise.all(
+      list.map(async (v) => {
+        const lastPosition = v.trackerDevice
+          ? await this.devicesService.getLastPosition(v.trackerDevice.id)
+          : null;
+        return {
+          id: v.id,
+          name: v.name ?? null,
+          plate: v.plate ?? null,
+          color: v.color ?? null,
+          vehicleType: v.vehicleType ?? null,
+          inactive: v.inactive,
+          customer: v.customer ? { id: v.customer.id, name: v.customer.name } : null,
+          trackerDevice: v.trackerDevice
+            ? {
+                id: v.trackerDevice.id,
+                imei: v.trackerDevice.imei,
+                connectedAt: v.trackerDevice.connectedAt?.toISOString() ?? null,
+              }
+            : null,
+          lastPosition: lastPosition ?? null,
+        } satisfies FleetVehicleStatusDto;
+      }),
+    );
+
+    return results;
+  }
+
   async delete(
     id: string,
     allowedCustomerIds: string[] | null,
@@ -282,6 +329,10 @@ export class VehiclesService {
       renavam: v.renavam ?? undefined,
       chassis: v.chassis ?? undefined,
       vehicleType: v.vehicleType ?? undefined,
+      vehicleSpecies: v.vehicleSpecies ?? undefined,
+      vehicleBodyType: v.vehicleBodyType ?? undefined,
+      vehicleTraction: v.vehicleTraction ?? undefined,
+      vehicleUseCategory: v.vehicleUseCategory ?? undefined,
       inactive: v.inactive,
       speedLimit: v.speedLimit ?? undefined,
       initialOdometerKm: v.initialOdometerKm ?? undefined,
