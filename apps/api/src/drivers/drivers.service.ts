@@ -30,6 +30,7 @@ export class DriversService {
     organizationId: string,
     member: Pick<OrganizationMember, 'id' | 'customerRestricted'>,
     filterCustomerId?: string,
+    activeOnly?: boolean,
   ): Promise<DriverResponseDto[]> {
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
@@ -43,7 +44,7 @@ export class DriversService {
 
     const where: any = {
       organizationId,
-      // Incluir ativos e inativos na listagem (o frontend pode filtrar)
+      ...(activeOnly ? { active: true } : {}),
     };
 
     if (filterCustomerId) {
