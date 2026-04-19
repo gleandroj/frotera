@@ -10,7 +10,12 @@ import { Plus } from "lucide-react";
 import { getDriverColumns } from "./columns";
 import { DriverFormDialog } from "./driver-form-dialog";
 import { DeleteDriverDialog } from "./delete-driver-dialog";
-import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
+import {
+  RecordStatusFilter,
+  RECORD_STATUS_ALL,
+  listParamsForRecordStatus,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
 
 export default function DriversPage() {
   const { t } = useTranslation();
@@ -18,7 +23,7 @@ export default function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ALL);
   const [createOpen, setCreateOpen] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [deleteDriver, setDeleteDriver] = useState<Driver | null>(null);
@@ -28,14 +33,14 @@ export default function DriversPage() {
     setLoading(true);
     setError(null);
     driversAPI
-      .list(currentOrganization.id, {
-        customerId: selectedCustomerId ?? undefined,
-        activeOnly: activeOnly ? true : undefined,
-      })
+      .list(
+        currentOrganization.id,
+        listParamsForRecordStatus(listStatus, selectedCustomerId ?? undefined),
+      )
       .then((res) => setDrivers(res.data?.drivers ?? []))
       .catch((err) => setError(err?.response?.data?.message ?? t("common.error")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, activeOnly, t]);
+  }, [currentOrganization?.id, selectedCustomerId, listStatus, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) { setLoading(false); return; }
@@ -73,25 +78,28 @@ export default function DriversPage() {
         </Button>
       </div>
 
-      <ActiveOnlyFilter
-        id="drivers-active-only"
-        checked={activeOnly}
-        onCheckedChange={setActiveOnly}
-      />
-
       {loading && (
         <p className="text-muted-foreground">{t("common.loading")}</p>
       )}
       {error && <p className="text-destructive text-sm">{error}</p>}
-      {!loading && !error && drivers.length === 0 && (
-        <p className="text-muted-foreground">{t("drivers.noDrivers")}</p>
-      )}
-      {!loading && !error && drivers.length > 0 && (
+      {!loading && !error && (
         <DataTable
           columns={columns}
           data={drivers}
           filterColumnId="name"
-          filterPlaceholder={t("drivers.filterByName")}
+          filterPlaceholder={t("common.search")}
+          noResultsLabel={
+            drivers.length === 0
+              ? t("drivers.noDrivers")
+              : t("common.noResults")
+          }
+          toolbarLeading={
+            <RecordStatusFilter
+              id="drivers-list-status"
+              value={listStatus}
+              onValueChange={setListStatus}
+            />
+          }
         />
       )}
 

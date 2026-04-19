@@ -57,6 +57,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  RecordStatusFilter,
+  RECORD_STATUS_ACTIVE,
+  RECORD_STATUS_INACTIVE,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
 import { ChecklistFillForm } from "./checklist-fill-form";
 
 type TabType = "templates" | "entries";
@@ -65,16 +71,12 @@ const STATUS_ALL = "all";
 
 const ENTRY_FILTER_ALL = "__all__";
 
-const TEMPLATE_LIST_ALL = "all";
-
 function formatVehicleLabel(v: Vehicle): string {
   const name = (v.name ?? "").trim();
   const plate = (v.plate ?? "").trim();
   if (name && plate) return `${name} (${plate})`;
   return name || plate || v.id;
 }
-const TEMPLATE_LIST_ACTIVE = "active";
-const TEMPLATE_LIST_INACTIVE = "inactive";
 
 export default function ChecklistPage() {
   const { t } = useTranslation();
@@ -101,9 +103,8 @@ export default function ChecklistPage() {
   const [entryFilterDrivers, setEntryFilterDrivers] = useState<Driver[]>([]);
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ChecklistTemplate | null>(null);
-  const [templateListFilter, setTemplateListFilter] = useState<
-    typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE
-  >(TEMPLATE_LIST_ACTIVE);
+  const [templateListFilter, setTemplateListFilter] =
+    useState<RecordListStatus>(RECORD_STATUS_ACTIVE);
   const [fillOpen, setFillOpen] = useState(false);
   const [fillTemplateId, setFillTemplateId] = useState<string | null>(null);
 
@@ -115,10 +116,10 @@ export default function ChecklistPage() {
   }, [searchParams]);
 
   const filteredTemplates = useMemo(() => {
-    if (templateListFilter === TEMPLATE_LIST_ACTIVE) {
+    if (templateListFilter === RECORD_STATUS_ACTIVE) {
       return templates.filter((tpl) => tpl.active);
     }
-    if (templateListFilter === TEMPLATE_LIST_INACTIVE) {
+    if (templateListFilter === RECORD_STATUS_INACTIVE) {
       return templates.filter((tpl) => !tpl.active);
     }
     return templates;
@@ -530,30 +531,11 @@ export default function ChecklistPage() {
               filterColumnId="name"
               noResultsLabel={t("checklist.noTemplatesMatchFilter")}
               toolbarLeading={
-                <Select
+                <RecordStatusFilter
+                  id="checklist-templates-list-status"
                   value={templateListFilter}
-                  aria-label={t("checklist.templateListFilter")}
-                  onValueChange={(v) =>
-                    setTemplateListFilter(
-                      v as typeof TEMPLATE_LIST_ALL | typeof TEMPLATE_LIST_ACTIVE | typeof TEMPLATE_LIST_INACTIVE,
-                    )
-                  }
-                >
-                  <SelectTrigger className="w-48 shrink-0 sm:w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={TEMPLATE_LIST_ACTIVE}>
-                      {t("checklist.templateListFilterActive")}
-                    </SelectItem>
-                    <SelectItem value={TEMPLATE_LIST_INACTIVE}>
-                      {t("checklist.templateListFilterInactive")}
-                    </SelectItem>
-                    <SelectItem value={TEMPLATE_LIST_ALL}>
-                      {t("checklist.templateListFilterAll")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  onValueChange={setTemplateListFilter}
+                />
               }
             />
           )}

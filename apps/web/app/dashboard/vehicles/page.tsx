@@ -11,7 +11,12 @@ import { Button } from "@/components/ui/button";
 import { getVehicleColumns } from "./columns";
 import { VehicleFormDialog } from "./vehicle-form-dialog";
 import { DeleteVehicleDialog } from "./delete-vehicle-dialog";
-import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
+import {
+  RecordStatusFilter,
+  RECORD_STATUS_ALL,
+  listParamsForRecordStatus,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
 
 export default function VehiclesPage() {
   const { t } = useTranslation();
@@ -22,7 +27,7 @@ export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ALL);
   const [createOpen, setCreateOpen] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<Vehicle | null>(null);
@@ -32,10 +37,10 @@ export default function VehiclesPage() {
     setLoading(true);
     setError(null);
     vehiclesAPI
-      .list(currentOrganization.id, {
-        customerId: selectedCustomerId ?? undefined,
-        activeOnly: activeOnly ? true : undefined,
-      })
+      .list(
+        currentOrganization.id,
+        listParamsForRecordStatus(listStatus, selectedCustomerId ?? undefined),
+      )
       .then((res) => {
         if (Array.isArray(res.data)) setVehicles(res.data);
       })
@@ -43,7 +48,7 @@ export default function VehiclesPage() {
         setError(getApiErrorMessage(err, t));
       })
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, activeOnly, t]);
+  }, [currentOrganization?.id, selectedCustomerId, listStatus, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) {
@@ -95,30 +100,30 @@ export default function VehiclesPage() {
         )}
       </div>
 
-      <ActiveOnlyFilter
-        id="vehicles-active-only"
-        checked={activeOnly}
-        onCheckedChange={setActiveOnly}
-      />
-
       {loading && (
         <p className="text-muted-foreground">{t("common.loading")}</p>
       )}
       {error && (
         <p className="text-destructive">{error}</p>
       )}
-      {!loading && !error && vehicles.length === 0 && (
-        <p className="text-muted-foreground">
-          {t("vehicles.noVehicles")}
-        </p>
-      )}
-      {!loading && !error && vehicles.length > 0 && (
+      {!loading && !error && (
         <DataTable<Vehicle, unknown>
           columns={columns}
           data={vehicles}
-          filterPlaceholder={t("vehicles.filterByName")}
+          filterPlaceholder={t("common.search")}
           filterColumnId="name"
-          noResultsLabel={t("vehicles.noResults")}
+          noResultsLabel={
+            vehicles.length === 0
+              ? t("vehicles.noVehicles")
+              : t("vehicles.noResults")
+          }
+          toolbarLeading={
+            <RecordStatusFilter
+              id="vehicles-list-status"
+              value={listStatus}
+              onValueChange={setListStatus}
+            />
+          }
         />
       )}
 

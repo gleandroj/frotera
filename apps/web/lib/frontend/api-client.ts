@@ -390,6 +390,8 @@ export interface ListParams {
   customerId?: string | null;
   /** Query param `activeOnly=true` — only non-inactive vehicles / active drivers / active geofences (per endpoint). */
   activeOnly?: boolean;
+  /** Query param `inactiveOnly=true` — only inactive vehicles / inactive drivers / inactive geofences (per endpoint). */
+  inactiveOnly?: boolean;
 }
 
 function buildListQueryParams(
@@ -399,6 +401,7 @@ function buildListQueryParams(
   const q: Record<string, string> = {};
   if (params.customerId) q.customerId = params.customerId;
   if (params.activeOnly === true) q.activeOnly = "true";
+  if (params.inactiveOnly === true) q.inactiveOnly = "true";
   return Object.keys(q).length ? q : undefined;
 }
 

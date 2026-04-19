@@ -105,7 +105,7 @@ export default function CustomersPage() {
         <DataTable<Customer, unknown>
           columns={columns}
           data={customers}
-          filterPlaceholder={t("customers.filterByName")}
+          filterPlaceholder={t("common.search")}
           filterColumnId="name"
           noResultsLabel={t("customers.noResults")}
         />

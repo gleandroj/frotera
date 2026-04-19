@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
@@ -11,15 +11,7 @@ import {
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { GeofenceFormDialog } from "../components/geofence-form-dialog";
 import {
   AlertDialog,
@@ -32,7 +24,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ActiveOnlyFilter } from "@/components/list-filters/active-only-filter";
+import {
+  RecordStatusFilter,
+  RECORD_STATUS_ALL,
+  listParamsForRecordStatus,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
+import { getGeofenceColumns } from "./columns";
 
 export default function GeofencesPage() {
   const { t } = useTranslation();
@@ -48,28 +46,42 @@ export default function GeofencesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GeofenceZone | null>(null);
   const [deleting, setDeleting] = useState<GeofenceZone | null>(null);
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ALL);
 
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await telemetryAPI.listGeofences(orgId, {
-        customerId: selectedCustomerId ?? undefined,
-        activeOnly: activeOnly ? true : undefined,
-      });
+      const res = await telemetryAPI.listGeofences(
+        orgId,
+        listParamsForRecordStatus(listStatus, selectedCustomerId ?? undefined),
+      );
       setZones(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       setError(getApiErrorMessage(e, t, "common.error"));
     } finally {
       setLoading(false);
     }
-  }, [orgId, selectedCustomerId, activeOnly, t]);
+  }, [orgId, selectedCustomerId, listStatus, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const columns = useMemo(
+    () =>
+      getGeofenceColumns(t, {
+        canEdit,
+        canDelete,
+        onEdit: (z) => {
+          setEditing(z);
+          setFormOpen(true);
+        },
+        onDelete: setDeleting,
+      }),
+    [t, canEdit, canDelete],
+  );
 
   const confirmDelete = async () => {
     if (!orgId || !deleting) return;
@@ -117,99 +129,30 @@ export default function GeofencesPage() {
         </div>
       </div>
 
-      <ActiveOnlyFilter
-        id="geofences-active-only"
-        checked={activeOnly}
-        onCheckedChange={setActiveOnly}
-      />
-
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("telemetry.geofences.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("telemetry.geofences.columns.name")}</TableHead>
-                  <TableHead>{t("telemetry.geofences.columns.company")}</TableHead>
-                  <TableHead>{t("telemetry.geofences.columns.type")}</TableHead>
-                  <TableHead>{t("telemetry.geofences.columns.status")}</TableHead>
-                  <TableHead>{t("telemetry.geofences.columns.alertOnEnter")}</TableHead>
-                  <TableHead>{t("telemetry.geofences.columns.alertOnExit")}</TableHead>
-                  <TableHead className="text-right">
-                    {t("telemetry.geofences.columns.actions")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7}>…</TableCell>
-                  </TableRow>
-                ) : zones.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground">
-                      {t("telemetry.geofences.noZones")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  zones.map((z) => (
-                    <TableRow key={z.id}>
-                      <TableCell className="font-medium">{z.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {z.customerName?.trim() || "—"}
-                      </TableCell>
-                      <TableCell>
-                        {z.type === "CIRCLE"
-                          ? t("telemetry.geofences.form.typeCircle")
-                          : z.type === "POLYGON"
-                            ? t("telemetry.geofences.form.typePolygon")
-                            : z.type}
-                      </TableCell>
-                      <TableCell>
-                        {z.active ? t("common.yes") : t("common.no")}
-                      </TableCell>
-                      <TableCell>
-                        {z.alertOnEnter ? t("common.yes") : t("common.no")}
-                      </TableCell>
-                      <TableCell>
-                        {z.alertOnExit ? t("common.yes") : t("common.no")}
-                      </TableCell>
-                      <TableCell className="space-x-2 text-right">
-                        {canEdit && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              setEditing(z);
-                              setFormOpen(true);
-                            }}
-                          >
-                            {t("telemetry.geofences.editZone")}
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setDeleting(z)}
-                          >
-                            {t("telemetry.geofences.deleteZone")}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {loading ? (
+        <p className="text-muted-foreground">{t("common.loading")}</p>
+      ) : (
+        <DataTable<GeofenceZone, unknown>
+          columns={columns}
+          data={zones}
+          filterPlaceholder={t("common.search")}
+          filterColumnId="name"
+          noResultsLabel={
+            zones.length === 0
+              ? t("telemetry.geofences.noZones")
+              : t("common.noResults")
+          }
+          toolbarLeading={
+            <RecordStatusFilter
+              id="geofences-list-status"
+              value={listStatus}
+              onValueChange={setListStatus}
+            />
+          }
+        />
+      )}
 
       <GeofenceFormDialog
         open={formOpen}
