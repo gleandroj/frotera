@@ -517,7 +517,7 @@ export interface Vehicle {
 /** New device to create and link when creating a vehicle */
 export interface CreateVehicleNewDevicePayload {
   imei: string;
-  model: string; // TrackerModel: X12_GT06 | X22_NT20
+  model: string; // TrackerModel (Prisma enum)
   name?: string;
   serialSat?: string;
   equipmentModel?: string;

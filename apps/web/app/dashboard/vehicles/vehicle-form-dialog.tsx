@@ -64,11 +64,6 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 
-const TRACKER_MODELS = [
-  { value: "X12_GT06", label: "X12 GT06" },
-  { value: "X22_NT20", label: "X22 NT20" },
-] as const;
-
 /** Placa BR (padrão antigo ou Mercosul): até 7 caracteres alfanuméricos + hífen após a 3ª posição. */
 function maskPlate(value: string): string {
   const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
@@ -135,7 +130,6 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
       trackerDeviceId: z.string().default(""),
       deviceOption: z.enum(["none", "existing", "new"]).default("none"),
       newImei: z.string().default(""),
-      newModel: z.string().default("X12_GT06"),
       newDeviceName: z.string().default(""),
       newSerialSat: z.string().default(""),
       newEquipmentModel: z.string().default(""),
@@ -180,7 +174,6 @@ function defaultValues(
     trackerDeviceId: vehicle?.trackerDeviceId ?? "",
     deviceOption: "none",
     newImei: "",
-    newModel: "X12_GT06",
     newDeviceName: "",
     newSerialSat: "",
     newEquipmentModel: "",
@@ -301,7 +294,7 @@ export function VehicleFormDialog({
         ...base,
         newDevice: {
           imei: values.newImei.trim(),
-          model: values.newModel ?? "X12_GT06",
+          model: "X12_GT06",
           name: values.newDeviceName?.trim() || undefined,
           serialSat: values.newSerialSat?.trim() || undefined,
           equipmentModel: values.newEquipmentModel?.trim() || undefined,
@@ -821,33 +814,6 @@ export function VehicleFormDialog({
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newModel"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.trackerModel")}</FormLabel>
-                              <Select
-                                value={field.value}
-                                onValueChange={field.onChange}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {TRACKER_MODELS.map((m) => (
-                                    <SelectItem key={m.value} value={m.value}>
-                                      {m.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
