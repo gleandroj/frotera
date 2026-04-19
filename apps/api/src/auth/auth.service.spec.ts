@@ -88,6 +88,8 @@ describe('AuthService', () => {
       expect(result.message).toBe('Login successful');
       expect(result.tokens).toBeDefined();
       expect(result.user.email).toBe('test@example.com');
+      expect(result.user.isSuperAdmin).toBe(false);
+      expect(result.user.twoFactorVerified).toBe(false);
     });
 
     it('throws UnauthorizedException when user not found', async () => {
@@ -128,6 +130,7 @@ describe('AuthService', () => {
       (authenticator.verify as jest.Mock).mockReturnValue(true);
       const result = await service.login({ email: 'test@example.com', password: 'pass', twoFactorCode: '123456' });
       expect(result.tokens).toBeDefined();
+      expect(result.user.twoFactorVerified).toBe(true);
     });
   });
 

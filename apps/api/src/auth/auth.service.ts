@@ -101,6 +101,9 @@ export class AuthService {
         language: user.language,
         twoFactorEnabled: user.twoFactorEnabled,
         emailVerified: user.emailVerified,
+        /** Needed by the app immediately after login (e.g. allow root customer creation). */
+        isSuperAdmin: user.isSuperAdmin === true,
+        twoFactorVerified: !!twoFactorCode,
       },
       tokens,
     };
