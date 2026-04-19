@@ -133,18 +133,18 @@ function PublicFillPageContent() {
 
     const load = async () => {
       try {
-        const [templateRes, vehiclesRes, driversRes] = await Promise.all([
-          publicApi.get(`/api/public/checklist/template`, {
+        const templateRes = await publicApi.get(`/api/public/checklist/template`, {
+          params: { organizationId: orgId, templateId },
+        });
+        setTemplate(templateRes.data);
+        const [vehiclesRes, driversRes] = await Promise.all([
+          publicApi.get(`/api/public/checklist/vehicles`, {
             params: { organizationId: orgId, templateId },
           }),
-          publicApi.get(`/api/public/checklist/vehicles`, {
-            params: { organizationId: orgId },
-          }),
           publicApi.get(`/api/public/checklist/drivers`, {
-            params: { organizationId: orgId },
+            params: { organizationId: orgId, templateId },
           }),
         ]);
-        setTemplate(templateRes.data);
         setVehicles(vehiclesRes.data ?? []);
         setDrivers(driversRes.data ?? []);
       } catch {

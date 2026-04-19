@@ -71,15 +71,31 @@ export class PublicChecklistController {
   }
 
   @Get("vehicles")
-  @ApiOperation({ summary: "Listar veículos para preenchimento público" })
-  listVehicles(@Query("organizationId") organizationId: string) {
-    return this.checklistService.listPublicVehicles(organizationId);
+  @ApiOperation({ summary: "Listar veículos para preenchimento público (escopo do template)" })
+  listVehicles(
+    @Query("organizationId") organizationId: string,
+    @Query("templateId") templateId: string,
+  ) {
+    const org = organizationId?.trim();
+    const tpl = templateId?.trim();
+    if (!org || !tpl) {
+      throw new BadRequestException("organizationId e templateId são obrigatórios.");
+    }
+    return this.checklistService.listPublicVehicles(org, tpl);
   }
 
   @Get("drivers")
-  @ApiOperation({ summary: "Listar motoristas para preenchimento público" })
-  listDrivers(@Query("organizationId") organizationId: string) {
-    return this.checklistService.listPublicDrivers(organizationId);
+  @ApiOperation({ summary: "Listar motoristas para preenchimento público (escopo do template)" })
+  listDrivers(
+    @Query("organizationId") organizationId: string,
+    @Query("templateId") templateId: string,
+  ) {
+    const org = organizationId?.trim();
+    const tpl = templateId?.trim();
+    if (!org || !tpl) {
+      throw new BadRequestException("organizationId e templateId são obrigatórios.");
+    }
+    return this.checklistService.listPublicDrivers(org, tpl);
   }
 
   @Post("entries")

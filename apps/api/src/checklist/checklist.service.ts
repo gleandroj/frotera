@@ -838,17 +838,38 @@ export class ChecklistService {
     });
   }
 
-  async listPublicVehicles(organizationId: string) {
+  /**
+   * Mesmo escopo do preenchimento autenticado: empresa (customer) do template + filiais abaixo.
+   */
+  private async customerIdsForPublicChecklistTemplate(
+    organizationId: string,
+    templateId: string,
+  ): Promise<string[]> {
+    const template = await this.prisma.checklistTemplate.findFirst({
+      where: { id: templateId, organizationId },
+      select: { customerId: true },
+    });
+    if (!template) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
+    const descendants = await this.customersService.getDescendantCustomerIds(
+      [template.customerId],
+      organizationId,
+    );
+    return [template.customerId, ...descendants];
+  }
+
+  async listPublicVehicles(organizationId: string, templateId: string) {
+    const customerIds = await this.customerIdsForPublicChecklistTemplate(organizationId, templateId);
     return this.prisma.vehicle.findMany({
-      where: { organizationId },
+      where: { organizationId, customerId: { in: customerIds } },
       select: { id: true, name: true, plate: true },
       orderBy: { name: "asc" },
     });
   }
 
-  async listPublicDrivers(organizationId: string) {
+  async listPublicDrivers(organizationId: string, templateId: string) {
+    const customerIds = await this.customerIdsForPublicChecklistTemplate(organizationId, templateId);
     return this.prisma.driver.findMany({
-      where: { organizationId },
+      where: { organizationId, customerId: { in: customerIds } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
