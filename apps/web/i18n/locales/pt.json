@@ -13,6 +13,7 @@
     "days": "dia(s)",
     "cancel": "Cancelar",
     "delete": "Excluir",
+    "deactivate": "Desativar",
     "edit": "Editar",
     "view": "Visualizar",
     "create": "Criar",
@@ -330,10 +331,11 @@
     "namePlaceholder": "Nome da empresa",
     "created": "Empresa criada com sucesso.",
     "updated": "Empresa atualizada com sucesso.",
-    "confirmDelete": {
-      "title": "Excluir empresa",
-      "description": "Tem certeza que deseja excluir esta empresa? Não é possível excluir se houver filiais ou veículos vinculados."
-    }
+    "confirmDeactivate": {
+      "title": "Desativar empresa",
+      "description": "Tem certeza que deseja desativar esta empresa? Não é possível desativar se houver veículos ou motoristas vinculados a ela."
+    },
+    "inactiveBadge": "Inativa"
   },
   "auth": {
     "title": "Bem-vindo de volta",
