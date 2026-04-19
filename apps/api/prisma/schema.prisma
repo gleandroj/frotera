@@ -635,7 +635,7 @@ model VehicleDocument {
   id             String       @id @default(cuid())
   organizationId String
   vehicleId      String
-  createdById    String       // OrganizationMember.id
+  createdById    String?      // OrganizationMember.id; null when super-admin has no membership
   type           DocumentType
   title          String
   fileUrl        String?      // URL externa (placeholder — upload S3/R2 futuro)
@@ -646,9 +646,9 @@ model VehicleDocument {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vehicle      Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  createdBy    OrganizationMember @relation(fields: [createdById], references: [id])
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdBy    OrganizationMember? @relation(fields: [createdById], references: [id])
 
   @@index([organizationId])
   @@index([vehicleId])
