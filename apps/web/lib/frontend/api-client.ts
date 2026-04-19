@@ -853,7 +853,7 @@ export interface VehicleDocument {
   customerName?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;
-  createdById: string | null;
+  createdById: string;
   type: DocumentType;
   title: string;
   fileUrl?: string | null;
