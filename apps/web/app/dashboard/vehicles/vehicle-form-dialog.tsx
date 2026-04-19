@@ -18,7 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -63,6 +65,32 @@ import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import {
+  VEHICLE_BODY_TYPES,
+  VEHICLE_SPECIES,
+  VEHICLE_TRACTIONS,
+  VEHICLE_USE_CATEGORIES,
+  type VehicleSpeciesGroupKey,
+} from "@gleandroj/shared";
+
+const CLASSIFICATION_SELECT_NONE = "__none__";
+
+const SPECIES_GROUP_ORDER: readonly VehicleSpeciesGroupKey[] = [
+  "passenger",
+  "cargo",
+  "mixed",
+  "special",
+  "competition",
+];
+
+function classificationFieldForApi(
+  value: string,
+  isEdit: boolean,
+): string | undefined | null {
+  const v = value?.trim() ?? "";
+  if (!v) return isEdit ? null : undefined;
+  return v;
+}
 
 /** Placa BR (padrão antigo ou Mercosul): até 7 caracteres alfanuméricos + hífen após a 3ª posição. */
 function maskPlate(value: string): string {
@@ -108,7 +136,10 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
       year: z.string().default(""),
       renavam: z.string().default(""),
       chassis: z.string().default(""),
-      vehicleType: z.string().default(""),
+      vehicleSpecies: z.string().default(""),
+      vehicleBodyType: z.string().default(""),
+      vehicleTraction: z.string().default(""),
+      vehicleUseCategory: z.string().default(""),
       inactive: z.boolean().default(false),
       speedLimit: z.string().default(""),
       initialOdometerKm: z
@@ -158,7 +189,10 @@ function defaultValues(
     year: vehicle?.year ?? "",
     renavam: vehicle?.renavam ?? "",
     chassis: vehicle?.chassis ?? "",
-    vehicleType: vehicle?.vehicleType ?? "",
+    vehicleSpecies: vehicle?.vehicleSpecies ?? "",
+    vehicleBodyType: vehicle?.vehicleBodyType ?? "",
+    vehicleTraction: vehicle?.vehicleTraction ?? "",
+    vehicleUseCategory: vehicle?.vehicleUseCategory ?? "",
     inactive: vehicle?.inactive ?? false,
     speedLimit:
       vehicle?.speedLimit != null && Number.isFinite(vehicle.speedLimit)
@@ -266,7 +300,13 @@ export function VehicleFormDialog({
       year: values.year?.trim() || undefined,
       renavam: values.renavam?.trim() || undefined,
       chassis: values.chassis?.trim() || undefined,
-      vehicleType: values.vehicleType?.trim() || undefined,
+      vehicleSpecies: classificationFieldForApi(values.vehicleSpecies, isEdit),
+      vehicleBodyType: classificationFieldForApi(values.vehicleBodyType, isEdit),
+      vehicleTraction: classificationFieldForApi(values.vehicleTraction, isEdit),
+      vehicleUseCategory: classificationFieldForApi(
+        values.vehicleUseCategory,
+        isEdit,
+      ),
       inactive: values.inactive,
       speedLimit: (() => {
         const s = values.speedLimit?.trim();
@@ -448,19 +488,160 @@ export function VehicleFormDialog({
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("vehicles.vehicleType")}</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="sm:col-span-2 space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                      {t("vehicles.classification.section")}
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="vehicleSpecies"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("vehicles.classification.speciesField")}</FormLabel>
+                            <Select
+                              value={field.value || CLASSIFICATION_SELECT_NONE}
+                              onValueChange={(v) =>
+                                field.onChange(
+                                  v === CLASSIFICATION_SELECT_NONE ? "" : v,
+                                )
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CLASSIFICATION_SELECT_NONE}>
+                                  {t("vehicles.classification.none")}
+                                </SelectItem>
+                                {SPECIES_GROUP_ORDER.map((group) => (
+                                  <SelectGroup key={group}>
+                                    <SelectLabel>
+                                      {t(`vehicles.classification.speciesGroup.${group}`)}
+                                    </SelectLabel>
+                                    {VEHICLE_SPECIES.filter((s) => s.group === group).map(
+                                      (s) => (
+                                        <SelectItem key={s.value} value={s.value}>
+                                          {t(`vehicles.classification.species.${s.value}`)}
+                                        </SelectItem>
+                                      ),
+                                    )}
+                                  </SelectGroup>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="vehicleBodyType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("vehicles.classification.bodyTypeField")}</FormLabel>
+                            <Select
+                              value={field.value || CLASSIFICATION_SELECT_NONE}
+                              onValueChange={(v) =>
+                                field.onChange(
+                                  v === CLASSIFICATION_SELECT_NONE ? "" : v,
+                                )
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CLASSIFICATION_SELECT_NONE}>
+                                  {t("vehicles.classification.none")}
+                                </SelectItem>
+                                {VEHICLE_BODY_TYPES.map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {t(`vehicles.classification.bodyType.${code}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="vehicleTraction"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("vehicles.classification.tractionField")}</FormLabel>
+                            <Select
+                              value={field.value || CLASSIFICATION_SELECT_NONE}
+                              onValueChange={(v) =>
+                                field.onChange(
+                                  v === CLASSIFICATION_SELECT_NONE ? "" : v,
+                                )
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CLASSIFICATION_SELECT_NONE}>
+                                  {t("vehicles.classification.none")}
+                                </SelectItem>
+                                {VEHICLE_TRACTIONS.map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {t(`vehicles.classification.traction.${code}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="vehicleUseCategory"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {t("vehicles.classification.useCategoryField")}
+                            </FormLabel>
+                            <Select
+                              value={field.value || CLASSIFICATION_SELECT_NONE}
+                              onValueChange={(v) =>
+                                field.onChange(
+                                  v === CLASSIFICATION_SELECT_NONE ? "" : v,
+                                )
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CLASSIFICATION_SELECT_NONE}>
+                                  {t("vehicles.classification.none")}
+                                </SelectItem>
+                                {VEHICLE_USE_CATEGORIES.map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {t(`vehicles.classification.useCategory.${code}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                   <FormField
                     control={form.control}
                     name="renavam"

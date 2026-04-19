@@ -26,6 +26,17 @@ const DeviceMapDynamic = dynamic(
   { ssr: false }
 );
 
+function vehicleClassificationLabel(
+  t: (key: string) => string,
+  segment: "species" | "bodyType" | "traction" | "useCategory",
+  code: string | null | undefined,
+): string {
+  if (code == null || code === "") return "—";
+  const key = `vehicles.classification.${segment}.${code}`;
+  const label = t(key);
+  return label === key ? code : label;
+}
+
 interface ApiPosition {
   id: string;
   deviceId: string;
@@ -234,9 +245,47 @@ export default function VehicleDetailPage() {
                     <dd className="mt-1">{vehicle.year ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-muted-foreground">{t("vehicles.vehicleType")}</dt>
-                    <dd className="mt-1">{vehicle.vehicleType ?? "—"}</dd>
+                    <dt className="text-sm text-muted-foreground">
+                      {t("vehicles.classification.speciesField")}
+                    </dt>
+                    <dd className="mt-1">
+                      {vehicleClassificationLabel(t, "species", vehicle.vehicleSpecies)}
+                    </dd>
                   </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {t("vehicles.classification.bodyTypeField")}
+                    </dt>
+                    <dd className="mt-1">
+                      {vehicleClassificationLabel(t, "bodyType", vehicle.vehicleBodyType)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {t("vehicles.classification.tractionField")}
+                    </dt>
+                    <dd className="mt-1">
+                      {vehicleClassificationLabel(t, "traction", vehicle.vehicleTraction)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {t("vehicles.classification.useCategoryField")}
+                    </dt>
+                    <dd className="mt-1">
+                      {vehicleClassificationLabel(
+                        t,
+                        "useCategory",
+                        vehicle.vehicleUseCategory,
+                      )}
+                    </dd>
+                  </div>
+                  {vehicle.vehicleType ? (
+                    <div>
+                      <dt className="text-sm text-muted-foreground">{t("vehicles.vehicleType")}</dt>
+                      <dd className="mt-1">{vehicle.vehicleType}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt className="text-sm text-muted-foreground">{t("vehicles.renavam")}</dt>
                     <dd className="mt-1">{vehicle.renavam ?? "—"}</dd>
