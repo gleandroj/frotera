@@ -257,7 +257,7 @@
         "typeCircle": "Circular",
         "typePolygon": "Poligonal",
         "radiusMeters": "Raio (metros)",
-        "radiusMetersHint": "De 5 a 10.000 m, ajustando de 5 em 5. O valor é guardado em metros.",
+        "radiusMetersHint": "De 5 a 5.000 m, ajustando de 5 em 5. O valor é guardado em metros.",
         "alertOnEnter": "Alertar ao entrar",
         "alertOnExit": "Alertar ao sair",
         "vehicles": "Veículos (opcional)",

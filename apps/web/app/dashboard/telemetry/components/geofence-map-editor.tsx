@@ -19,7 +19,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 const DEFAULT_CENTER: [number, number] = [-15.77972, -47.92972];
 /** `coordinates.radius` is stored in meters (API / DB). */
 const MIN_RADIUS_M = 5;
-const MAX_RADIUS_M = 10_000;
+const MAX_RADIUS_M = 5_000;
 const STEP_RADIUS_M = 5;
 
 function parseCenter(raw: unknown): [number, number] {
