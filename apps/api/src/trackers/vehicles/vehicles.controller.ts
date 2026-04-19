@@ -123,6 +123,7 @@ export class VehiclesController {
       req.allowedCustomerIds,
     );
     return this.vehiclesService.update(
+      organizationId,
       vehicleId,
       body,
       req.allowedCustomerIds,

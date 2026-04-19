@@ -154,6 +154,7 @@ export function GeofenceFormDialog({
   const selectedPickedCustomer = customers.find((c) => c.id === pickedCustomerId);
 
   const handleSave = async () => {
+    if (saving) return;
     setNameSubmitError(false);
     setCompanySubmitError(false);
     if (!name.trim()) {
@@ -392,7 +393,7 @@ export function GeofenceFormDialog({
               <Label htmlFor="active">{t("telemetry.geofences.form.active")}</Label>
             </div>
           )}
-          <Button onClick={handleSave} disabled={saving} className="mt-2">
+          <Button onClick={() => void handleSave()} className="mt-2">
             {saving ? "…" : t("common.save")}
           </Button>
         </div>

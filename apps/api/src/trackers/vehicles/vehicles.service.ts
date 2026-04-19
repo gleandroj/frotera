@@ -7,6 +7,7 @@ import {
 import type { Prisma, TrackerModel } from "@prisma/client";
 import { ApiCode } from "@/common/api-codes.enum";
 import { PrismaService } from "@/prisma/prisma.service";
+import { CustomersService } from "@/customers/customers.service";
 import {
   CreateVehicleDto,
   UpdateVehicleDto,
@@ -23,6 +24,7 @@ export class VehiclesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly devicesService: TrackerDevicesService,
+    private readonly customersService: CustomersService,
   ) {}
 
   async create(
@@ -64,6 +66,13 @@ export class VehiclesService {
       trackerDeviceId = device.id;
     }
 
+    await this.assertPlateUniqueInCustomerHierarchy(
+      organizationId,
+      customerId,
+      dto.plate,
+      undefined,
+    );
+
     const vehicle = await this.prisma.vehicle.create({
       data: {
         organizationId,
@@ -91,10 +100,17 @@ export class VehiclesService {
   }
 
   async update(
+    organizationId: string,
     id: string,
     dto: UpdateVehicleDto,
     allowedCustomerIds: string[] | null,
   ): Promise<VehicleResponseDto> {
+    const existing = await this.prisma.vehicle.findFirst({
+      where: { id, organizationId },
+      select: { customerId: true, plate: true },
+    });
+    if (!existing) throw new NotFoundException(ApiCode.VEHICLE_NOT_FOUND);
+
     if (dto.customerId !== undefined) {
       const cid = typeof dto.customerId === "string" ? dto.customerId.trim() : "";
       if (!cid) {
@@ -107,6 +123,18 @@ export class VehiclesService {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
     }
+
+    const effectiveCustomerId =
+      dto.customerId !== undefined ? (dto.customerId as string) : existing.customerId;
+    const effectivePlate =
+      dto.plate !== undefined ? dto.plate : existing.plate;
+    await this.assertPlateUniqueInCustomerHierarchy(
+      organizationId,
+      effectiveCustomerId,
+      effectivePlate,
+      id,
+    );
+
     const data = Object.fromEntries(
       (Object.entries(dto) as [keyof UpdateVehicleDto, unknown][]).filter(
         ([, value]) => value !== undefined,
@@ -185,6 +213,55 @@ export class VehiclesService {
       }
     }
     await this.prisma.vehicle.delete({ where: { id } });
+  }
+
+  /** Placa comparável: trim, maiúsculas, sem espaço/hífen (evita ABC-1234 vs ABC 1234 duplicado). */
+  private normalizePlateKey(plate: string | null | undefined): string | null {
+    if (plate == null) return null;
+    const key = plate.trim().toUpperCase().replace(/[\s-]/g, "");
+    return key.length > 0 ? key : null;
+  }
+
+  /**
+   * Garante que não exista outro veículo com a mesma placa (normalizada) na mesma árvore de
+   * customer (raiz + filhos). Raízes diferentes na mesma org podem repetir placa.
+   */
+  private async assertPlateUniqueInCustomerHierarchy(
+    organizationId: string,
+    customerId: string,
+    plate: string | null | undefined,
+    excludeVehicleId: string | undefined,
+  ): Promise<void> {
+    const plateKey = this.normalizePlateKey(plate);
+    if (!plateKey) return;
+
+    const ancestorChain = await this.customersService.getCustomerIdAndAncestorIds(
+      customerId,
+      organizationId,
+    );
+    if (ancestorChain.length === 0) {
+      throw new BadRequestException(ApiCode.VEHICLE_CUSTOMER_REQUIRED);
+    }
+    const rootId = ancestorChain[ancestorChain.length - 1]!;
+    const descendantIds = await this.customersService.getDescendantCustomerIds(
+      [rootId],
+      organizationId,
+    );
+    const customerIdsInTree = new Set<string>([rootId, ...descendantIds]);
+
+    const candidates = await this.prisma.vehicle.findMany({
+      where: {
+        organizationId,
+        customerId: { in: [...customerIdsInTree] },
+        id: excludeVehicleId ? { not: excludeVehicleId } : undefined,
+      },
+      select: { id: true, plate: true },
+    });
+    for (const v of candidates) {
+      if (this.normalizePlateKey(v.plate) === plateKey) {
+        throw new BadRequestException(ApiCode.VEHICLE_DUPLICATE_PLATE_IN_CUSTOMER_HIERARCHY);
+      }
+    }
   }
 
   private toResponse(v: VehicleWithDeviceAndCustomer): VehicleResponseDto {

@@ -851,9 +851,9 @@ export interface CreateDocumentPayload {
   vehicleId: string;
   type: DocumentType;
   title: string;
+  issueDate: string;
+  expiryDate: string;
   fileUrl?: string;
-  issueDate?: string;
-  expiryDate?: string;
   notes?: string;
 }
 

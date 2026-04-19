@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function CustomerFleetSettingsPage() {
   const { t } = useTranslation();
@@ -36,6 +37,8 @@ export default function CustomerFleetSettingsPage() {
   const [editTarget, setEditTarget] = useState<string>("");
   const [offlineMinutes, setOfflineMinutes] = useState("");
   const [defaultSpeedKmh, setDefaultSpeedKmh] = useState("");
+  const [offlineMinutesInvalid, setOfflineMinutesInvalid] = useState(false);
+  const [defaultSpeedInvalid, setDefaultSpeedInvalid] = useState(false);
 
   const load = useCallback(async () => {
     if (!orgId || !canEdit) return;
@@ -82,6 +85,9 @@ export default function CustomerFleetSettingsPage() {
   }, [list, editTarget]);
 
   const parsePayload = useCallback(() => {
+    setOfflineMinutesInvalid(false);
+    setDefaultSpeedInvalid(false);
+
     const offlineTrim = offlineMinutes.trim();
     let deviceOfflineThresholdMinutes: number | null | undefined;
     if (offlineTrim === "") {
@@ -89,7 +95,9 @@ export default function CustomerFleetSettingsPage() {
     } else {
       const n = parseInt(offlineTrim, 10);
       if (!Number.isFinite(n) || n < 1) {
+        setOfflineMinutesInvalid(true);
         toast.error(t("companySettings.validation.offlineMinutes"));
+        document.getElementById("offlineMinutes")?.focus();
         return null;
       }
       deviceOfflineThresholdMinutes = n;
@@ -102,7 +110,9 @@ export default function CustomerFleetSettingsPage() {
     } else {
       const s = parseFloat(speedTrim.replace(",", "."));
       if (!Number.isFinite(s) || s < 0) {
+        setDefaultSpeedInvalid(true);
         toast.error(t("companySettings.validation.defaultSpeed"));
+        document.getElementById("defaultSpeed")?.focus();
         return null;
       }
       defaultSpeedLimitKmh = s <= 0 ? null : s;
@@ -111,6 +121,7 @@ export default function CustomerFleetSettingsPage() {
   }, [offlineMinutes, defaultSpeedKmh, t]);
 
   const handleSaveCurrent = async () => {
+    if (saving) return;
     if (!orgId || editTarget === "") return;
     const payload = parsePayload();
     if (!payload) return;
@@ -131,6 +142,7 @@ export default function CustomerFleetSettingsPage() {
   };
 
   const handleApplyAllAccessible = async () => {
+    if (saving) return;
     if (!orgId) return;
     const payload = parsePayload();
     if (!payload) return;
@@ -233,8 +245,15 @@ export default function CustomerFleetSettingsPage() {
                     min={1}
                     inputMode="numeric"
                     value={offlineMinutes}
-                    onChange={(e) => setOfflineMinutes(e.target.value)}
+                    onChange={(e) => {
+                      setOfflineMinutes(e.target.value);
+                      setOfflineMinutesInvalid(false);
+                    }}
                     placeholder={t("companySettings.offlineThresholdPlaceholder")}
+                    aria-invalid={offlineMinutesInvalid || undefined}
+                    className={cn(
+                      offlineMinutesInvalid && "border-destructive ring-1 ring-destructive",
+                    )}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t("companySettings.offlineThresholdHint")}
@@ -249,8 +268,15 @@ export default function CustomerFleetSettingsPage() {
                     step="1"
                     inputMode="decimal"
                     value={defaultSpeedKmh}
-                    onChange={(e) => setDefaultSpeedKmh(e.target.value)}
+                    onChange={(e) => {
+                      setDefaultSpeedKmh(e.target.value);
+                      setDefaultSpeedInvalid(false);
+                    }}
                     placeholder={t("companySettings.defaultSpeedPlaceholder")}
+                    aria-invalid={defaultSpeedInvalid || undefined}
+                    className={cn(
+                      defaultSpeedInvalid && "border-destructive ring-1 ring-destructive",
+                    )}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t("companySettings.defaultSpeedHint")}
@@ -258,13 +284,13 @@ export default function CustomerFleetSettingsPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button onClick={() => void handleSaveCurrent()} disabled={saving}>
+                <Button onClick={() => void handleSaveCurrent()}>
                   {saving ? "…" : t("companySettings.saveCurrent")}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={saving || customerOptions.length === 0}
+                  disabled={customerOptions.length === 0}
                   onClick={() => void handleApplyAllAccessible()}
                 >
                   {t("companySettings.applyAllAccessible")}

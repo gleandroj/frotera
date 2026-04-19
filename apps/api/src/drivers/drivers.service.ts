@@ -41,20 +41,27 @@ export class DriversService {
       return [];
     }
 
-    // Se filtro por empresa foi passado, validar acesso
-    if (filterCustomerId && allowedCustomerIds !== null) {
-      if (!allowedCustomerIds.includes(filterCustomerId)) {
-        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-      }
-    }
-
     const where: any = {
       organizationId,
       // Incluir ativos e inativos na listagem (o frontend pode filtrar)
     };
 
     if (filterCustomerId) {
-      where.customerId = filterCustomerId;
+      // Mesma regra dos veículos e do checklist: empresa raiz + filiais (descendentes),
+      // cruzado com o escopo do membro.
+      const descendantIds = await this.customersService.getDescendantCustomerIds(
+        [filterCustomerId],
+        organizationId,
+      );
+      const filterSet = [filterCustomerId, ...descendantIds];
+      const effectiveIds =
+        allowedCustomerIds === null
+          ? filterSet
+          : filterSet.filter((id) => allowedCustomerIds.includes(id));
+      if (effectiveIds.length === 0) {
+        return [];
+      }
+      where.customerId = { in: effectiveIds };
     } else if (allowedCustomerIds !== null) {
       where.customerId = { in: allowedCustomerIds };
     }
