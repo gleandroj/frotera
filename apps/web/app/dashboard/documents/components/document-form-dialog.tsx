@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { isValid, parse } from 'date-fns';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   Sheet,
@@ -57,7 +58,6 @@ import {
   documentsAPI,
   vehiclesAPI,
   type VehicleDocument,
-  type CreateDocumentPayload,
   type UpdateDocumentPayload,
   type Vehicle,
   type DocumentType,
@@ -80,13 +80,23 @@ interface DocumentFormDialogProps {
   onSuccess: () => void;
 }
 
+const requiredYmd = (t: (k: string) => string, requiredKey: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, t(requiredKey))
+    .refine(
+      (v) => isValid(parse(v, 'yyyy-MM-dd', new Date())),
+      t('documents.dateInvalid'),
+    );
+
 const buildSchema = (t: (k: string) => string) =>
   z.object({
     vehicleId: z.string().min(1, t('documents.vehicleRequired')),
     type: z.enum(['CRLV', 'INSURANCE', 'LICENSE', 'INSPECTION', 'OTHER']),
     title: z.string().min(1, t('documents.titleRequired')),
-    issueDate: z.string().default(''),
-    expiryDate: z.string().default(''),
+    issueDate: requiredYmd(t, 'documents.issueDateRequired'),
+    expiryDate: requiredYmd(t, 'documents.expiryDateRequired'),
     notes: z.string().default(''),
   });
 
@@ -194,8 +204,8 @@ export function DocumentFormDialog({
         await documentsAPI.update(organizationId, document!.id, {
           type: values.type,
           title: values.title,
-          issueDate: values.issueDate || null,
-          expiryDate: values.expiryDate || null,
+          issueDate: values.issueDate,
+          expiryDate: values.expiryDate,
           fileUrl,
           notes: values.notes || null,
         } as UpdateDocumentPayload);
@@ -209,7 +219,7 @@ export function DocumentFormDialog({
           expiryDate: values.expiryDate,
           ...(fileUrl != null ? { fileUrl } : {}),
           notes: values.notes,
-        } as CreateDocumentPayload);
+        });
         toast.success(t('documents.toastCreated'));
       }
       onSuccess();
@@ -369,7 +379,7 @@ export function DocumentFormDialog({
                 name="issueDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('documents.fields.issueDate')}</FormLabel>
+                    <FormLabel>{t('documents.fields.issueDate')} *</FormLabel>
                     <FormControl>
                       <DatePicker
                         value={field.value || undefined}
@@ -388,7 +398,7 @@ export function DocumentFormDialog({
                 name="expiryDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('documents.fields.expiryDate')}</FormLabel>
+                    <FormLabel>{t('documents.fields.expiryDate')} *</FormLabel>
                     <FormControl>
                       <DatePicker
                         value={field.value || undefined}
