@@ -83,29 +83,55 @@ describe('OrganizationMemberGuard', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true and populate organizationMember when superAdmin is true', async () => {
+    it('should throw ORGANIZATION_NOT_FOUND when superAdmin has no membership row', async () => {
       const context = createMockContext({
         user: { userId: 'user-1', isSuperAdmin: true },
         params: { organizationId: 'org-1' },
       });
+      (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(null);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND),
+      );
+    });
+
+    it('should load DB membership for superAdmin and skip customersService', async () => {
+      const membership = {
+        id: 'member-sa',
+        userId: 'user-1',
+        organizationId: 'org-1',
+        roleId: 'role-1',
+        customerRestricted: false,
+        role: { permissions: [] },
+      };
+      const context = createMockContext({
+        user: { userId: 'user-1', isSuperAdmin: true },
+        params: { organizationId: 'org-1' },
+      });
+      (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(membership);
 
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
       const request = context.switchToHttp().getRequest();
-      expect(request.organizationMember).toEqual({
-        id: 'superadmin',
-        organizationId: 'org-1',
-        userId: 'user-1',
-        role: 'OWNER',
-        customerRestricted: false,
-      });
+      expect(request.organizationMember).toEqual(membership);
+      expect(request.allowedCustomerIds).toBeNull();
+      expect(customersService.getAllowedCustomerIds).not.toHaveBeenCalled();
     });
 
-    it('should set allowedCustomerIds to null for superAdmin', async () => {
+    it('should set allowedCustomerIds to null for superAdmin with membership', async () => {
+      const membership = {
+        id: 'member-sa',
+        userId: 'user-1',
+        organizationId: 'org-1',
+        roleId: 'role-1',
+        customerRestricted: false,
+        role: { permissions: [] },
+      };
       const context = createMockContext({
         user: { userId: 'user-1', isSuperAdmin: true },
       });
+      (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(membership);
 
       const result = await guard.canActivate(context);
 
@@ -114,10 +140,19 @@ describe('OrganizationMemberGuard', () => {
       expect(request.allowedCustomerIds).toBeNull();
     });
 
-    it('should not call customersService for superAdmin', async () => {
+    it('should not call customersService for superAdmin with membership', async () => {
+      const membership = {
+        id: 'member-sa',
+        userId: 'user-1',
+        organizationId: 'org-1',
+        roleId: 'role-1',
+        customerRestricted: false,
+        role: { permissions: [] },
+      };
       const context = createMockContext({
         user: { userId: 'user-1', isSuperAdmin: true },
       });
+      (prismaService.organizationMember.findUnique as any).mockResolvedValueOnce(membership);
 
       await guard.canActivate(context);
 

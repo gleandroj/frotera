@@ -24,18 +24,6 @@ export class OrganizationMemberGuard implements CanActivate {
       return false;
     }
 
-    if (request.user?.isSuperAdmin) {
-      request.organizationMember = {
-        id: "superadmin",
-        organizationId,
-        userId,
-        role: "OWNER",
-        customerRestricted: false,
-      };
-      request.allowedCustomerIds = null;
-      return true;
-    }
-
     const membership = await this.prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
@@ -53,6 +41,12 @@ export class OrganizationMemberGuard implements CanActivate {
     }
 
     request.organizationMember = membership;
+
+    if (request.user?.isSuperAdmin) {
+      request.allowedCustomerIds = null;
+      return true;
+    }
+
     request.allowedCustomerIds =
       await this.customersService.getAllowedCustomerIds(
         membership,
