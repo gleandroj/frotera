@@ -182,8 +182,12 @@ export class VehiclesService {
     organizationId: string,
     allowedCustomerIds: string[] | null,
     filterCustomerIds?: string[] | null,
+    activeOnly?: boolean,
   ): Promise<VehicleResponseDto[]> {
-    const where: Prisma.VehicleWhereInput = { organizationId };
+    const where: Prisma.VehicleWhereInput = {
+      organizationId,
+      ...(activeOnly ? { inactive: false } : {}),
+    };
     const effectiveIds = filterCustomerIds !== undefined && filterCustomerIds !== null
       ? filterCustomerIds
       : allowedCustomerIds;

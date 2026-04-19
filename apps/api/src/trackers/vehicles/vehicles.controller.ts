@@ -66,8 +66,10 @@ export class VehiclesController {
   async list(
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
+    @Query("activeOnly") activeOnlyRaw: string | undefined,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto[]> {
+    const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
     let filterIds: string[] | null | undefined;
     if (filterCustomerId) {
       const descendantIds = await this.customersService.getDescendantCustomerIds(
@@ -84,6 +86,7 @@ export class VehiclesController {
       organizationId,
       req.allowedCustomerIds,
       filterIds,
+      activeOnly,
     );
   }
 
