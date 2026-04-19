@@ -5,6 +5,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import * as fs from "fs";
 import * as net from "net";
 import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
@@ -52,6 +53,7 @@ interface SocketContext {
 export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TrackerTcpService.name);
   private server: net.Server | null = null;
+  private hexDebugStream: fs.WriteStream | null = null;
   private readonly socketContexts = new Map<net.Socket, SocketContext>();
 
   constructor(
@@ -71,6 +73,17 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       this.config.get<string>("TRACKER_TCP_PORT") ?? "5023",
       10,
     );
+    const hexDebugPath = this.config.get<string>("TRACKER_TCP_HEX_DEBUG_FILE")?.trim();
+    if (hexDebugPath) {
+      this.hexDebugStream = fs.createWriteStream(hexDebugPath, { flags: "a" });
+      this.hexDebugStream.on("error", (err: NodeJS.ErrnoException) => {
+        this.logger.error(`TCP hex debug file (${hexDebugPath}): ${err.message}`);
+      });
+      this.logger.warn(
+        `TRACKER_TCP_HEX_DEBUG_FILE is set — appending every TCP recv chunk as hex to ${hexDebugPath}`,
+      );
+    }
+
     this.server = net.createServer((socket) => this.handleConnection(socket));
     this.server.listen(port, () => {
       this.logger.log(`Tracker TCP server listening on port ${port}`);
@@ -81,6 +94,12 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (this.hexDebugStream) {
+      await new Promise<void>((resolve) => {
+        this.hexDebugStream!.end(() => resolve());
+      });
+      this.hexDebugStream = null;
+    }
     if (this.server) {
       this.server.close();
       this.server = null;
@@ -130,6 +149,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     this.socketContexts.set(socket, ctx);
 
     socket.on("data", (data: Buffer) => {
+      this.appendTcpHexDebugLine(remote, data);
       const hexPreview =
         data.length <= 64 ? data.toString("hex") : `${data.subarray(0, 32).toString("hex")}...`;
       const hint =
@@ -157,6 +177,18 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       const ctx = this.socketContexts.get(socket);
       this.socketContexts.delete(socket);
       if (ctx?.deviceId) this.markDisconnected(ctx.deviceId);
+    });
+  }
+
+  /** One line per `socket.on("data")` chunk: ISO time, remote, byte length, full hex. */
+  private appendTcpHexDebugLine(remote: string, data: Buffer): void {
+    const stream = this.hexDebugStream;
+    if (!stream) return;
+    const line = `${new Date().toISOString()}\t${remote}\t${data.length}\t${data.toString("hex")}\n`;
+    stream.write(line, (err) => {
+      if (err) {
+        this.logger.warn(`TCP hex debug write failed: ${err.message}`);
+      }
     });
   }
 
@@ -288,7 +320,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       }
       return;
     }
-
+    console.log("parsed", parsed);
     if (isGT06Location(parsed.protocolNumber)) {
       socket.write(buildGT06LocationAck(parsed.serialNumber, parsed.protocolNumber));
       const position = parseGT06LocationToPosition(
@@ -385,4 +417,3 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
 function extractIgnitionFromPosition(position: NormalizedPosition): boolean | null {
   return position.ignitionOn ?? null;
 }
-
