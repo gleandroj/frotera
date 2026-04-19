@@ -96,9 +96,22 @@ export class VehiclesController {
   @ApiResponse({ status: 403, description: "Forbidden" })
   async fleetStatus(
     @Param("organizationId") organizationId: string,
+    @Query("customerId") filterCustomerId: string | undefined,
     @Request() req: OrgScopedRequest,
   ): Promise<FleetVehicleStatusDto[]> {
-    return this.vehiclesService.listFleetStatus(organizationId, req.allowedCustomerIds);
+    let filterIds: string[] | null | undefined;
+    if (filterCustomerId) {
+      const descendantIds = await this.customersService.getDescendantCustomerIds(
+        [filterCustomerId],
+        organizationId,
+      );
+      const filterSet = [filterCustomerId, ...descendantIds];
+      filterIds =
+        req.allowedCustomerIds === null
+          ? filterSet
+          : filterSet.filter((id) => req.allowedCustomerIds!.includes(id));
+    }
+    return this.vehiclesService.listFleetStatus(organizationId, req.allowedCustomerIds, filterIds);
   }
 
   @Get(":vehicleId")

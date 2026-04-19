@@ -212,11 +212,16 @@ export class VehiclesService {
   async listFleetStatus(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    filterCustomerIds?: string[] | null,
   ): Promise<FleetVehicleStatusDto[]> {
     const where: Prisma.VehicleWhereInput = { organizationId };
-    if (allowedCustomerIds !== null) {
-      if (allowedCustomerIds.length === 0) return [];
-      where.customerId = { in: allowedCustomerIds };
+    const effectiveIds =
+      filterCustomerIds !== undefined && filterCustomerIds !== null
+        ? filterCustomerIds
+        : allowedCustomerIds;
+    if (effectiveIds !== null) {
+      if (effectiveIds.length === 0) return [];
+      where.customerId = { in: effectiveIds };
     }
     const list = await this.prisma.vehicle.findMany({
       where,
