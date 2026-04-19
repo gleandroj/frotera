@@ -5,6 +5,7 @@ import type { Server } from "socket.io";
 export const TRACKER_REDIS_SUB = "TRACKER_REDIS_SUB";
 
 export interface PositionPayload {
+  deviceId: string;
   latitude: number;
   longitude: number;
   altitude: number | null;
@@ -59,7 +60,8 @@ export class TrackerPositionsStreamService implements OnModuleDestroy {
       const id = ch.slice(CHANNEL_PREFIX.length);
       if (!this.deviceState.has(id) || !this.server) return;
       try {
-        const payload = JSON.parse(message) as PositionPayload;
+        const raw = JSON.parse(message) as Omit<PositionPayload, "deviceId">;
+        const payload: PositionPayload = { ...raw, deviceId: id };
         this.server.to(this.getRoom(id)).emit("positions:batch", [payload]);
         this.logger.debug(
           `Emitted position to room device:${id} (${payload.latitude},${payload.longitude})`,
