@@ -77,7 +77,8 @@
     "noResults": "Nenhum resultado.",
     "createNewVehicle": "Novo veículo",
     "createNewDriver": "Novo motorista",
-    "createNewCompany": "Nova empresa"
+    "createNewCompany": "Nova empresa",
+    "forbidden": "Acesso não autorizado"
   },
   "errors": {
     "api": {
@@ -85,7 +86,24 @@
       "AUTH_UNAUTHORIZED": "Autenticação necessária.",
       "COMMON_NOT_FOUND": "Recurso não encontrado.",
       "COMMON_BAD_REQUEST": "Requisição inválida."
-    }
+    },
+    "generic": "Algo deu errado. Por favor, tente novamente.",
+    "network": "Erro de rede. Por favor, verifique sua conexão.",
+    "timeout": "Solicitação expirou. Por favor, tente novamente.",
+    "somethingWentWrong": "Algo deu errado!",
+    "applicationError": "Ocorreu um erro ao carregar a aplicação.",
+    "planLimitExceeded": "Limite do plano foi excedido",
+    "agentLimitExceeded": "Limite de agentes de IA foi atingido",
+    "whatsappLimitExceeded": "Limite de instâncias do WhatsApp foi atingido",
+    "memberLimitExceeded": "Limite de membros da equipe foi atingido",
+    "upgradeRequired": "Upgrade necessário para continuar",
+    "upgradeAction": "Fazer upgrade",
+    "tryAgain": "Tentar Novamente",
+    "goHome": "Ir para Início",
+    "pageNotFound": "Página Não Encontrada",
+    "pageNotFoundDescription": "A página que você está procurando não existe ou foi movida.",
+    "signIn": "Entrar",
+    "systemDiagnostics": "Diagnósticos do Sistema"
   },
   "dataTable": {
     "view": "Exibir",
@@ -162,7 +180,64 @@
     "year": "Ano",
     "renavam": "Renavam",
     "chassis": "Chassi",
-    "vehicleType": "Tipo de veículo",
+    "vehicleType": "Tipo (texto livre, legado)",
+    "classification": {
+      "section": "Classificação do veículo",
+      "speciesField": "Espécie (finalidade)",
+      "bodyTypeField": "Tipo de carroceria",
+      "tractionField": "Tração",
+      "useCategoryField": "Categoria de uso",
+      "none": "Não informado",
+      "speciesGroup": {
+        "passenger": "Passageiros",
+        "cargo": "Carga",
+        "mixed": "Misto",
+        "special": "Especial",
+        "competition": "Competição"
+      },
+      "species": {
+        "PASSENGER_MOTONETA": "Motoneta",
+        "PASSENGER_MOTORCYCLE": "Motocicleta",
+        "PASSENGER_TRICYCLE": "Triciclo",
+        "PASSENGER_QUADRICYCLE": "Quadriciclo",
+        "PASSENGER_AUTOMOBILE": "Automóvel",
+        "PASSENGER_UTILITY": "Utilitário",
+        "PASSENGER_MICROBUS": "Micro-ônibus",
+        "PASSENGER_BUS": "Ônibus",
+        "CARGO_PICKUP": "Caminhonete",
+        "CARGO_TRUCK": "Caminhão",
+        "MIXED_PICKUP": "Caminhonete (carga e passageiros)",
+        "SPECIAL_AMBULANCE": "Ambulância",
+        "SPECIAL_FIRE": "Bombeiro",
+        "SPECIAL_FUNERAL": "Funerário",
+        "SPECIAL_MOTORHOME": "Motor-casa",
+        "SPECIAL_TOW": "Guincho",
+        "SPECIAL_COLLECTION": "Veículo de coleção",
+        "COMPETITION_RACING": "Competição (preparado para corridas)"
+      },
+      "bodyType": {
+        "BODY_HATCH": "Hatch (Hatchback)",
+        "BODY_SEDAN": "Sedan",
+        "BODY_SUV": "SUV",
+        "BODY_PICKUP": "Picape",
+        "BODY_MINIVAN": "Minivan / Monovolume",
+        "BODY_STATION_WAGON": "Station Wagon (Perua)",
+        "BODY_COUPE": "Coupé"
+      },
+      "traction": {
+        "TRACTION_AUTOMOTOR": "Automotor (combustão ou elétrico)",
+        "TRACTION_ELECTRIC": "Propulsão elétrica",
+        "TRACTION_HUMAN": "Propulsão humana",
+        "TRACTION_ANIMAL": "Tração animal",
+        "TRACTION_TRAILER": "Reboque ou semi-reboque"
+      },
+      "useCategory": {
+        "USE_PRIVATE": "Particular",
+        "USE_RENTAL": "Aluguel (táxi, transporte coletivo ou de cargas)",
+        "USE_OFFICIAL": "Oficial",
+        "USE_LEARNING": "Aprendizagem (autoescola)"
+      }
+    },
     "inactive": "Inativo",
     "initialOdometer": "Hodômetro inicial (km)",
     "initialOdometerHint": "Opcional. Ajuda a calcular o consumo no primeiro abastecimento quando ainda não existe registro anterior.",
@@ -507,25 +582,6 @@
       "confirmLink": "Confirmar vínculo",
       "linking": "Vinculando…"
     }
-  },
-  "errors": {
-    "generic": "Algo deu errado. Por favor, tente novamente.",
-    "network": "Erro de rede. Por favor, verifique sua conexão.",
-    "timeout": "Solicitação expirou. Por favor, tente novamente.",
-    "somethingWentWrong": "Algo deu errado!",
-    "applicationError": "Ocorreu um erro ao carregar a aplicação.",
-    "planLimitExceeded": "Limite do plano foi excedido",
-    "agentLimitExceeded": "Limite de agentes de IA foi atingido",
-    "whatsappLimitExceeded": "Limite de instâncias do WhatsApp foi atingido",
-    "memberLimitExceeded": "Limite de membros da equipe foi atingido",
-    "upgradeRequired": "Upgrade necessário para continuar",
-    "upgradeAction": "Fazer upgrade",
-    "tryAgain": "Tentar Novamente",
-    "goHome": "Ir para Início",
-    "pageNotFound": "Página Não Encontrada",
-    "pageNotFoundDescription": "A página que você está procurando não existe ou foi movida.",
-    "signIn": "Entrar",
-    "systemDiagnostics": "Diagnósticos do Sistema"
   },
   "loading": {
     "loadingConfiguration": "Carregando configuração...",
@@ -906,7 +962,8 @@
       "incidents": "Ocorrências",
       "telemetry": "Telemetria",
       "companyFleetSettings": "Empresa e telemetria",
-      "trackerDiscoveries": "Rastreadores Conectados"
+      "trackerDiscoveries": "Rastreadores Conectados",
+      "tracking": "Rastreamento"
     },
     "footer": {
       "copyright": "© {{year}} Rotera",
@@ -1741,7 +1798,6 @@
     "title": "Relatórios de Combustível",
     "description": "Análise completa de consumo, custos e preços da frota.",
     "nav": "Relatórios",
-
     "consumption": {
       "title": "Consumo por Veículo",
       "description": "Eficiência (km/l) por veículo no período.",
@@ -1758,7 +1814,6 @@
       },
       "noData": "Nenhum dado de consumo disponível para o período."
     },
-
     "costs": {
       "title": "Análise de Custos",
       "description": "Custos de abastecimento agrupados por período.",
@@ -1772,7 +1827,6 @@
       },
       "noData": "Nenhum custo registrado no período."
     },
-
     "benchmark": {
       "title": "Preço Pago vs Mercado",
       "description": "Compare o preço pago nos abastecimentos com a média de mercado do estado.",
@@ -1785,7 +1839,6 @@
       "noMarketData": "Dados de mercado não disponíveis para o período.",
       "noData": "Nenhum registro com preço de referência de mercado."
     },
-
     "efficiency": {
       "title": "Alertas de Eficiência",
       "description": "Veículos com queda de consumo acima do limiar configurado.",
@@ -1799,7 +1852,6 @@
       "noAlerts": "Nenhum veículo com queda de consumo detectada.",
       "noData": "Dados insuficientes para análise de eficiência."
     },
-
     "summary": {
       "title": "Resumo do Período",
       "description": "KPIs de combustível para o período selecionado.",
@@ -1818,7 +1870,6 @@
       "vsLastPeriod": "vs período anterior",
       "noData": "Nenhum dado para o período selecionado."
     },
-
     "hub": {
       "consumption": "Consumo por Veículo",
       "consumptionDesc": "Eficiência km/l e tendência por veículo",
@@ -1831,5 +1882,20 @@
       "summary": "Resumo do Período",
       "summaryDesc": "KPIs de dia, mês ou ano com comparativo"
     }
+  },
+  "tracking": {
+    "title": "Rastreamento em Tempo Real",
+    "searchPlaceholder": "Buscar por placa ou nome...",
+    "noVehicles": "Nenhum veículo encontrado",
+    "noPosition": "Sem posição",
+    "lastUpdate": "Última posição",
+    "ignitionOn": "Ligado",
+    "ignitionOff": "Desligado",
+    "noTracker": "Sem rastreador",
+    "collapse": "Recolher painel",
+    "expand": "Expandir painel",
+    "viewVehicle": "Ver veículo",
+    "viewFuel": "Abastecimentos",
+    "viewChecklist": "Checklists"
   }
 }
