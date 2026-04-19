@@ -17,10 +17,10 @@ import type { GeofenceTypeApi } from "@/lib/frontend/api-client";
 import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_CENTER: [number, number] = [-15.77972, -47.92972];
-const MIN_RADIUS_KM = 0.1;
-const MAX_RADIUS_KM = 100;
-/** Half-kilometer steps: usable slider range (0.5–500 km) without excessive granularity. */
-const STEP_KM = 0.1;
+/** `coordinates.radius` is stored in meters (API / DB). */
+const MIN_RADIUS_M = 5;
+const MAX_RADIUS_M = 10_000;
+const STEP_RADIUS_M = 5;
 
 function parseCenter(raw: unknown): [number, number] {
   if (!Array.isArray(raw) || raw.length < 2) return DEFAULT_CENTER;
@@ -30,17 +30,16 @@ function parseCenter(raw: unknown): [number, number] {
   return [la, ln];
 }
 
-/** `coordinates.radius` is stored in meters (API / DB). */
 function parseRadiusMeters(raw: unknown): number {
   const n = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(n) || n < 1) return MIN_RADIUS_KM * 1000;
+  if (!Number.isFinite(n) || n < 1) return 500;
   return n;
 }
 
-function clampRadiusKm(km: number): number {
-  if (!Number.isFinite(km)) return MIN_RADIUS_KM;
-  const stepped = Math.round(km / STEP_KM) * STEP_KM;
-  return Math.min(MAX_RADIUS_KM, Math.max(MIN_RADIUS_KM, stepped));
+function clampRadiusMeters(m: number): number {
+  if (!Number.isFinite(m)) return MIN_RADIUS_M;
+  const stepped = Math.round(m / STEP_RADIUS_M) * STEP_RADIUS_M;
+  return Math.min(MAX_RADIUS_M, Math.max(MIN_RADIUS_M, stepped));
 }
 
 function parsePoints(raw: unknown): [number, number][] {
@@ -108,14 +107,16 @@ export function GeofenceMapEditor({
   const [center, setCenter] = useState<[number, number]>(() =>
     parseCenter(coordinates.center),
   );
-  const [radiusKm, setRadiusKm] = useState(() =>
-    clampRadiusKm(parseRadiusMeters(coordinates.radius) / 1000),
+  const [radiusM, setRadiusM] = useState(() =>
+    clampRadiusMeters(parseRadiusMeters(coordinates.radius)),
   );
   const [points, setPoints] = useState<[number, number][]>(() =>
     parsePoints(coordinates.points),
   );
-  const radiusKmRef = useRef(radiusKm);
-  radiusKmRef.current = radiusKm;
+  const radiusMRef = useRef(radiusM);
+  radiusMRef.current = radiusM;
+  const coordinatesRef = useRef(coordinates);
+  coordinatesRef.current = coordinates;
 
   const browserGeoAttemptRef = useRef<string | null>(null);
 
@@ -126,7 +127,7 @@ export function GeofenceMapEditor({
   useEffect(() => {
     if (type === "CIRCLE") {
       setCenter(parseCenter(coordinates.center));
-      setRadiusKm(clampRadiusKm(parseRadiusMeters(coordinates.radius) / 1000));
+      setRadiusM(clampRadiusMeters(parseRadiusMeters(coordinates.radius)));
     } else {
       setPoints(parsePoints(coordinates.points));
     }
@@ -143,7 +144,7 @@ export function GeofenceMapEditor({
       if (!isDefaultCenter(parseCenter(coordinates.center))) return;
     } else {
       if (parsePoints(coordinates.points).length > 0) return;
-      if (!isDefaultCenter(center)) return;
+      if (!isDefaultCenter(parseCenter(coordinates.center))) return;
     }
 
     browserGeoAttemptRef.current = attemptKey;
@@ -157,12 +158,18 @@ export function GeofenceMapEditor({
           pos.coords.longitude,
         ];
         if (type === "CIRCLE") {
+          const c = parseCenter(coordinatesRef.current.center);
+          if (!isDefaultCenter(c)) return;
           setCenter(next);
           onChange({
             center: next,
-            radius: radiusKmRef.current * 1000,
+            radius: radiusMRef.current,
           });
         } else {
+          const pts = parsePoints(coordinatesRef.current.points);
+          if (pts.length > 0) return;
+          const c = parseCenter(coordinatesRef.current.center);
+          if (!isDefaultCenter(c)) return;
           setCenter(next);
         }
       },
@@ -171,9 +178,9 @@ export function GeofenceMapEditor({
         browserGeoAttemptRef.current = null;
       },
       {
-        enableHighAccuracy: false,
-        maximumAge: 300_000,
-        timeout: 12_000,
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 15_000,
       },
     );
     return () => {
@@ -185,11 +192,8 @@ export function GeofenceMapEditor({
     syncKey,
     coordinates.center,
     coordinates.points,
-    center,
     onChange,
   ]);
-
-  const radiusMeters = radiusKm * 1000;
 
   const mapCenter = useMemo(() => {
     if (type === "POLYGON" && points.length > 0) return points[0]!;
@@ -198,11 +202,11 @@ export function GeofenceMapEditor({
 
   const mapZoom = type === "POLYGON" && points.length > 1 ? 14 : 13;
 
-  const setCircleRadiusKm = useCallback(
-    (nextKm: number) => {
-      const km = clampRadiusKm(nextKm);
-      setRadiusKm(km);
-      onChange({ center, radius: km * 1000 });
+  const setCircleRadiusM = useCallback(
+    (nextM: number) => {
+      const m = clampRadiusMeters(nextM);
+      setRadiusM(m);
+      onChange({ center, radius: m });
     },
     [center, onChange],
   );
@@ -212,7 +216,7 @@ export function GeofenceMapEditor({
       if (type === "CIRCLE") {
         const next: [number, number] = [lat, lng];
         setCenter(next);
-        onChange({ center: next, radius: radiusKm * 1000 });
+        onChange({ center: next, radius: radiusM });
       } else {
         setPoints((prev) => {
           const next = [...prev, [lat, lng] as [number, number]];
@@ -221,7 +225,7 @@ export function GeofenceMapEditor({
         });
       }
     },
-    [type, onChange, radiusKm],
+    [type, onChange, radiusM],
   );
 
   const closePolygon = useCallback(() => {
@@ -249,7 +253,7 @@ export function GeofenceMapEditor({
           {type === "CIRCLE" && (
             <Circle
               center={center}
-              radius={radiusMeters}
+              radius={radiusM}
               pathOptions={{ color: "#2563eb" }}
             />
           )}
@@ -263,37 +267,35 @@ export function GeofenceMapEditor({
       </div>
       {type === "CIRCLE" && (
         <div className="space-y-2">
-          <Label>{t("telemetry.geofences.form.radiusKm")}</Label>
+          <Label>{t("telemetry.geofences.form.radiusMeters")}</Label>
           <Slider
-            value={[radiusKm]}
-            min={MIN_RADIUS_KM}
-            max={MAX_RADIUS_KM}
-            step={STEP_KM}
+            value={[radiusM]}
+            min={MIN_RADIUS_M}
+            max={MAX_RADIUS_M}
+            step={STEP_RADIUS_M}
             onValueChange={(v) => {
-              const r = v[0] ?? radiusKm;
-              setCircleRadiusKm(r);
+              const r = v[0] ?? radiusM;
+              setCircleRadiusM(r);
             }}
           />
           <div className="flex flex-wrap items-center gap-2">
             <Input
               type="number"
-              min={MIN_RADIUS_KM}
-              max={MAX_RADIUS_KM}
-              step={STEP_KM}
+              min={MIN_RADIUS_M}
+              max={MAX_RADIUS_M}
+              step={STEP_RADIUS_M}
               className="max-w-[140px]"
-              value={radiusKm}
+              value={radiusM}
               onChange={(e) => {
                 const x = parseFloat(e.target.value.replace(",", "."));
                 if (!Number.isFinite(x)) return;
-                setCircleRadiusKm(x);
+                setCircleRadiusM(x);
               }}
             />
-            <span className="text-xs text-muted-foreground">km</span>
+            <span className="text-xs text-muted-foreground">m</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            {t("telemetry.geofences.form.radiusKmHint", {
-              meters: Math.round(radiusMeters).toLocaleString(),
-            })}
+            {t("telemetry.geofences.form.radiusMetersHint")}
           </p>
         </div>
       )}
