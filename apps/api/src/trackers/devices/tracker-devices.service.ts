@@ -157,6 +157,7 @@ export class TrackerDevicesService {
         altitude: fromRedis.altitude ?? null,
         speed: fromRedis.speed ?? null,
         heading: fromRedis.heading ?? null,
+        ignitionOn: fromRedis.ignitionOn ?? null,
         recordedAt: fromRedis.recordedAt,
         createdAt: new Date().toISOString(),
       };
@@ -231,6 +232,7 @@ export class TrackerDevicesService {
     altitude: number | null;
     speed: number | null;
     heading: number | null;
+    ignitionOn?: boolean | null;
     recordedAt: Date;
     createdAt: Date;
   }): PositionResponseDto {
@@ -242,6 +244,7 @@ export class TrackerDevicesService {
       altitude: p.altitude ?? undefined,
       speed: p.speed ?? undefined,
       heading: p.heading ?? undefined,
+      ignitionOn: p.ignitionOn ?? null,
       recordedAt: p.recordedAt.toISOString(),
       createdAt: p.createdAt.toISOString(),
     };
