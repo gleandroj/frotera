@@ -91,7 +91,14 @@ export default function NewUserPage() {
     .refine((data) => data.password === data.confirmPassword, {
       message: t("team.createUserDialog.validation.confirmPasswordMatch"),
       path: ["confirmPassword"],
-    });
+    })
+    .refine(
+      (data) => data.fullAccess || data.customerIds.length > 0,
+      {
+        message: t("team.createUserDialog.validation.customerAccessRequired"),
+        path: ["customerIds"],
+      },
+    );
 
   type CreateUserFormValues = z.infer<typeof schema>;
 
@@ -103,7 +110,7 @@ export default function NewUserPage() {
       confirmPassword: "",
       name: "",
       roleId: defaultRoleId,
-      fullAccess: !currentUserRestricted,
+      fullAccess: false,
       customerIds: [],
     },
   });
@@ -148,7 +155,6 @@ export default function NewUserPage() {
       const me = members.find((m: { user: { id: string } }) => m.user.id === user.id);
       const restricted = me?.customerRestricted === true;
       setCurrentUserRestricted(restricted);
-      form.setValue("fullAccess", !restricted);
     }).catch(() => setCurrentUserRestricted(false));
   }, [currentOrganization?.id, user?.id]);
 
@@ -377,6 +383,15 @@ export default function NewUserPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="customerIds"
+                      render={() => (
+                        <FormItem className="space-y-0">
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input

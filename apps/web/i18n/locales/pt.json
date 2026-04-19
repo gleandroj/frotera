@@ -1288,7 +1288,8 @@
         "confirmPasswordRequired": "Confirmação de senha é obrigatória",
         "confirmPasswordMatch": "As senhas não coincidem",
         "roleRequired": "Função é obrigatória",
-        "roleInvalid": "Função inválida"
+        "roleInvalid": "Função inválida",
+        "customerAccessRequired": "Selecione ao menos uma empresa ou marque \"Acesso completo à organização\"."
       }
     },
     "table": {
