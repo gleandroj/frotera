@@ -85,7 +85,7 @@ export default function NewUserPage() {
       }),
       name: z.string().default(""),
       roleId: z.string().min(1, t("team.createUserDialog.validation.roleRequired")),
-      fullAccess: z.boolean().default(true),
+      fullAccess: z.boolean().default(false),
       customerIds: z.array(z.string()).default([]),
     })
     .refine((data) => data.password === data.confirmPassword, {
