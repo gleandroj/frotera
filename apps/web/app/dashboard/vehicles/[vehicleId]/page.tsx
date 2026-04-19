@@ -246,6 +246,15 @@ export default function VehicleDetailPage() {
                     <dd className="mt-1 font-mono text-sm">{vehicle.chassis ?? "—"}</dd>
                   </div>
                   <div>
+                    <dt className="text-sm text-muted-foreground">{t("vehicles.initialOdometer")}</dt>
+                    <dd className="mt-1">
+                      {vehicle.initialOdometerKm != null &&
+                      Number.isFinite(vehicle.initialOdometerKm)
+                        ? new Intl.NumberFormat("pt-BR").format(vehicle.initialOdometerKm)
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
                     <dt className="text-sm text-muted-foreground">{t("vehicles.inactive")}</dt>
                     <dd className="mt-1">{vehicle.inactive ? t("common.yes") : t("common.no")}</dd>
                   </div>

@@ -447,6 +447,8 @@ export interface Vehicle {
   vehicleType?: string | null;
   inactive?: boolean;
   speedLimit?: number | null;
+  /** Hodômetro (km) na entrada do veículo na frota */
+  initialOdometerKm?: number | null;
   notes?: string | null;
   trackerDeviceId?: string | null;
   customerId?: string | null;
@@ -480,6 +482,7 @@ export interface CreateVehiclePayload {
   vehicleType?: string;
   inactive?: boolean;
   speedLimit?: number | null;
+  initialOdometerKm?: number | null;
   notes?: string;
   trackerDeviceId?: string;
   customerId?: string;
@@ -498,6 +501,7 @@ export interface UpdateVehiclePayload {
   vehicleType?: string;
   inactive?: boolean;
   speedLimit?: number | null;
+  initialOdometerKm?: number | null;
   notes?: string;
   trackerDeviceId?: string;
   customerId?: string;

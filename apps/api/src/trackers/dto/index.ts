@@ -8,6 +8,7 @@ import {
   IsString,
   Min,
   Max,
+  ValidateIf,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
@@ -300,6 +301,12 @@ export class VehicleResponseDto {
   @ApiPropertyOptional({ nullable: true, description: "Limite km/h para alertas de excesso de velocidade" })
   speedLimit?: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Hodômetro inicial (km) ao cadastrar o veículo na frota",
+  })
+  initialOdometerKm?: number | null;
+
   @ApiPropertyOptional()
   notes?: string | null;
 
@@ -426,6 +433,18 @@ export class CreateVehicleDto {
   @Min(0)
   speedLimit?: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Hodômetro inicial (km) ao cadastrar o veículo na frota",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @ValidateIf((_, v) => v != null)
+  @IsNumber()
+  @Min(0)
+  @Max(9_999_999_999)
+  initialOdometerKm?: number | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -506,6 +525,18 @@ export class UpdateVehicleDto {
   @IsNumber()
   @Min(0)
   speedLimit?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Hodômetro inicial (km); null remove o valor",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @ValidateIf((_, v) => v != null)
+  @IsNumber()
+  @Min(0)
+  @Max(9_999_999_999)
+  initialOdometerKm?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()

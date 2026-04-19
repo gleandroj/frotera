@@ -75,6 +75,8 @@ describe('AuthController', () => {
           language: 'pt',
           twoFactorEnabled: false,
           emailVerified: new Date(),
+          isSuperAdmin: false,
+          twoFactorVerified: false,
         },
         tokens: {
           accessToken: 'access_token',

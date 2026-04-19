@@ -165,7 +165,14 @@ export class FuelService {
       orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
     });
 
-    const kmDriven = previousLog ? dto.odometer - previousLog.odometer : null;
+    const baselineOdometer = previousLog
+      ? previousLog.odometer
+      : vehicle.initialOdometerKm != null &&
+          Number.isFinite(vehicle.initialOdometerKm)
+        ? vehicle.initialOdometerKm
+        : null;
+    const kmDriven =
+      baselineOdometer !== null ? dto.odometer - baselineOdometer : null;
     const consumption =
       kmDriven && kmDriven > 0 && dto.liters > 0
         ? parseFloat((kmDriven / dto.liters).toFixed(2))
@@ -287,7 +294,13 @@ export class FuelService {
       where: { id, organizationId },
       include: {
         vehicle: {
-          select: { id: true, name: true, plate: true, customerId: true },
+          select: {
+            id: true,
+            name: true,
+            plate: true,
+            customerId: true,
+            initialOdometerKm: true,
+          },
         },
       },
     });
@@ -329,7 +342,14 @@ export class FuelService {
       orderBy: [{ date: 'desc' }, { odometer: 'desc' }],
     });
 
-    const kmDriven = previousLog ? odometer - previousLog.odometer : null;
+    const initialKm = currentLog.vehicle.initialOdometerKm;
+    const baselineOdometer = previousLog
+      ? previousLog.odometer
+      : initialKm != null && Number.isFinite(initialKm)
+        ? initialKm
+        : null;
+    const kmDriven =
+      baselineOdometer !== null ? odometer - baselineOdometer : null;
     const consumption =
       kmDriven && kmDriven > 0 && liters > 0
         ? parseFloat((kmDriven / liters).toFixed(2))

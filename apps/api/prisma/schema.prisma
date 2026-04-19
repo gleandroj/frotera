@@ -167,6 +167,8 @@ model Vehicle {
   inactive         Boolean        @default(false)
   /// km/h; null = sem monitoramento de velocidade (alertas SPEEDING)
   speedLimit       Float?
+  /// Hodômetro (km) na entrada do veículo na frota; usado no 1º abastecimento quando não há log anterior
+  initialOdometerKm Float?
   notes            String?        // Informações / histórico
   trackerDeviceId  String?        @unique
   customerId       String

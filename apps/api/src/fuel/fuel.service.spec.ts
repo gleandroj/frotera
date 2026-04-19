@@ -390,6 +390,41 @@ describe('FuelService', () => {
       );
     });
 
+    it('should calculate consumption from vehicle initial odometer when no previous log', async () => {
+      mockPrisma.organizationMember.findFirst.mockResolvedValue(mockMember);
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        ...mockVehicle,
+        initialOdometerKm: 9000,
+      });
+      mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
+      mockPrisma.fuelLog.findFirst.mockResolvedValue(null);
+      mockPrisma.organization.findFirst.mockResolvedValue({ id: orgId });
+      mockFuelPriceApiService.getLatestPrice.mockResolvedValue(null);
+      mockPrisma.fuelLog.create.mockResolvedValue({
+        ...mockFuelLog,
+        consumption: 20,
+      });
+
+      const dto: CreateFuelLogDto = {
+        vehicleId,
+        date: '2026-04-01',
+        odometer: 10000,
+        liters: 50,
+        pricePerLiter: 6.5,
+        fuelType: FuelTypeEnum.GASOLINE,
+      };
+
+      await service.create(orgId, userId, dto);
+
+      expect(mockPrisma.fuelLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            consumption: 20,
+          }),
+        }),
+      );
+    });
+
     it('should populate marketPriceRef when FuelPriceApiService returns snapshot', async () => {
       const snapshot = { avgPrice: 6.2, refDate: new Date() };
 

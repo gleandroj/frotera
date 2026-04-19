@@ -115,6 +115,18 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
       vehicleType: z.string().default(""),
       inactive: z.boolean().default(false),
       speedLimit: z.string().default(""),
+      initialOdometerKm: z
+        .string()
+        .default("")
+        .refine(
+          (s) => {
+            const trimmed = s?.trim() ?? "";
+            if (!trimmed) return true;
+            const n = parseFloat(trimmed.replace(",", "."));
+            return Number.isFinite(n) && n >= 0 && n <= 9_999_999_999;
+          },
+          { message: t("vehicles.initialOdometerInvalid") },
+        ),
       notes: z.string().default(""),
       customerId: isEdit
         ? z.string().default("")
@@ -156,6 +168,11 @@ function defaultValues(
     speedLimit:
       vehicle?.speedLimit != null && Number.isFinite(vehicle.speedLimit)
         ? String(vehicle.speedLimit)
+        : "",
+    initialOdometerKm:
+      vehicle?.initialOdometerKm != null &&
+      Number.isFinite(vehicle.initialOdometerKm)
+        ? String(vehicle.initialOdometerKm)
         : "",
     notes: vehicle?.notes ?? "",
     customerId: isEdit ? (vehicle?.customerId ?? "") : (defaultCustomerId ?? ""),
@@ -259,6 +276,13 @@ export function VehicleFormDialog({
       inactive: values.inactive,
       speedLimit: (() => {
         const s = values.speedLimit?.trim();
+        if (!s) return isEdit ? null : undefined;
+        const n = parseFloat(s.replace(",", "."));
+        if (!Number.isFinite(n)) return isEdit ? null : undefined;
+        return n;
+      })(),
+      initialOdometerKm: (() => {
+        const s = values.initialOdometerKm?.trim();
         if (!s) return isEdit ? null : undefined;
         const n = parseFloat(s.replace(",", "."));
         if (!Number.isFinite(n)) return isEdit ? null : undefined;
@@ -506,6 +530,31 @@ export function VehicleFormDialog({
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
                         {t("vehicles.speedLimitHint")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="initialOdometerKm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("vehicles.initialOdometer")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={9_999_999_999}
+                          step={1}
+                          inputMode="decimal"
+                          placeholder="0"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("vehicles.initialOdometerHint")}
                       </p>
                       <FormMessage />
                     </FormItem>
