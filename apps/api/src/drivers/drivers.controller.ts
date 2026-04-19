@@ -46,14 +46,17 @@ export class DriversController {
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
     @Query('activeOnly') activeOnlyRaw?: string,
+    @Query('inactiveOnly') inactiveOnlyRaw?: string,
   ): Promise<DriversListResponseDto> {
     const activeOnly = activeOnlyRaw === 'true' || activeOnlyRaw === '1';
+    const inactiveOnly = inactiveOnlyRaw === 'true' || inactiveOnlyRaw === '1';
     const member = await this.getMember(req.user.userId, organizationId);
     const drivers = await this.driversService.list(
       organizationId,
       member,
       customerId,
       activeOnly,
+      inactiveOnly,
     );
     return { drivers };
   }

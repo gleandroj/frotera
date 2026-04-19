@@ -107,14 +107,17 @@ export class TelemetryController {
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
     @Query("activeOnly") activeOnlyRaw: string | undefined,
+    @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
     @Request() req: TelemetryRequest,
   ) {
     const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
+    const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
     return this.telemetryService.listGeofences(
       organizationId,
       req.allowedCustomerIds ?? null,
       filterCustomerId,
       activeOnly,
+      inactiveOnly,
     );
   }
 

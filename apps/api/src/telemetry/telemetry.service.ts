@@ -437,6 +437,7 @@ export class TelemetryService {
     allowedCustomerIds: string[] | null,
     filterCustomerId?: string,
     activeOnly?: boolean,
+    inactiveOnly?: boolean,
   ): Promise<GeofenceResponseDto[]> {
     const leaves = await this.customersService.resolveResourceCustomerFilter(
       organizationId,
@@ -446,6 +447,7 @@ export class TelemetryService {
     let where: Prisma.GeofenceZoneWhereInput = {
       organizationId,
       ...(activeOnly ? { active: true } : {}),
+      ...(inactiveOnly ? { active: false } : {}),
     };
     if (leaves !== null) {
       if (leaves.length === 0) {
@@ -456,6 +458,7 @@ export class TelemetryService {
         organizationId,
         customerId: { in: ownerIds },
         ...(activeOnly ? { active: true } : {}),
+        ...(inactiveOnly ? { active: false } : {}),
       };
     }
     const rows = await this.prisma.geofenceZone.findMany({

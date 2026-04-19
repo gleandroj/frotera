@@ -67,9 +67,11 @@ export class VehiclesController {
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
     @Query("activeOnly") activeOnlyRaw: string | undefined,
+    @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
     @Request() req: RequestWithAllowedCustomers,
   ): Promise<VehicleResponseDto[]> {
     const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
+    const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
     let filterIds: string[] | null | undefined;
     if (filterCustomerId) {
       const descendantIds = await this.customersService.getDescendantCustomerIds(
@@ -87,6 +89,7 @@ export class VehiclesController {
       req.allowedCustomerIds,
       filterIds,
       activeOnly,
+      inactiveOnly,
     );
   }
 
