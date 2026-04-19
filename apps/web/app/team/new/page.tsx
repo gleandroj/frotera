@@ -63,7 +63,7 @@ function getDescendantIds(
 export default function NewUserPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization, user, selectedCustomerId } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -123,14 +123,17 @@ export default function NewUserPage() {
     if (!currentOrganization?.id) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(currentOrganization.id)
+      .list(
+        currentOrganization.id,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => {
         const list = res.data?.customers ?? [];
         setCustomers(Array.isArray(list) ? list : []);
       })
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, selectedCustomerId]);
 
   useEffect(() => {
     loadCustomers();

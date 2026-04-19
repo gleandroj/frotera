@@ -45,6 +45,7 @@ describe('MembersService - Dependency Resolution', () => {
     getAllowedCustomerIds: jest.fn(),
     getCustomerIdAndAncestorIds: jest.fn(),
     getRootCustomerIds: jest.fn(),
+    memberOverlapsViewerCustomerIds: jest.fn(),
   };
 
   const mockAuthService = {
@@ -137,7 +138,7 @@ describe('MembersService - Dependency Resolution', () => {
 
       mockPrisma.organizationMember.findFirst.mockResolvedValueOnce(mockMembership);
       mockPrisma.organizationMember.findMany.mockResolvedValueOnce([mockMembership]);
-      mockCustomersService.getAllowedCustomerIds.mockResolvedValueOnce(null);
+      mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
 
       await service.getMembers(userId, orgId);
 
@@ -272,6 +273,7 @@ describe('MembersService - Dependency Resolution', () => {
         userId,
         organizationId: orgId,
         roleId: 'role-1',
+        customerRestricted: false,
         role: {
           permissions: [
             {
@@ -289,11 +291,13 @@ describe('MembersService - Dependency Resolution', () => {
         userId: 'user-2',
         organizationId: orgId,
         roleId: 'role-1',
+        customerRestricted: false,
       };
 
       mockPrisma.organizationMember.findFirst
         .mockResolvedValueOnce(membershipWithDelete)
         .mockResolvedValueOnce(memberToDelete);
+      mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
       mockPrisma.organizationMember.delete.mockResolvedValueOnce(memberToDelete);
 
       const result = await service.removeMember(userId, orgId, memberId);

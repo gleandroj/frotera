@@ -61,6 +61,22 @@ export class CustomersService {
   }
 
   /**
+   * True when the member's empresa scope (assigned + descendants) intersects the viewer's
+   * allowed set. Full-org members ({@link getAllowedCustomerIds} = null) return false so
+   * customer-scoped viewers do not see them.
+   */
+  async memberOverlapsViewerCustomerIds(
+    member: Pick<OrganizationMember, "id" | "customerRestricted">,
+    organizationId: string,
+    viewerAllowedCustomerIds: string[],
+  ): Promise<boolean> {
+    const memberAllowed = await this.getAllowedCustomerIds(member, organizationId);
+    if (memberAllowed === null || memberAllowed.length === 0) return false;
+    const set = new Set(viewerAllowedCustomerIds);
+    return memberAllowed.some((id) => set.has(id));
+  }
+
+  /**
    * Returns the given customer ID and all its ancestor IDs (walking parentId up).
    * Used to check "member has access to this customer" (member's assigned set may include an ancestor).
    */

@@ -90,7 +90,7 @@ export default function EditMemberPage() {
   const params = useParams();
   const memberId = typeof params.memberId === "string" ? params.memberId : null;
 
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization, user, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const [member, setMember] = useState<TeamMember | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -162,20 +162,23 @@ export default function EditMemberPage() {
         setMember(null);
       })
       .finally(() => setLoadingMember(false));
-  }, [currentOrganization?.id, memberId]);
+  }, [currentOrganization?.id, memberId, form.reset]);
 
   const loadCustomers = useCallback(() => {
     if (!currentOrganization?.id) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(currentOrganization.id)
+      .list(
+        currentOrganization.id,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => {
         const list = res.data?.customers ?? [];
         setCustomers(Array.isArray(list) ? list : []);
       })
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, selectedCustomerId]);
 
   useEffect(() => {
     loadMembersAndMember();

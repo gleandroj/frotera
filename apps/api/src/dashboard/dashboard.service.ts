@@ -14,6 +14,86 @@ export class DashboardService {
   ) {}
 
   /**
+   * Same visibility rules as {@link MembersService.getMembers}: excludes super-admin /
+   * system users; empresa scope via {@link CustomersService.getAllowedCustomerIds};
+   * optional company filter (ancestor chain for org-wide viewers, expanded scope when restricted).
+   */
+  private async countVisibleTeamMembers(
+    organizationId: string,
+    allowedCustomerIds: string[] | null,
+    filterCustomerId?: string,
+  ): Promise<number> {
+    const hasCompanyFilter = Boolean(filterCustomerId?.trim());
+    if (allowedCustomerIds === null && !hasCompanyFilter) {
+      return this.prisma.organizationMember.count({
+        where: {
+          organizationId,
+          user: { isSuperAdmin: false, isSystemUser: false },
+        },
+      });
+    }
+
+    const members = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        user: { isSuperAdmin: false, isSystemUser: false },
+      },
+      select: {
+        id: true,
+        customerRestricted: true,
+        customers: { select: { customerId: true } },
+      },
+    });
+
+    let filtered = members;
+
+    if (allowedCustomerIds !== null) {
+      const overlapped = await Promise.all(
+        filtered.map(async (m) =>
+          (await this.customersService.memberOverlapsViewerCustomerIds(
+            { id: m.id, customerRestricted: m.customerRestricted },
+            organizationId,
+            allowedCustomerIds,
+          ))
+            ? m
+            : null,
+        ),
+      );
+      filtered = overlapped.filter((m): m is NonNullable<typeof m> => m !== null);
+    }
+
+    const f = filterCustomerId?.trim();
+    if (f) {
+      const customerIdAndAncestors =
+        await this.customersService.getCustomerIdAndAncestorIds(f, organizationId);
+      if (customerIdAndAncestors.length > 0) {
+        const ancestorSet = new Set(customerIdAndAncestors);
+        if (allowedCustomerIds === null) {
+          filtered = filtered.filter((m) => {
+            if (!m.customerRestricted) return true;
+            const ids = m.customers.map((c) => c.customerId);
+            return ids.some((id) => ancestorSet.has(id));
+          });
+        } else {
+          const pass = await Promise.all(
+            filtered.map(async (m) => {
+              const mAllowed = await this.customersService.getAllowedCustomerIds(
+                { id: m.id, customerRestricted: m.customerRestricted },
+                organizationId,
+              );
+              if (mAllowed === null || mAllowed.length === 0) return null;
+              return mAllowed.some((id) => ancestorSet.has(id)) ? m : null;
+            }),
+          );
+          filtered = pass.filter((m): m is NonNullable<typeof m> => m !== null);
+        }
+      }
+    }
+
+    return filtered.length;
+  }
+
+  /**
    * Get dashboard statistics for an organization, scoped by member companies
    * and optional `customerId` (subtree within allowed access).
    */
@@ -81,7 +161,11 @@ export class DashboardService {
       customers,
       openIncidents,
     ] = await Promise.all([
-      this.prisma.organizationMember.count({ where: { organizationId } }),
+      this.countVisibleTeamMembers(
+        organizationId,
+        allowedCustomerIds,
+        filterCustomerId,
+      ),
       this.prisma.vehicle.count({ where: vehicleWhere }),
       this.prisma.driver.count({ where: driverWhere }),
       this.prisma.trackerDevice.count({ where: trackerWhere }),

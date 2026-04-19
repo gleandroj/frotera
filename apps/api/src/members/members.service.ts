@@ -82,12 +82,18 @@ export class MembersService {
     );
 
     if (requestingUserAllowedIds !== null) {
-      const allowedSet = new Set(requestingUserAllowedIds);
-      members = members.filter((member) => {
-        if (!member.customerRestricted) return true;
-        const memberCustomerIds = member.customers?.map((mc) => mc.customer.id) ?? [];
-        return memberCustomerIds.some((id) => allowedSet.has(id));
-      });
+      const filtered = await Promise.all(
+        members.map(async (member) =>
+          (await this.customersService.memberOverlapsViewerCustomerIds(
+            { id: member.id, customerRestricted: member.customerRestricted },
+            organizationId,
+            requestingUserAllowedIds,
+          ))
+            ? member
+            : null,
+        ),
+      );
+      members = filtered.filter((m): m is NonNullable<typeof m> => m !== null);
     }
 
     if (filterCustomerId?.trim()) {
@@ -96,12 +102,26 @@ export class MembersService {
         organizationId,
       );
       if (customerIdAndAncestors.length > 0) {
-        const allowedSet = new Set(customerIdAndAncestors);
-        members = members.filter((member) => {
-          if (!member.customerRestricted) return true;
-          const memberCustomerIds = member.customers?.map((mc) => mc.customer.id) ?? [];
-          return memberCustomerIds.some((id) => allowedSet.has(id));
-        });
+        const ancestorSet = new Set(customerIdAndAncestors);
+        if (requestingUserAllowedIds === null) {
+          members = members.filter((member) => {
+            if (!member.customerRestricted) return true;
+            const memberCustomerIds = member.customers?.map((mc) => mc.customer.id) ?? [];
+            return memberCustomerIds.some((id) => ancestorSet.has(id));
+          });
+        } else {
+          const filtered = await Promise.all(
+            members.map(async (member) => {
+              const mAllowed = await this.customersService.getAllowedCustomerIds(
+                { id: member.id, customerRestricted: member.customerRestricted },
+                organizationId,
+              );
+              if (mAllowed === null || mAllowed.length === 0) return null;
+              return mAllowed.some((id) => ancestorSet.has(id)) ? member : null;
+            }),
+          );
+          members = filtered.filter((m): m is NonNullable<typeof m> => m !== null);
+        }
       }
     }
 
@@ -307,6 +327,17 @@ export class MembersService {
       organizationId,
     );
     if (editorAllowedIds !== null) {
+      const targetAllowed = await this.customersService.getAllowedCustomerIds(
+        { id: memberToUpdate.id, customerRestricted: memberToUpdate.customerRestricted },
+        organizationId,
+      );
+      if (
+        targetAllowed === null ||
+        targetAllowed.length === 0 ||
+        !targetAllowed.some((id) => editorAllowedIds.includes(id))
+      ) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
       if (data.customerRestricted === false) {
         throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
       }
@@ -422,6 +453,24 @@ export class MembersService {
 
     if (memberToRemove.userId === userId) {
       throw new BadRequestException(ApiCode.MEMBER_CANNOT_REMOVE_YOURSELF);
+    }
+
+    const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
+      { id: userMembership.id, customerRestricted: userMembership.customerRestricted },
+      organizationId,
+    );
+    if (editorAllowedIds !== null) {
+      const targetAllowed = await this.customersService.getAllowedCustomerIds(
+        { id: memberToRemove.id, customerRestricted: memberToRemove.customerRestricted },
+        organizationId,
+      );
+      if (
+        targetAllowed === null ||
+        targetAllowed.length === 0 ||
+        !targetAllowed.some((id) => editorAllowedIds.includes(id))
+      ) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
     }
 
     await this.prisma.organizationMember.delete({ where: { id: memberId } });
