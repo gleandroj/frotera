@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTranslation } from "@/i18n/useTranslation";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { organizationAPI, customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { rolesAPI, type Role } from "@/lib/api/roles";
@@ -240,7 +241,10 @@ export default function NewUserPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form
+          onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
+          className="space-y-6"
+        >
           <Card>
             <CardHeader>
               <CardTitle>{t("team.createUserDialog.title")}</CardTitle>

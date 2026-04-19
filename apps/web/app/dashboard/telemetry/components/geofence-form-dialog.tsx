@@ -15,19 +15,41 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   telemetryAPI,
+  customersAPI,
+  type Customer,
   type GeofenceTypeApi,
   type GeofenceZone,
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
+import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
+import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
+import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
+import { useAuth } from "@/lib/hooks/use-auth";
 import { VehicleMultiSelect } from "./vehicle-multi-select";
 
 const GeofenceMapEditor = dynamic(
@@ -55,6 +77,9 @@ export function GeofenceFormDialog({
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
+  const { user, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canCreateCompany = can(Module.COMPANIES, Action.CREATE);
   const isEdit = !!zone;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -68,10 +93,19 @@ export function GeofenceFormDialog({
   const [alertOnExit, setAlertOnExit] = useState(true);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [pickedCustomerId, setPickedCustomerId] = useState("");
+  const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
+  const [nameSubmitError, setNameSubmitError] = useState(false);
+  const [companySubmitError, setCompanySubmitError] = useState(false);
   const syncKey = `${open}-${zone?.id ?? "new"}`;
 
   useEffect(() => {
     if (!open) return;
+    setNameSubmitError(false);
+    setCompanySubmitError(false);
     if (zone) {
       setName(zone.name);
       setDescription(zone.description ?? "");
@@ -95,16 +129,42 @@ export function GeofenceFormDialog({
       setAlertOnEnter(true);
       setAlertOnExit(true);
       setActive(true);
+      setPickedCustomerId(customerId?.trim() ?? "");
     }
-  }, [open, zone]);
+  }, [open, zone, customerId]);
+
+  useEffect(() => {
+    if (!open || isEdit || !organizationId) return;
+    setLoadingCustomers(true);
+    customersAPI
+      .list(organizationId)
+      .then((res) => setCustomers(res.data?.customers ?? []))
+      .catch(() => setCustomers([]))
+      .finally(() => setLoadingCustomers(false));
+  }, [open, isEdit, organizationId]);
+
+  const refreshCustomersSilently = () => {
+    if (!organizationId) return;
+    customersAPI
+      .list(organizationId)
+      .then((res) => setCustomers(res.data?.customers ?? []))
+      .catch(() => setCustomers([]));
+  };
+
+  const selectedPickedCustomer = customers.find((c) => c.id === pickedCustomerId);
 
   const handleSave = async () => {
+    setNameSubmitError(false);
+    setCompanySubmitError(false);
     if (!name.trim()) {
-      toast.error(t("telemetry.geofences.form.name"));
+      setNameSubmitError(true);
+      toast.error(t("telemetry.geofences.form.nameRequiredSubmit"));
+      document.getElementById("geofence-zone-name")?.focus();
       return;
     }
-    if (!isEdit && !customerId?.trim()) {
-      toast.error(t("telemetry.geofences.form.customerRequired"));
+    if (!isEdit && !pickedCustomerId.trim()) {
+      setCompanySubmitError(true);
+      toast.error(t("telemetry.geofences.form.companyRequiredPick"));
       return;
     }
     setSaving(true);
@@ -125,7 +185,7 @@ export function GeofenceFormDialog({
       } else {
         await telemetryAPI.createGeofence(organizationId, {
           ...payload,
-          customerId: customerId!.trim(),
+          customerId: pickedCustomerId.trim(),
         });
         toast.success(t("telemetry.geofences.createSuccess"));
       }
@@ -139,6 +199,7 @@ export function GeofenceFormDialog({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-xl">
         <SheetHeader>
@@ -149,12 +210,103 @@ export function GeofenceFormDialog({
           </SheetTitle>
         </SheetHeader>
         <div className="mt-4 flex flex-1 flex-col gap-4 pb-6">
+          {!isEdit ? (
+            <div className="space-y-2">
+              <Label>
+                {t("telemetry.geofences.form.company")}
+                <span className="ml-1 text-destructive" aria-hidden>
+                  *
+                </span>
+              </Label>
+              <ResourceSelectCreateRow
+                showCreate={canCreateCompany}
+                createLabel={t("common.createNewCompany")}
+                onCreateClick={() => setCustomerFormOpen(true)}
+                disabled={loadingCustomers}
+              >
+                <Popover
+                  open={customerComboboxOpen}
+                  onOpenChange={setCustomerComboboxOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      disabled={loadingCustomers}
+                      className={cn(
+                        "h-10 w-full justify-between font-normal",
+                        !pickedCustomerId && "text-muted-foreground",
+                        companySubmitError && "border-destructive ring-1 ring-destructive",
+                      )}
+                    >
+                      <span className="truncate">
+                        {pickedCustomerId && selectedPickedCustomer ? (
+                          <span
+                            style={{
+                              paddingLeft: (selectedPickedCustomer.depth ?? 0) * 12,
+                            }}
+                            className="inline-block"
+                          >
+                            {selectedPickedCustomer.name}
+                          </span>
+                        ) : (
+                          t("telemetry.geofences.form.selectCompany")
+                        )}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("telemetry.geofences.form.filterCompany")}
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                        <CommandGroup>
+                          {customers.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.name}
+                              onSelect={() => {
+                                setPickedCustomerId(c.id);
+                                setCompanySubmitError(false);
+                                setCustomerComboboxOpen(false);
+                              }}
+                            >
+                              <span
+                                style={{ paddingLeft: (c.depth ?? 0) * 12 }}
+                                className="inline-block"
+                              >
+                                {c.name}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </ResourceSelectCreateRow>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label>{t("telemetry.geofences.form.name")}</Label>
             <Input
+              id="geofence-zone-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameSubmitError(false);
+              }}
               placeholder={t("telemetry.geofences.form.namePlaceholder")}
+              aria-invalid={nameSubmitError || undefined}
+              className={cn(nameSubmitError && "border-destructive ring-1 ring-destructive")}
             />
           </div>
           <div className="space-y-2">
@@ -203,7 +355,9 @@ export function GeofenceFormDialog({
             <Label>{t("telemetry.geofences.form.vehicles")}</Label>
             <VehicleMultiSelect
               organizationId={organizationId}
-              customerId={isEdit ? zone?.customerId ?? customerId : customerId}
+              customerId={
+                isEdit ? zone?.customerId ?? customerId : pickedCustomerId || customerId
+              }
               value={vehicleIds}
               onChange={setVehicleIds}
               disabled={saving}
@@ -244,5 +398,25 @@ export function GeofenceFormDialog({
         </div>
       </SheetContent>
     </Sheet>
+
+    <DrawerStackParentDim show={customerFormOpen} />
+    <CustomerFormDialog
+      open={customerFormOpen}
+      onOpenChange={setCustomerFormOpen}
+      customer={null}
+      organizationId={organizationId}
+      customers={customers}
+      defaultParentId={
+        selectedCustomerId ??
+        (pickedCustomerId.trim() ? pickedCustomerId.trim() : undefined)
+      }
+      allowRootCreation={user?.isSuperAdmin ?? false}
+      hideOverlay
+      onSuccess={(created) => {
+        refreshCustomersSilently();
+        if (created?.id) setPickedCustomerId(created.id);
+      }}
+    />
+    </>
   );
 }

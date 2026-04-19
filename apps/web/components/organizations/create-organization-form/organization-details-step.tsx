@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/i18n/useTranslation";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
@@ -52,8 +53,6 @@ export function OrganizationDetailsStep({
   });
 
   const onSubmit = async (data: OrganizationFormData) => {
-    if (!form.formState.isValid) return;
-
     setIsSubmitting(true);
 
     // Add a small delay for better UX
@@ -69,7 +68,11 @@ export function OrganizationDetailsStep({
   return (
     <div className="space-y-6 px-1">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+        <form
+          onSubmit={form.handleSubmit(onSubmit, onRhfInvalidSubmit(form, t))}
+          className="space-y-6"
+          noValidate
+        >
           <FormField
             control={form.control}
             name="name"
@@ -111,7 +114,7 @@ export function OrganizationDetailsStep({
                 ? 'scale-95 opacity-70'
                 : 'hover:shadow-md'
               }`}
-            disabled={isLoading || !form.formState.isValid}
+            disabled={isLoading}
           >
             {isLoading ? (
               <div className="flex items-center">

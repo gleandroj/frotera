@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/useTranslation";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 
 interface EditOrganizationFormProps {
   organizationId: string;
@@ -88,6 +89,10 @@ export function EditOrganizationForm({
   }, [organizationId, form, t]);
 
   const onSubmit = async (data: OrganizationFormValues) => {
+    if (!form.formState.isDirty) {
+      toast.info(t("common.nothingToSave"));
+      return;
+    }
     try {
       const response = await organizationAPI.update(organizationId, {
         name: data.name,
@@ -125,7 +130,11 @@ export function EditOrganizationForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-1" noValidate>
+      <form
+        onSubmit={form.handleSubmit(onSubmit, onRhfInvalidSubmit(form, t))}
+        className="space-y-6 px-1"
+        noValidate
+      >
         <FormField
           control={form.control}
           name="name"
@@ -151,7 +160,7 @@ export function EditOrganizationForm({
           )}
           <Button
             type="submit"
-            disabled={form.formState.isSubmitting || !form.formState.isDirty}
+            disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting
               ? t('organizations.updating')

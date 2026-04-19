@@ -73,6 +73,7 @@ import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog"
 import { DriverFormDialog } from "@/app/dashboard/drivers/driver-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 
 const FUEL_TYPES: FuelType[] = ["GASOLINE", "ETHANOL", "DIESEL", "ELECTRIC", "GNV"];
@@ -300,11 +301,14 @@ export function FuelFormDrawer({
     if (!organizationId) return;
     setLoadingVehicles(true);
     vehiclesAPI
-      .list(organizationId)
+      .list(
+        organizationId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => setVehicles(Array.isArray(res.data) ? res.data : []))
       .catch(() => setVehicles([]))
       .finally(() => setLoadingVehicles(false));
-  }, [organizationId]);
+  }, [organizationId, selectedCustomerId]);
 
   useEffect(() => {
     if (!open || !organizationId) return;
@@ -378,7 +382,10 @@ export function FuelFormDrawer({
   const refreshVehiclesSilently = () => {
     if (!organizationId) return;
     vehiclesAPI
-      .list(organizationId)
+      .list(
+        organizationId,
+        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+      )
       .then((res) => setVehicles(Array.isArray(res.data) ? res.data : []))
       .catch(() => setVehicles([]));
   };
@@ -452,7 +459,7 @@ export function FuelFormDrawer({
           <Form {...form}>
             <form
               id="fuel-form"
-              onSubmit={form.handleSubmit(handleSubmit)}
+              onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
               className="space-y-6"
             >
               {/* Veículo */}
@@ -1075,7 +1082,7 @@ export function FuelFormDrawer({
           <Button
             type="submit"
             form="fuel-form"
-            disabled={submitting || loadingVehicles}
+            disabled={submitting}
           >
             {submitting ? t("common.saving") : t("common.save")}
           </Button>

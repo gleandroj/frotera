@@ -61,6 +61,7 @@ import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 
 const TRACKER_MODELS = [
@@ -366,7 +367,7 @@ export function VehicleFormDialog({
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
             className="flex flex-col flex-1 overflow-hidden"
           >
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">

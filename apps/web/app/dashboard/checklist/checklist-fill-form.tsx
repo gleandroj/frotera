@@ -139,19 +139,34 @@ export function ChecklistFillForm({
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
   const canCreateDriver = can(Module.DRIVERS, Action.CREATE);
 
+  const vehicleDriverListParams = React.useMemo(() => {
+    if (template?.customerId) return { customerId: template.customerId };
+    if (selectedCustomerId) return { customerId: selectedCustomerId };
+    return undefined;
+  }, [template?.customerId, selectedCustomerId]);
+
+  const defaultVehicleDriverCustomerId =
+    template?.customerId ?? selectedCustomerId ?? undefined;
+
   useEffect(() => {
     if (!orgId || !templateId) return;
 
     const loadData = async () => {
       try {
         setLoading(true);
-        const [templateRes, vehiclesRes, driversRes] = await Promise.all([
-          checklistAPI.getTemplate(orgId, templateId),
-          vehiclesAPI.list(orgId),
-          driversAPI.list(orgId),
+        const templateRes = await checklistAPI.getTemplate(orgId, templateId);
+        const tpl = templateRes.data;
+        setTemplate(tpl);
+        const listParams =
+          tpl?.customerId != null && tpl.customerId !== ""
+            ? { customerId: tpl.customerId }
+            : selectedCustomerId
+              ? { customerId: selectedCustomerId }
+              : undefined;
+        const [vehiclesRes, driversRes] = await Promise.all([
+          vehiclesAPI.list(orgId, listParams),
+          driversAPI.list(orgId, listParams),
         ]);
-
-        setTemplate(templateRes.data);
         setVehicles(vehiclesRes.data ?? []);
         setDrivers(driversRes.data?.drivers ?? []);
 
@@ -168,7 +183,7 @@ export function ChecklistFillForm({
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- omit onCancel/onLoadError to avoid reload loops
-  }, [orgId, templateId, initialVehicleId, initialDriverId, t]);
+  }, [orgId, templateId, initialVehicleId, initialDriverId, selectedCustomerId, t]);
 
   useEffect(() => {
     if (!template) return;
@@ -196,14 +211,14 @@ export function ChecklistFillForm({
 
   const refreshVehiclesSilently = () => {
     vehiclesAPI
-      .list(orgId)
+      .list(orgId, vehicleDriverListParams)
       .then((res) => setVehicles(res.data ?? []))
       .catch(() => setVehicles([]));
   };
 
   const refreshDriversSilently = () => {
     driversAPI
-      .list(orgId)
+      .list(orgId, vehicleDriverListParams)
       .then((res) => setDrivers(res.data?.drivers ?? []))
       .catch(() => setDrivers([]));
   };
@@ -241,7 +256,14 @@ export function ChecklistFillForm({
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!orgId || !template) return;
-    if (!runValidation()) return;
+    if (attachmentUploadingId) {
+      toast.error(t("common.waitAttachmentUpload"));
+      return;
+    }
+    if (!runValidation()) {
+      toast.error(t("common.formValidationFailed"));
+      return;
+    }
 
     const { driverRequirement: driverReq } = template;
 
@@ -610,11 +632,7 @@ export function ChecklistFillForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             {t("common.cancel")}
           </Button>
-          <Button
-            type="submit"
-            disabled={submitting || !!attachmentUploadingId}
-            className="flex-1"
-          >
+          <Button type="submit" disabled={submitting} className="flex-1">
             {submitting ? t("checklist.submitting") : t("checklist.submitChecklist")}
           </Button>
         </div>
@@ -668,7 +686,7 @@ export function ChecklistFillForm({
         onOpenChange={setVehicleFormOpen}
         vehicle={null}
         organizationId={orgId}
-        defaultCustomerId={selectedCustomerId ?? undefined}
+        defaultCustomerId={defaultVehicleDriverCustomerId}
         hideOverlay={hideDialogOverlay}
         onSuccess={(created) => {
           refreshVehiclesSilently();
@@ -680,7 +698,7 @@ export function ChecklistFillForm({
         onOpenChange={setDriverFormOpen}
         driver={null}
         organizationId={orgId}
-        defaultCustomerId={selectedCustomerId ?? undefined}
+        defaultCustomerId={defaultVehicleDriverCustomerId}
         hideOverlay={hideDialogOverlay}
         onSuccess={(created) => {
           refreshDriversSilently();
@@ -719,7 +737,7 @@ export function ChecklistFillForm({
         <Button
           type="submit"
           form={CHECKLIST_FILL_FORM_ID}
-          disabled={submitting || !!attachmentUploadingId}
+          disabled={submitting}
           className="flex-1 sm:flex-none"
         >
           {submitting ? t("checklist.submitting") : t("checklist.submitChecklist")}
@@ -730,7 +748,7 @@ export function ChecklistFillForm({
         onOpenChange={setVehicleFormOpen}
         vehicle={null}
         organizationId={orgId}
-        defaultCustomerId={selectedCustomerId ?? undefined}
+        defaultCustomerId={defaultVehicleDriverCustomerId}
         hideOverlay={hideDialogOverlay}
         onSuccess={(created) => {
           refreshVehiclesSilently();
@@ -742,7 +760,7 @@ export function ChecklistFillForm({
         onOpenChange={setDriverFormOpen}
         driver={null}
         organizationId={orgId}
-        defaultCustomerId={selectedCustomerId ?? undefined}
+        defaultCustomerId={defaultVehicleDriverCustomerId}
         hideOverlay={hideDialogOverlay}
         onSuccess={(created) => {
           refreshDriversSilently();

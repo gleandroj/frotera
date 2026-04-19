@@ -21,20 +21,39 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   incidentsAPI,
   vehiclesAPI,
   driversAPI,
+  customersAPI,
+  type Customer,
   type Driver,
   type Incident,
   type Vehicle,
 } from "@/lib/frontend/api-client";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
 import { VehicleFormDialog } from "@/app/dashboard/vehicles/vehicle-form-dialog";
 import { DriverFormDialog } from "@/app/dashboard/drivers/driver-form-dialog";
+import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 const INCIDENT_TYPES = [
   "ACCIDENT",
@@ -86,17 +105,23 @@ export function IncidentFormSheet({
   onSuccess,
 }: IncidentFormSheetProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!incident;
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
   const canCreateDriver = can(Module.DRIVERS, Action.CREATE);
+  const canCreateCompany = can(Module.COMPANIES, Action.CREATE);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [driverFormOpen, setDriverFormOpen] = useState(false);
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +137,10 @@ export function IncidentFormSheet({
   const [insuranceClaim, setInsuranceClaim] = useState(false);
   const [claimNumber, setClaimNumber] = useState("");
   const [notes, setNotes] = useState("");
+  /** Empresa explícita quando não há veículo nem motorista (API exige customerId). */
+  const [explicitCustomerId, setExplicitCustomerId] = useState("");
+  const [titleSubmitError, setTitleSubmitError] = useState(false);
+  const [customerSubmitError, setCustomerSubmitError] = useState(false);
 
   const listParams = {
     customerId: selectedCustomerId ?? undefined,
@@ -137,6 +166,14 @@ export function IncidentFormSheet({
       .catch(() => setDrivers([]));
   };
 
+  const refreshCustomersSilently = () => {
+    if (!organizationId) return;
+    customersAPI
+      .list(organizationId)
+      .then((res) => setCustomers(res.data?.customers ?? []))
+      .catch(() => setCustomers([]));
+  };
+
   useEffect(() => {
     if (!open) return;
     if (isEdit && incident) {
@@ -144,6 +181,8 @@ export function IncidentFormSheet({
       setDescription(incident.description ?? "");
       setLocation(incident.location ?? "");
       setNotes(incident.notes ?? "");
+      setTitleSubmitError(false);
+      setCustomerSubmitError(false);
       setError(null);
       return;
     }
@@ -161,6 +200,9 @@ export function IncidentFormSheet({
       setInsuranceClaim(d.insuranceClaim);
       setClaimNumber(d.claimNumber);
       setNotes(d.notes);
+      setExplicitCustomerId(selectedCustomerId ?? "");
+      setTitleSubmitError(false);
+      setCustomerSubmitError(false);
       setError(null);
 
       setLoadingVehicles(true);
@@ -193,10 +235,26 @@ export function IncidentFormSheet({
     selectedCustomerId,
   ]);
 
+  useEffect(() => {
+    if (!open || isEdit || !organizationId) return;
+    setLoadingCustomers(true);
+    customersAPI
+      .list(organizationId)
+      .then((res) => setCustomers(res.data?.customers ?? []))
+      .catch(() => setCustomers([]))
+      .finally(() => setLoadingCustomers(false));
+  }, [open, isEdit, organizationId]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTitleSubmitError(false);
+    setCustomerSubmitError(false);
     if (!title.trim()) {
-      setError(t("incidents.toast.error"));
+      setTitleSubmitError(true);
+      const msg = t("incidents.titleRequiredOnSubmit");
+      setError(msg);
+      toast.error(msg);
+      document.getElementById("incident-title")?.focus();
       return;
     }
     setSubmitting(true);
@@ -235,22 +293,23 @@ export function IncidentFormSheet({
     if (location.trim()) payload.location = location.trim();
     if (vehicleId) payload.vehicleId = vehicleId;
     if (driverId && driverId !== DRIVER_NONE) payload.driverId = driverId;
-    if (
-      !vehicleId &&
-      (!driverId || driverId === DRIVER_NONE) &&
-      selectedCustomerId
-    ) {
-      payload.customerId = selectedCustomerId;
-    }
-    if (
-      !vehicleId &&
-      (!driverId || driverId === DRIVER_NONE) &&
-      !selectedCustomerId
-    ) {
-      setSubmitting(false);
-      setError(t("incidents.customerRequiredForNoVehicle"));
-      toast.error(t("incidents.customerRequiredForNoVehicle"));
-      return;
+    const noVehicleNoDriver =
+      !vehicleId && (!driverId || driverId === DRIVER_NONE);
+    if (noVehicleNoDriver) {
+      const cid = explicitCustomerId.trim();
+      if (!cid) {
+        setSubmitting(false);
+        setCustomerSubmitError(true);
+        const msg = t("incidents.customerRequiredForNoVehicle");
+        setError(msg);
+        toast.error(msg);
+        document.getElementById("incident-customer-explicit")?.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
+        return;
+      }
+      payload.customerId = cid;
     }
     if (costNum !== undefined && !Number.isNaN(costNum)) payload.cost = costNum;
     if (insuranceClaim && claimNumber.trim()) payload.claimNumber = claimNumber.trim();
@@ -272,6 +331,9 @@ export function IncidentFormSheet({
 
   const driverSelectDisabled = submitting || loadingDrivers;
   const vehicleSelectDisabled = submitting || loadingVehicles;
+  const selectedExplicitCustomer = customers.find((c) => c.id === explicitCustomerId);
+  const defaultNestedCustomerId =
+    explicitCustomerId.trim() || selectedCustomerId || undefined;
 
   return (
     <>
@@ -284,6 +346,7 @@ export function IncidentFormSheet({
           </SheetHeader>
 
           <form
+            noValidate
             onSubmit={handleSubmit}
             className="flex flex-1 flex-col overflow-hidden"
           >
@@ -323,10 +386,14 @@ export function IncidentFormSheet({
                 <Input
                   id="incident-title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setTitleSubmitError(false);
+                  }}
                   placeholder={t("incidents.form.titlePlaceholder")}
-                  required
                   maxLength={200}
+                  aria-invalid={titleSubmitError || undefined}
+                  className={cn(titleSubmitError && "border-destructive ring-1 ring-destructive")}
                 />
               </div>
 
@@ -357,7 +424,6 @@ export function IncidentFormSheet({
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        required
                       />
                     </div>
                     <div className="space-y-2">
@@ -408,7 +474,10 @@ export function IncidentFormSheet({
                     >
                       <Select
                         value={vehicleId || "none"}
-                        onValueChange={(v) => setVehicleId(v === "none" ? "" : v)}
+                        onValueChange={(v) => {
+                          setVehicleId(v === "none" ? "" : v);
+                          setCustomerSubmitError(false);
+                        }}
                         disabled={vehicleSelectDisabled}
                       >
                         <SelectTrigger className="w-full">
@@ -441,7 +510,10 @@ export function IncidentFormSheet({
                     >
                       <Select
                         value={driverId || DRIVER_NONE}
-                        onValueChange={(v) => setDriverId(v === DRIVER_NONE ? "" : v)}
+                        onValueChange={(v) => {
+                          setDriverId(v === DRIVER_NONE ? "" : v);
+                          setCustomerSubmitError(false);
+                        }}
                         disabled={driverSelectDisabled}
                       >
                         <SelectTrigger className="w-full">
@@ -458,6 +530,93 @@ export function IncidentFormSheet({
                       </Select>
                     </ResourceSelectCreateRow>
                   </div>
+
+                  {!vehicleId && (!driverId || driverId === DRIVER_NONE) ? (
+                    <div className="space-y-2" id="incident-customer-explicit">
+                      <Label>
+                        {t("drivers.customer")}
+                        <span className="ml-1 text-destructive" aria-hidden>
+                          *
+                        </span>
+                      </Label>
+                      <ResourceSelectCreateRow
+                        showCreate={canCreateCompany}
+                        createLabel={t("common.createNewCompany")}
+                        onCreateClick={() => setCustomerFormOpen(true)}
+                        disabled={loadingCustomers}
+                      >
+                        <Popover
+                          open={customerComboboxOpen}
+                          onOpenChange={setCustomerComboboxOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              disabled={loadingCustomers}
+                              className={cn(
+                                "h-10 w-full justify-between font-normal",
+                                !explicitCustomerId && "text-muted-foreground",
+                                customerSubmitError &&
+                                  "border-destructive ring-1 ring-destructive",
+                              )}
+                            >
+                              <span className="truncate">
+                                {explicitCustomerId && selectedExplicitCustomer ? (
+                                  <span
+                                    style={{
+                                      paddingLeft: (selectedExplicitCustomer.depth ?? 0) * 12,
+                                    }}
+                                    className="inline-block"
+                                  >
+                                    {selectedExplicitCustomer.name}
+                                  </span>
+                                ) : (
+                                  t("drivers.selectCustomer")
+                                )}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[var(--radix-popover-trigger-width)] p-0"
+                            align="start"
+                          >
+                            <Command>
+                              <CommandInput
+                                placeholder={t("drivers.filterCustomer")}
+                                className="h-9"
+                              />
+                              <CommandList>
+                                <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                                <CommandGroup>
+                                  {customers.map((c) => (
+                                    <CommandItem
+                                      key={c.id}
+                                      value={c.name}
+                                      onSelect={() => {
+                                        setExplicitCustomerId(c.id);
+                                        setCustomerSubmitError(false);
+                                        setCustomerComboboxOpen(false);
+                                      }}
+                                    >
+                                      <span
+                                        style={{ paddingLeft: (c.depth ?? 0) * 12 }}
+                                        className="inline-block"
+                                      >
+                                        {c.name}
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </ResourceSelectCreateRow>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-2">
                     <Label htmlFor="incident-cost">{t("incidents.fields.cost")}</Label>
@@ -530,7 +689,7 @@ export function IncidentFormSheet({
               >
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={submitting || !title.trim()}>
+              <Button type="submit" disabled={submitting}>
                 {submitting
                   ? t("common.loading")
                   : isEdit
@@ -540,7 +699,9 @@ export function IncidentFormSheet({
             </div>
           </form>
 
-          <DrawerStackParentDim show={vehicleFormOpen || driverFormOpen} />
+          <DrawerStackParentDim
+            show={vehicleFormOpen || driverFormOpen || customerFormOpen}
+          />
         </SheetContent>
       </Sheet>
 
@@ -551,7 +712,7 @@ export function IncidentFormSheet({
             onOpenChange={setVehicleFormOpen}
             vehicle={null}
             organizationId={organizationId}
-            defaultCustomerId={selectedCustomerId}
+            defaultCustomerId={defaultNestedCustomerId}
             hideOverlay
             onSuccess={(created) => {
               refreshVehiclesSilently();
@@ -563,11 +724,28 @@ export function IncidentFormSheet({
             onOpenChange={setDriverFormOpen}
             driver={null}
             organizationId={organizationId}
-            defaultCustomerId={selectedCustomerId}
+            defaultCustomerId={defaultNestedCustomerId}
             hideOverlay
             onSuccess={(created) => {
               refreshDriversSilently();
               if (created?.id) setDriverId(created.id);
+            }}
+          />
+          <CustomerFormDialog
+            open={customerFormOpen}
+            onOpenChange={setCustomerFormOpen}
+            customer={null}
+            organizationId={organizationId}
+            customers={customers}
+            defaultParentId={
+              selectedCustomerId ??
+              (explicitCustomerId.trim() ? explicitCustomerId.trim() : undefined)
+            }
+            allowRootCreation={user?.isSuperAdmin ?? false}
+            hideOverlay
+            onSuccess={(created) => {
+              refreshCustomersSilently();
+              if (created?.id) setExplicitCustomerId(created.id);
             }}
           />
         </>

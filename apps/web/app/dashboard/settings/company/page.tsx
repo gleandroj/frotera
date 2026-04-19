@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
@@ -24,7 +25,7 @@ import { toast } from "sonner";
 
 export default function CustomerFleetSettingsPage() {
   const { t } = useTranslation();
-  const { currentOrganization, selectedCustomerId } = useAuth();
+  const { currentOrganization, selectedCustomerId, user } = useAuth();
   const { can } = usePermissions();
   const canEdit = can(Module.COMPANIES, Action.EDIT);
   const orgId = currentOrganization?.id;
@@ -166,19 +167,32 @@ export default function CustomerFleetSettingsPage() {
     );
   }
 
+  const editTargetHint = user?.isSuperAdmin
+    ? t("companySettings.editTargetHintSuperAdmin")
+    : t("companySettings.editTargetHintMember");
+
   return (
-    <div className="mx-auto max-w-xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("companySettings.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("companySettings.description")}</p>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t("companySettings.title")}
+          </h1>
+          <p className="mt-1 max-w-3xl text-muted-foreground">
+            {t("companySettings.description")}
+          </p>
+        </div>
+        <Button variant="outline" asChild className="shrink-0 self-start sm:self-auto">
+          <Link href="/dashboard/telemetry">{t("companySettings.openTelemetry")}</Link>
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>{t("companySettings.cardTitle")}</CardTitle>
-          <CardDescription>{t("companySettings.cardDescription")}</CardDescription>
+          <CardDescription className="max-w-3xl">
+            {t("companySettings.cardDescription")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {loading || !list ? (
@@ -205,43 +219,43 @@ export default function CustomerFleetSettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  {t("companySettings.editTargetHintMember")}
-                </p>
+                <p className="text-xs text-muted-foreground">{editTargetHint}</p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="offlineMinutes">
-                  {t("companySettings.offlineThresholdLabel")}
-                </Label>
-                <Input
-                  id="offlineMinutes"
-                  type="number"
-                  min={1}
-                  inputMode="numeric"
-                  value={offlineMinutes}
-                  onChange={(e) => setOfflineMinutes(e.target.value)}
-                  placeholder={t("companySettings.offlineThresholdPlaceholder")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("companySettings.offlineThresholdHint")}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="defaultSpeed">{t("companySettings.defaultSpeedLabel")}</Label>
-                <Input
-                  id="defaultSpeed"
-                  type="number"
-                  min={0}
-                  step="1"
-                  inputMode="decimal"
-                  value={defaultSpeedKmh}
-                  onChange={(e) => setDefaultSpeedKmh(e.target.value)}
-                  placeholder={t("companySettings.defaultSpeedPlaceholder")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("companySettings.defaultSpeedHint")}
-                </p>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="offlineMinutes">
+                    {t("companySettings.offlineThresholdLabel")}
+                  </Label>
+                  <Input
+                    id="offlineMinutes"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={offlineMinutes}
+                    onChange={(e) => setOfflineMinutes(e.target.value)}
+                    placeholder={t("companySettings.offlineThresholdPlaceholder")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("companySettings.offlineThresholdHint")}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultSpeed">{t("companySettings.defaultSpeedLabel")}</Label>
+                  <Input
+                    id="defaultSpeed"
+                    type="number"
+                    min={0}
+                    step="1"
+                    inputMode="decimal"
+                    value={defaultSpeedKmh}
+                    onChange={(e) => setDefaultSpeedKmh(e.target.value)}
+                    placeholder={t("companySettings.defaultSpeedPlaceholder")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("companySettings.defaultSpeedHint")}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button onClick={() => void handleSaveCurrent()} disabled={saving}>

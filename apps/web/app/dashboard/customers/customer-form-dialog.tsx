@@ -38,6 +38,7 @@ import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 
 interface CustomerFormDialogProps {
   open: boolean;
@@ -169,7 +170,7 @@ export function CustomerFormDialog({
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
             className="flex flex-1 flex-col overflow-hidden"
           >
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">

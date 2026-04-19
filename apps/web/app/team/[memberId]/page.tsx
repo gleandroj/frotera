@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTranslation } from "@/i18n/useTranslation";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import {
   organizationAPI,
   customersAPI,
@@ -320,7 +321,10 @@ export default function EditMemberPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form
+          onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
+          className="space-y-6"
+        >
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Informações do Usuário</CardTitle>

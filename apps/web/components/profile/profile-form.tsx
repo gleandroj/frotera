@@ -26,6 +26,7 @@ import { externalApi } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
+import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 
 export function ProfileForm() {
   const { t } = useTranslation();
@@ -103,7 +104,10 @@ export function ProfileForm() {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, onRhfInvalidSubmit(form, t))}
+            className="space-y-8"
+          >
             <FormField
               control={form.control}
               name="name"

@@ -172,6 +172,10 @@ function PublicFillPageContent() {
 
   const handleSubmit = async () => {
     if (!template) return;
+    if (attachmentUploadingId) {
+      toast.error("Aguarde o fim do envio do anexo antes de enviar.");
+      return;
+    }
 
     const { vehicleRequired, driverRequirement: driverReq } = template;
 
@@ -560,11 +564,7 @@ function PublicFillPageContent() {
         <div className="pb-8">
           <Button
             onClick={handleSubmit}
-            disabled={
-              submitting ||
-              !!attachmentUploadingId ||
-              (vehicleRequired && !selectedVehicle)
-            }
+            disabled={submitting}
             className="w-full"
             size="lg"
           >

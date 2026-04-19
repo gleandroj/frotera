@@ -52,6 +52,7 @@ import { DrawerStackParentDim } from '@/components/drawer-stack-parent-dim';
 import { VehicleFormDialog } from '@/app/dashboard/vehicles/vehicle-form-dialog';
 import { usePermissions, Module, Action } from '@/lib/hooks/use-permissions';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { onRhfInvalidSubmit } from '@/lib/on-rhf-invalid-submit';
 import {
   documentsAPI,
   vehiclesAPI,
@@ -230,7 +231,7 @@ export function DocumentFormDialog({
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
             className="flex flex-1 flex-col overflow-hidden"
           >
             <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">

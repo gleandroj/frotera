@@ -50,6 +50,7 @@ import {
   type ItemType,
 } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ChecklistTemplateFormDialogProps {
   open: boolean;
@@ -205,6 +206,8 @@ export function ChecklistTemplateFormDialog({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerId, setCustomerId] = useState("");
+  const [submitNameError, setSubmitNameError] = useState(false);
+  const [submitCustomerError, setSubmitCustomerError] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -213,6 +216,8 @@ export function ChecklistTemplateFormDialog({
 
   useEffect(() => {
     if (!open) return;
+    setSubmitNameError(false);
+    setSubmitCustomerError(false);
 
     if (template) {
       setName(template.name);
@@ -301,9 +306,18 @@ export function ChecklistTemplateFormDialog({
   }
 
   async function handleSubmit() {
-    if (!name.trim()) return;
+    setSubmitNameError(false);
+    setSubmitCustomerError(false);
+    if (!name.trim()) {
+      setSubmitNameError(true);
+      toast.error(t("checklist.templateNameRequiredToast"));
+      document.getElementById("template-name")?.focus();
+      return;
+    }
     if (!isEdit && !customerId) {
+      setSubmitCustomerError(true);
       toast.error(t("checklist.templateCustomerRequired"));
+      document.getElementById("template-customer")?.focus();
       return;
     }
 
@@ -373,10 +387,19 @@ export function ChecklistTemplateFormDialog({
               </Label>
               <Select
                 value={customerId}
-                onValueChange={setCustomerId}
+                onValueChange={(v) => {
+                  setCustomerId(v);
+                  setSubmitCustomerError(false);
+                }}
                 disabled={loading || loadingCustomers}
               >
-                <SelectTrigger id="template-customer" className="w-full">
+                <SelectTrigger
+                  id="template-customer"
+                  className={cn(
+                    "w-full",
+                    submitCustomerError && "border-destructive ring-1 ring-destructive",
+                  )}
+                >
                   <SelectValue placeholder={t("checklist.templateCompanyPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -399,9 +422,14 @@ export function ChecklistTemplateFormDialog({
             <Input
               id="template-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setSubmitNameError(false);
+              }}
               placeholder={t("checklist.templateNamePlaceholder")}
               disabled={loading}
+              aria-invalid={submitNameError || undefined}
+              className={cn(submitNameError && "border-destructive ring-1 ring-destructive")}
             />
           </div>
 
@@ -518,10 +546,7 @@ export function ChecklistTemplateFormDialog({
           >
             {t("common.cancel")}
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !name.trim() || (!isEdit && (!customerId || loadingCustomers))}
-          >
+          <Button onClick={handleSubmit} disabled={loading}>
             {loading ? t("common.saving") : t("common.save")}
           </Button>
         </div>
