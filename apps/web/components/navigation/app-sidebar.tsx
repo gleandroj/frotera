@@ -26,6 +26,7 @@ import {
   FileText,
   Fuel,
   Home,
+  MapPin,
   Radio,
   SlidersHorizontal,
   User,
@@ -62,6 +63,7 @@ export function AppSidebar() {
   const { can } = usePermissions();
   const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
+  const canViewTracking = can(Module.TRACKING, Action.VIEW);
   const canEditCompanySettings = can(Module.COMPANIES, Action.EDIT);
 
   const isMember = currentOrganization
@@ -156,6 +158,14 @@ export function AppSidebar() {
         current: pathname.startsWith("/dashboard/fuel/reports"),
       },
     ];
+    if (canViewTracking) {
+      items.push({
+        name: t("navigation.items.tracking"),
+        href: "/dashboard/tracking",
+        icon: MapPin,
+        current: pathname.startsWith("/dashboard/tracking"),
+      });
+    }
     if (canViewTelemetry) {
       items.push({
         name: t("navigation.items.telemetry"),

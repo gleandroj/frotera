@@ -14,16 +14,17 @@ export interface BreadcrumbItem {
 interface AppLayoutProps {
   children: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
+  fullscreen?: boolean;
 }
 
-export function AppLayout({ children, breadcrumbs = [] }: AppLayoutProps) {
+export function AppLayout({ children, breadcrumbs = [], fullscreen = false }: AppLayoutProps) {
   return (
     <RequireAuth>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="flex flex-col h-svh overflow-hidden">
           <AppHeader breadcrumbs={breadcrumbs} />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-2 overflow-y-auto">
+          <div className={fullscreen ? "flex flex-1 overflow-hidden" : "flex flex-1 flex-col gap-4 p-4 pt-2 overflow-y-auto"}>
             {children}
           </div>
         </SidebarInset>
