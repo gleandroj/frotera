@@ -501,6 +501,10 @@ export interface Vehicle {
   renavam?: string | null;
   chassis?: string | null;
   vehicleType?: string | null;
+  vehicleSpecies?: string | null;
+  vehicleBodyType?: string | null;
+  vehicleTraction?: string | null;
+  vehicleUseCategory?: string | null;
   inactive?: boolean;
   speedLimit?: number | null;
   /** Hodômetro (km) na entrada do veículo na frota */
@@ -536,6 +540,10 @@ export interface CreateVehiclePayload {
   renavam?: string;
   chassis?: string;
   vehicleType?: string;
+  vehicleSpecies?: string | null;
+  vehicleBodyType?: string | null;
+  vehicleTraction?: string | null;
+  vehicleUseCategory?: string | null;
   inactive?: boolean;
   speedLimit?: number | null;
   initialOdometerKm?: number | null;
@@ -555,12 +563,38 @@ export interface UpdateVehiclePayload {
   renavam?: string;
   chassis?: string;
   vehicleType?: string;
+  vehicleSpecies?: string | null;
+  vehicleBodyType?: string | null;
+  vehicleTraction?: string | null;
+  vehicleUseCategory?: string | null;
   inactive?: boolean;
   speedLimit?: number | null;
   initialOdometerKm?: number | null;
   notes?: string;
   trackerDeviceId?: string;
   customerId?: string;
+}
+
+export interface FleetPosition {
+  latitude: number;
+  longitude: number;
+  altitude?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  ignitionOn?: boolean | null;
+  recordedAt: string;
+}
+
+export interface FleetVehicleStatus {
+  id: string;
+  name?: string | null;
+  plate?: string | null;
+  color?: string | null;
+  vehicleType?: string | null;
+  inactive: boolean;
+  customer?: { id: string; name: string } | null;
+  trackerDevice?: { id: string; imei: string; connectedAt?: string | null } | null;
+  lastPosition?: FleetPosition | null;
 }
 
 export const vehiclesAPI = {
@@ -590,6 +624,11 @@ export const vehiclesAPI = {
   delete: (organizationId: string, vehicleId: string) =>
     externalApi.delete(
       `/api/organizations/${organizationId}/vehicles/${vehicleId}`,
+    ),
+  fleetStatus: (organizationId: string, params?: { customerId?: string | null }) =>
+    externalApi.get<FleetVehicleStatus[]>(
+      `/api/organizations/${organizationId}/vehicles/fleet-status`,
+      { params: params?.customerId ? { customerId: params.customerId } : undefined },
     ),
 };
 
