@@ -6,9 +6,13 @@ import {
   ApiBearerAuth, ApiOperation, ApiResponse, ApiTags,
 } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { OrganizationMember } from '@prisma/client';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
+import { Permission } from '@/auth/decorators/permission.decorator';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { RoleActionEnum, RoleModuleEnum } from '@/roles/roles.dto';
 import { DriversService } from './drivers.service';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   AssignVehicleDto,
   CreateDriverDto,
@@ -17,32 +21,36 @@ import {
   UpdateDriverDto,
 } from './drivers.dto';
 
-// TODO (Wave 1 — RBAC): Descomentar quando PermissionGuard estiver implementado
-// import { PermissionGuard } from '../auth/guards/permission.guard';
-// import { Permission } from '../auth/decorators/permission.decorator';
-// import { Module as PermModule, Action } from '../auth/enums/permission.enum';
+interface DriversRequest extends ExpressRequest {
+  user: { userId: string; isSuperAdmin?: boolean };
+  allowedCustomerIds: string[] | null;
+  organizationMember: {
+    id: string;
+    organizationId: string;
+    customerRestricted: boolean;
+  };
+}
 
-interface RequestWithUser extends ExpressRequest {
-  user: { userId: string };
+function memberFromRequest(req: DriversRequest): Pick<OrganizationMember, 'id' | 'customerRestricted'> {
+  return {
+    id: req.organizationMember.id,
+    customerRestricted: req.organizationMember.customerRestricted,
+  };
 }
 
 @ApiTags('drivers')
 @Controller('organizations/:organizationId/drivers')
-@UseGuards(JwtAuthGuard)
-// TODO (Wave 1 — RBAC): @UseGuards(JwtAuthGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class DriversController {
-  constructor(
-    private readonly driversService: DriversService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly driversService: DriversService) {}
 
   @Get()
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.VIEW)
   @ApiOperation({ summary: 'List drivers in an organization' })
   @ApiResponse({ status: 200, type: DriversListResponseDto })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.VIEW)
   async list(
-    @Request() req: RequestWithUser,
+    @Request() req: DriversRequest,
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
     @Query('activeOnly') activeOnlyRaw?: string,
@@ -50,7 +58,7 @@ export class DriversController {
   ): Promise<DriversListResponseDto> {
     const activeOnly = activeOnlyRaw === 'true' || activeOnlyRaw === '1';
     const inactiveOnly = inactiveOnlyRaw === 'true' || inactiveOnlyRaw === '1';
-    const member = await this.getMember(req.user.userId, organizationId);
+    const member = memberFromRequest(req);
     const drivers = await this.driversService.list(
       organizationId,
       member,
@@ -62,64 +70,63 @@ export class DriversController {
   }
 
   @Post()
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.CREATE)
   @ApiOperation({ summary: 'Create a new driver' })
   @ApiResponse({ status: 201, type: DriverResponseDto })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.CREATE)
   async create(
-    @Request() req: RequestWithUser,
+    @Request() req: DriversRequest,
     @Param('organizationId') organizationId: string,
     @Body() dto: CreateDriverDto,
   ): Promise<DriverResponseDto> {
-    const member = await this.getMember(req.user.userId, organizationId);
+    const member = memberFromRequest(req);
     return this.driversService.create(organizationId, member, dto);
   }
 
   @Get(':driverId')
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.VIEW)
   @ApiOperation({ summary: 'Get a driver by ID' })
   @ApiResponse({ status: 200, type: DriverResponseDto })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.VIEW)
   async getById(
-    @Request() req: RequestWithUser,
+    @Request() req: DriversRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
   ): Promise<DriverResponseDto> {
-    const member = await this.getMember(req.user.userId, organizationId);
+    const member = memberFromRequest(req);
     return this.driversService.getById(driverId, organizationId, member);
   }
 
   @Patch(':driverId')
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Update a driver' })
   @ApiResponse({ status: 200, type: DriverResponseDto })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.EDIT)
   async update(
-    @Request() req: RequestWithUser,
+    @Request() req: DriversRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
     @Body() dto: UpdateDriverDto,
   ): Promise<DriverResponseDto> {
-    const member = await this.getMember(req.user.userId, organizationId);
+    const member = memberFromRequest(req);
     return this.driversService.update(driverId, organizationId, member, dto);
   }
 
   @Delete(':driverId')
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.DELETE)
   @ApiOperation({ summary: 'Soft-delete a driver (sets active = false)' })
   @ApiResponse({ status: 204, description: 'Driver deactivated' })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.DELETE)
   async delete(
-    @Request() req: RequestWithUser,
+    @Request() req: DriversRequest,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
   ): Promise<void> {
-    const member = await this.getMember(req.user.userId, organizationId);
+    const member = memberFromRequest(req);
     return this.driversService.delete(driverId, organizationId, member);
   }
 
   @Post(':driverId/assign-vehicle')
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Assign a vehicle to a driver' })
   @ApiResponse({ status: 201 })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.EDIT)
   async assignVehicle(
-    @Request() req: RequestWithUser,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
     @Body() dto: AssignVehicleDto,
@@ -128,29 +135,14 @@ export class DriversController {
   }
 
   @Delete(':driverId/assign-vehicle/:vehicleId')
+  @Permission(RoleModuleEnum.DRIVERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Remove vehicle assignment from a driver' })
   @ApiResponse({ status: 204 })
-  // TODO (Wave 1 — RBAC): @Permission(PermModule.DRIVERS, Action.EDIT)
   async unassignVehicle(
-    @Request() req: RequestWithUser,
     @Param('organizationId') organizationId: string,
     @Param('driverId') driverId: string,
     @Param('vehicleId') vehicleId: string,
   ): Promise<void> {
     return this.driversService.unassignVehicle(driverId, vehicleId, organizationId);
-  }
-
-  // ── HELPER ────────────────────────────────────────────────────────────────
-
-  private async getMember(userId: string, organizationId: string) {
-    const member = await this.prisma.organizationMember.findFirst({
-      where: { userId, organizationId },
-      select: { id: true, customerRestricted: true },
-    });
-    if (!member) {
-      const { ForbiddenException } = await import('@nestjs/common');
-      throw new ForbiddenException('AUTH_FORBIDDEN');
-    }
-    return member;
   }
 }
