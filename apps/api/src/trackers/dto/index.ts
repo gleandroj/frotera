@@ -3,6 +3,7 @@ import { TrackerModel } from "@prisma/client";
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -12,6 +13,12 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import {
+  VEHICLE_BODY_TYPE_VALUES,
+  VEHICLE_SPECIES_VALUES,
+  VEHICLE_TRACTION_VALUES,
+  VEHICLE_USE_CATEGORY_VALUES,
+} from "@gleandroj/shared";
 
 // ─── Internal types ──────────────────────────────────────────────────────────
 
@@ -193,6 +200,9 @@ export class PositionResponseDto {
   @ApiPropertyOptional()
   heading?: number | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  ignitionOn?: boolean | null;
+
   @ApiProperty()
   recordedAt: string;
 
@@ -218,6 +228,48 @@ export class PositionHistoryQueryDto {
   @Min(1)
   @Max(1000)
   limit?: number = 100;
+}
+
+// ─── Fleet Status ────────────────────────────────────────────────────────────
+
+export class FleetTrackerDeviceDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  imei: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  connectedAt?: string | null;
+}
+
+export class FleetVehicleStatusDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  name?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  plate?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  color?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vehicleType?: string | null;
+
+  @ApiProperty()
+  inactive: boolean;
+
+  @ApiPropertyOptional({ type: () => ({ id: String, name: String }), nullable: true })
+  customer?: { id: string; name: string } | null;
+
+  @ApiPropertyOptional({ type: () => FleetTrackerDeviceDto, nullable: true })
+  trackerDevice?: FleetTrackerDeviceDto | null;
+
+  @ApiPropertyOptional({ type: () => PositionResponseDto, nullable: true })
+  lastPosition?: PositionResponseDto | null;
 }
 
 // ─── Vehicles ────────────────────────────────────────────────────────────────
@@ -294,6 +346,18 @@ export class VehicleResponseDto {
 
   @ApiPropertyOptional()
   vehicleType?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vehicleSpecies?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vehicleBodyType?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vehicleTraction?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vehicleUseCategory?: string | null;
 
   @ApiPropertyOptional()
   inactive?: boolean;
@@ -420,6 +484,30 @@ export class CreateVehicleDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== "")
+  @IsIn(VEHICLE_SPECIES_VALUES)
+  vehicleSpecies?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== "")
+  @IsIn(VEHICLE_BODY_TYPE_VALUES)
+  vehicleBodyType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== "")
+  @IsIn(VEHICLE_TRACTION_VALUES)
+  vehicleTraction?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== "")
+  @IsIn(VEHICLE_USE_CATEGORY_VALUES)
+  vehicleUseCategory?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsBoolean()
   inactive?: boolean;
 
@@ -510,6 +598,26 @@ export class UpdateVehicleDto {
   @IsOptional()
   @IsString()
   vehicleType?: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsIn(VEHICLE_SPECIES_VALUES)
+  vehicleSpecies?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsIn(VEHICLE_BODY_TYPE_VALUES)
+  vehicleBodyType?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsIn(VEHICLE_TRACTION_VALUES)
+  vehicleTraction?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsIn(VEHICLE_USE_CATEGORY_VALUES)
+  vehicleUseCategory?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
