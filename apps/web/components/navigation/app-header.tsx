@@ -28,6 +28,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { CreateOrganizationDialog } from "@/components/organizations";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { getUserInitials } from "@/lib/user-initials";
 import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import {
   Building,
@@ -40,15 +41,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n/useTranslation";
-
-const getInitials = (name: string): string => {
-  return name
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-};
 
 interface AppHeaderProps {
   breadcrumbs?: Array<{
@@ -324,9 +316,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {currentOrganization?.name
-                  ? getInitials(currentOrganization.name)
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                {user
+                  ? getUserInitials(user.name, user.email)
                   : "U"}
               </AvatarFallback>
             </Avatar>

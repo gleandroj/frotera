@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getUserInitials } from "@/lib/user-initials";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -126,13 +127,6 @@ export default function TeamPage() {
     };
     load();
   }, [currentOrganization?.id, selectedCustomerId, t]);
-
-  const getInitials = (name: string | null, email: string) => {
-    if (name) {
-      return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-    }
-    return email.slice(0, 2).toUpperCase();
-  };
 
   const getRoleColor = (role: TeamMemberRole) => {
     if (role.color) return "";
@@ -256,7 +250,7 @@ export default function TeamPage() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {getInitials(member.user.name, member.user.email)}
+                            {getUserInitials(member.user.name, member.user.email)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{member.user.name || t('team.noName')}</span>
