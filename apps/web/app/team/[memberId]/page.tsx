@@ -121,7 +121,7 @@ export default function EditMemberPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       roleId: "",
-      fullAccess: true,
+      fullAccess: false,
       customerIds: [],
       name: "",
       email: "",
@@ -148,7 +148,7 @@ export default function EditMemberPage() {
         if (found) {
           form.reset({
             roleId: found.role.id,
-            fullAccess: true,
+            fullAccess: false,
             customerIds: found.customers?.map((c) => c.id) ?? [],
             name: found.user.name ?? "",
             email: found.user.email,
