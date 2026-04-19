@@ -293,6 +293,17 @@ export default function ChecklistPage() {
       header: t("checklist.columns.name"),
     },
     {
+      id: "customer",
+      accessorFn: (row) => row.customerName ?? "",
+      meta: { labelKey: "checklist.columns.customer" },
+      header: t("checklist.columns.customer"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">
+          {row.original.customerName ?? "—"}
+        </span>
+      ),
+    },
+    {
       accessorKey: "active",
       meta: { labelKey: "checklist.columns.active" },
       header: t("checklist.columns.active"),
@@ -398,6 +409,17 @@ export default function ChecklistPage() {
         const e = row.original;
         return e.templateName ?? e.templateId;
       },
+    },
+    {
+      id: "entryCustomer",
+      accessorFn: (row) => row.customerName ?? "",
+      meta: { labelKey: "checklist.columns.customer" },
+      header: t("checklist.columns.customer"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">
+          {row.original.customerName ?? "—"}
+        </span>
+      ),
     },
     {
       id: "vehicle",

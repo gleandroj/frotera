@@ -227,6 +227,9 @@ export class GeofenceResponseDto {
   @ApiProperty()
   customerId!: string;
 
+  @ApiPropertyOptional({ nullable: true })
+  customerName?: string | null;
+
   @ApiProperty()
   name!: string;
 

@@ -107,6 +107,17 @@ export function getIncidentColumns(
       },
     },
     {
+      id: "customer",
+      accessorFn: (row) => row.customer?.name ?? "",
+      meta: { labelKey: "incidents.columns.customer" },
+      header: t("incidents.columns.customer"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.customer?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
       accessorKey: "date",
       meta: { labelKey: "incidents.columns.date" },
       header: ({ column }) => (

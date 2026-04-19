@@ -59,6 +59,17 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
       },
     },
     {
+      id: "customer",
+      accessorFn: (row) => row.vehicle?.customer?.name ?? "",
+      meta: { labelKey: "fuel.fields.customer" },
+      header: t("fuel.fields.customer"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.vehicle?.customer?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
       accessorKey: "odometer",
       meta: { labelKey: "fuel.fields.odometer" },
       header: t("fuel.fields.odometer"),

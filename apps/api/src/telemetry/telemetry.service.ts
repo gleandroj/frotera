@@ -189,6 +189,7 @@ export class TelemetryService {
     id: string;
     organizationId: string;
     customerId: string;
+    customer?: { id: string; name: string } | null;
     name: string;
     description: string | null;
     type: GeofenceType;
@@ -204,6 +205,7 @@ export class TelemetryService {
       id: row.id,
       organizationId: row.organizationId,
       customerId: row.customerId,
+      customerName: row.customer?.name ?? null,
       name: row.name,
       description: row.description,
       type: row.type,
@@ -451,6 +453,7 @@ export class TelemetryService {
     const rows = await this.prisma.geofenceZone.findMany({
       where,
       orderBy: { name: "asc" },
+      include: { customer: { select: { id: true, name: true } } },
     });
     return rows.map((r) => this.toGeofenceDto(r));
   }

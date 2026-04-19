@@ -143,6 +143,8 @@ export class DocumentResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   customerId: string | null;
   @ApiPropertyOptional({ type: String, nullable: true })
+  customerName: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
   vehicleName: string | null;
   @ApiPropertyOptional({ type: String, nullable: true })
   vehiclePlate: string | null;

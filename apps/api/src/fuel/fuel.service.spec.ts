@@ -67,7 +67,12 @@ describe('FuelService', () => {
 
   const fuelLogListInclude = {
     vehicle: {
-      select: { id: true, name: true, plate: true },
+      select: {
+        id: true,
+        name: true,
+        plate: true,
+        customer: { select: { id: true, name: true } },
+      },
     },
     driver: { select: { id: true, name: true } },
   };

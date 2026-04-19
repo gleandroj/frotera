@@ -42,6 +42,7 @@ export class IncidentsService {
       where: { id, organizationId },
       include: {
         attachments: true,
+        customer: { select: { id: true, name: true } },
         vehicle: { select: { id: true, name: true, plate: true } },
       },
     });
@@ -175,6 +176,7 @@ export class IncidentsService {
         where,
         include: {
           attachments: true,
+          customer: { select: { id: true, name: true } },
           vehicle: { select: { id: true, name: true, plate: true } },
         },
         orderBy: { date: "desc" },
@@ -227,7 +229,11 @@ export class IncidentsService {
         notes: dto.notes,
         status: IncidentStatus.OPEN,
       },
-      include: { attachments: true },
+      include: {
+        attachments: true,
+        customer: { select: { id: true, name: true } },
+        vehicle: { select: { id: true, name: true, plate: true } },
+      },
     });
   }
 
@@ -325,7 +331,11 @@ export class IncidentsService {
     return this.prisma.incident.update({
       where: { id },
       data,
-      include: { attachments: true, vehicle: { select: { id: true, name: true, plate: true } } },
+      include: {
+        attachments: true,
+        customer: { select: { id: true, name: true } },
+        vehicle: { select: { id: true, name: true, plate: true } },
+      },
     });
   }
 

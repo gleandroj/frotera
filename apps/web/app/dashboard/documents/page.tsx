@@ -167,6 +167,7 @@ export default function DocumentsPage() {
                     <TableHead>{t('documents.fields.title')}</TableHead>
                     <TableHead>{t('documents.fields.type')}</TableHead>
                     <TableHead>{t('documents.fields.vehicle')}</TableHead>
+                    <TableHead>{t('documents.fields.customer')}</TableHead>
                     <TableHead>{t('documents.fields.expiryDate')}</TableHead>
                     <TableHead>{t('documents.fields.daysUntilExpiry')}</TableHead>
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
@@ -181,6 +182,9 @@ export default function DocumentsPage() {
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
                       <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {doc.customerName?.trim() || '—'}
+                      </TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')
@@ -250,6 +254,7 @@ export default function DocumentsPage() {
                     <TableHead>{t('documents.fields.title')}</TableHead>
                     <TableHead>{t('documents.fields.type')}</TableHead>
                     <TableHead>{t('documents.fields.vehicle')}</TableHead>
+                    <TableHead>{t('documents.fields.customer')}</TableHead>
                     <TableHead>{t('documents.fields.expiryDate')}</TableHead>
                     <TableHead>{t('documents.fields.daysUntilExpiry')}</TableHead>
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
@@ -264,6 +269,9 @@ export default function DocumentsPage() {
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
                       <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {doc.customerName?.trim() || '—'}
+                      </TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')
@@ -333,6 +341,7 @@ export default function DocumentsPage() {
                     <TableHead>{t('documents.fields.title')}</TableHead>
                     <TableHead>{t('documents.fields.type')}</TableHead>
                     <TableHead>{t('documents.fields.vehicle')}</TableHead>
+                    <TableHead>{t('documents.fields.customer')}</TableHead>
                     <TableHead>{t('documents.fields.expiryDate')}</TableHead>
                     <TableHead>{t('documents.fields.daysUntilExpiry')}</TableHead>
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
@@ -347,6 +356,9 @@ export default function DocumentsPage() {
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{t(`documents.type.${doc.type}`)}</TableCell>
                       <TableCell>{documentVehicleLabel(doc, t('common.notAvailable'))}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {doc.customerName?.trim() || '—'}
+                      </TableCell>
                       <TableCell>
                         {doc.expiryDate
                           ? new Date(doc.expiryDate).toLocaleDateString('pt-BR')

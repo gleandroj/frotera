@@ -126,6 +126,7 @@ export default function GeofencesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("telemetry.geofences.columns.name")}</TableHead>
+                  <TableHead>{t("telemetry.geofences.columns.company")}</TableHead>
                   <TableHead>{t("telemetry.geofences.columns.type")}</TableHead>
                   <TableHead>{t("telemetry.geofences.columns.status")}</TableHead>
                   <TableHead>{t("telemetry.geofences.columns.alertOnEnter")}</TableHead>
@@ -138,11 +139,11 @@ export default function GeofencesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6}>…</TableCell>
+                    <TableCell colSpan={7}>…</TableCell>
                   </TableRow>
                 ) : zones.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-muted-foreground">
+                    <TableCell colSpan={7} className="text-muted-foreground">
                       {t("telemetry.geofences.noZones")}
                     </TableCell>
                   </TableRow>
@@ -150,6 +151,9 @@ export default function GeofencesPage() {
                   zones.map((z) => (
                     <TableRow key={z.id}>
                       <TableCell className="font-medium">{z.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {z.customerName?.trim() || "—"}
+                      </TableCell>
                       <TableCell>
                         {z.type === "CIRCLE"
                           ? t("telemetry.geofences.form.typeCircle")

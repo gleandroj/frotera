@@ -273,6 +273,7 @@
       },
       "columns": {
         "name": "Nome",
+        "company": "Empresa",
         "type": "Tipo",
         "status": "Status",
         "alertOnEnter": "Entrar",
@@ -1104,6 +1105,7 @@
     "noEntriesMatchFilter": "Nenhuma entrada corresponde a estes filtros.",
     "columns": {
       "name": "Nome",
+      "customer": "Empresa",
       "active": "Ativo",
       "itemCount": "Itens",
       "createdAt": "Criado em",
@@ -1137,6 +1139,7 @@
       "title": "Título",
       "type": "Tipo",
       "vehicle": "Veículo",
+      "customer": "Empresa",
       "date": "Data",
       "status": "Status",
       "severity": "Gravidade",
@@ -1563,6 +1566,7 @@
     },
     "fields": {
       "vehicle": "Veículo",
+      "customer": "Empresa",
       "type": "Tipo",
       "title": "Título",
       "issueDate": "Data de Emissão",
@@ -1617,6 +1621,7 @@
     },
     "fields": {
       "vehicle": "Veículo",
+      "customer": "Empresa",
       "driver": "Motorista",
       "date": "Data",
       "odometer": "Hodômetro (km)",

@@ -235,7 +235,10 @@ export class ChecklistService {
     }
     const templates = await this.prisma.checklistTemplate.findMany({
       where,
-      include: { items: { orderBy: { order: "asc" } } },
+      include: {
+        items: { orderBy: { order: "asc" } },
+        customer: { select: { id: true, name: true } },
+      },
       orderBy: { createdAt: "desc" },
     });
     return templates.map(this.toTemplateResponse);
@@ -275,7 +278,10 @@ export class ChecklistService {
           })),
         },
       },
-      include: { items: { orderBy: { order: "asc" } } },
+      include: {
+        items: { orderBy: { order: "asc" } },
+        customer: { select: { id: true, name: true } },
+      },
     });
     return this.toTemplateResponse(template);
   }
@@ -287,7 +293,10 @@ export class ChecklistService {
   ): Promise<ChecklistTemplateResponseDto> {
     const template = await this.prisma.checklistTemplate.findFirst({
       where: { id: templateId, organizationId },
-      include: { items: { orderBy: { order: "asc" } } },
+      include: {
+        items: { orderBy: { order: "asc" } },
+        customer: { select: { id: true, name: true } },
+      },
     });
     if (!template) throw new NotFoundException(ApiCode.CHECKLIST_TEMPLATE_NOT_FOUND);
     await this.assertTemplateCustomerReadable(
@@ -333,7 +342,10 @@ export class ChecklistService {
             },
           }),
         },
-        include: { items: { orderBy: { order: "asc" } } },
+        include: {
+          items: { orderBy: { order: "asc" } },
+          customer: { select: { id: true, name: true } },
+        },
       });
       return this.toTemplateResponse(template);
     });
@@ -395,7 +407,12 @@ export class ChecklistService {
       where,
       include: {
         answers: true,
-        template: { select: { name: true } },
+        template: {
+          select: {
+            name: true,
+            customer: { select: { name: true } },
+          },
+        },
         vehicle: { select: { name: true, plate: true } },
         member: { include: { user: { select: { name: true, email: true } } } },
       },
@@ -678,7 +695,12 @@ export class ChecklistService {
       },
       include: {
         answers: true,
-        template: { select: { name: true } },
+        template: {
+          select: {
+            name: true,
+            customer: { select: { name: true } },
+          },
+        },
         vehicle: { select: { name: true, plate: true } },
         member: { include: { user: { select: { name: true, email: true } } } },
       },
@@ -703,7 +725,13 @@ export class ChecklistService {
       where: { id: entryId, organizationId },
       include: {
         answers: true,
-        template: { select: { name: true, customerId: true } },
+        template: {
+          select: {
+            name: true,
+            customerId: true,
+            customer: { select: { name: true } },
+          },
+        },
         vehicle: { select: { name: true, plate: true } },
         member: { include: { user: { select: { name: true, email: true } } } },
       },
@@ -754,7 +782,12 @@ export class ChecklistService {
       },
       include: {
         answers: true,
-        template: { select: { name: true } },
+        template: {
+          select: {
+            name: true,
+            customer: { select: { name: true } },
+          },
+        },
         vehicle: { select: { name: true, plate: true } },
         member: { include: { user: { select: { name: true, email: true } } } },
       },
@@ -826,6 +859,7 @@ export class ChecklistService {
       id: t.id,
       organizationId: t.organizationId,
       customerId: t.customerId,
+      customerName: t.customer?.name ?? null,
       name: t.name,
       description: t.description, active: t.active,
       vehicleRequired: t.vehicleRequired,
@@ -842,6 +876,7 @@ export class ChecklistService {
     return {
       id: e.id, organizationId: e.organizationId, templateId: e.templateId,
       templateName: e.template?.name ?? null,
+      customerName: e.template?.customer?.name ?? null,
       vehicleId: e.vehicleId,
       vehicleName: e.vehicle?.name ?? null,
       vehiclePlate: e.vehicle?.plate ?? null,

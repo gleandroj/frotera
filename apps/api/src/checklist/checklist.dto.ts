@@ -60,6 +60,8 @@ export class ChecklistTemplateResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() organizationId: string;
   @ApiProperty() customerId: string;
+  @ApiPropertyOptional({ nullable: true })
+  customerName?: string | null;
   @ApiProperty() name: string;
   @ApiPropertyOptional() description?: string | null;
   @ApiProperty() active: boolean;
@@ -188,6 +190,8 @@ export class ChecklistEntryResponseDto {
   @ApiProperty() organizationId: string;
   @ApiProperty() templateId: string;
   @ApiPropertyOptional() templateName?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  customerName?: string | null;
   @ApiPropertyOptional() vehicleId?: string | null;
   @ApiPropertyOptional() vehicleName?: string | null;
   @ApiPropertyOptional() vehiclePlate?: string | null;

@@ -19,7 +19,14 @@ import {
 } from './documents.dto';
 
 const DOCUMENT_VEHICLE_INCLUDE = {
-  vehicle: { select: { name: true, plate: true, customerId: true } },
+  vehicle: {
+    select: {
+      name: true,
+      plate: true,
+      customerId: true,
+      customer: { select: { id: true, name: true } },
+    },
+  },
 } as const;
 
 const DOCUMENT_UPLOAD_MIME = new Set([
@@ -65,6 +72,7 @@ export class DocumentsService {
       organizationId: doc.organizationId,
       vehicleId: doc.vehicleId,
       customerId: doc.vehicle?.customerId ?? null,
+      customerName: doc.vehicle?.customer?.name ?? null,
       vehicleName: doc.vehicle?.name ?? null,
       vehiclePlate: doc.vehicle?.plate ?? null,
       createdById: doc.createdById,

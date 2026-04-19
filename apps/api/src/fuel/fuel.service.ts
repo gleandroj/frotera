@@ -23,6 +23,13 @@ import {
   FuelStatsQueryDto,
 } from './fuel.dto';
 
+const fuelLogVehicleListSelect = {
+  id: true,
+  name: true,
+  plate: true,
+  customer: { select: { id: true, name: true } },
+} as const;
+
 @Injectable()
 export class FuelService {
   constructor(
@@ -95,7 +102,7 @@ export class FuelService {
       where,
       include: {
         vehicle: {
-          select: { id: true, name: true, plate: true },
+          select: fuelLogVehicleListSelect,
         },
         driver: { select: { id: true, name: true } },
       },
@@ -218,7 +225,7 @@ export class FuelService {
       },
       include: {
         vehicle: {
-          select: { id: true, name: true, plate: true },
+          select: fuelLogVehicleListSelect,
         },
         driver: { select: { id: true, name: true } },
       },
@@ -251,7 +258,13 @@ export class FuelService {
       where: { id, organizationId },
       include: {
         vehicle: {
-          select: { id: true, name: true, plate: true, customerId: true },
+          select: {
+            id: true,
+            name: true,
+            plate: true,
+            customerId: true,
+            customer: { select: { id: true, name: true } },
+          },
         },
         driver: { select: { id: true, name: true } },
       },
@@ -387,7 +400,7 @@ export class FuelService {
       },
       include: {
         vehicle: {
-          select: { id: true, name: true, plate: true },
+          select: fuelLogVehicleListSelect,
         },
         driver: { select: { id: true, name: true } },
       },

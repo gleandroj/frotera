@@ -559,6 +559,7 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
   attachments: IncidentAttachment[];
+  customer?: { id: string; name: string } | null;
   vehicle?: { id: string; name: string | null; plate: string | null } | null;
 }
 
@@ -709,6 +710,7 @@ export interface GeofenceZone {
   id: string;
   organizationId: string;
   customerId: string;
+  customerName?: string | null;
   name: string;
   description: string | null;
   type: GeofenceTypeApi;
@@ -832,6 +834,7 @@ export interface VehicleDocument {
   organizationId: string;
   vehicleId: string;
   customerId?: string | null;
+  customerName?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;
   createdById: string;
@@ -1054,7 +1057,12 @@ export interface FuelLog {
   consumption?: number | null;   // km/l
   createdAt: string;
   updatedAt: string;
-  vehicle?: { id: string; name: string | null; plate: string | null } | null;
+  vehicle?: {
+    id: string;
+    name: string | null;
+    plate: string | null;
+    customer?: { id: string; name: string } | null;
+  } | null;
   driver?: { id: string; name: string } | null;
 }
 
@@ -1294,6 +1302,7 @@ export interface ChecklistTemplate {
   id: string;
   organizationId: string;
   customerId?: string;
+  customerName?: string | null;
   name: string;
   description?: string | null;
   active: boolean;
@@ -1322,6 +1331,7 @@ export interface ChecklistEntry {
   organizationId: string;
   templateId: string;
   templateName?: string | null;
+  customerName?: string | null;
   vehicleId?: string | null;
   vehicleName?: string | null;
   vehiclePlate?: string | null;

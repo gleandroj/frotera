@@ -252,7 +252,14 @@ export class FuelLogResponseDto {
   @ApiProperty() updatedAt: string;
 
   // Joined fields
-  @ApiPropertyOptional() vehicle?: { id: string; name: string | null; plate: string | null };
+  @ApiPropertyOptional()
+  vehicle?: {
+    id: string;
+    name: string | null;
+    plate: string | null;
+    customerId?: string;
+    customer?: { id: string; name: string } | null;
+  };
   @ApiPropertyOptional() driver?: { id: string; name: string } | null;
 }
 
