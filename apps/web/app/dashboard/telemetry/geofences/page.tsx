@@ -150,7 +150,13 @@ export default function GeofencesPage() {
                   zones.map((z) => (
                     <TableRow key={z.id}>
                       <TableCell className="font-medium">{z.name}</TableCell>
-                      <TableCell>{z.type}</TableCell>
+                      <TableCell>
+                        {z.type === "CIRCLE"
+                          ? t("telemetry.geofences.form.typeCircle")
+                          : z.type === "POLYGON"
+                            ? t("telemetry.geofences.form.typePolygon")
+                            : z.type}
+                      </TableCell>
                       <TableCell>
                         {z.active ? t("common.yes") : t("common.no")}
                       </TableCell>
