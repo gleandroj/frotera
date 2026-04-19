@@ -165,7 +165,15 @@ model Vehicle {
   year             String?        // Year e.g. 2015
   renavam          String?
   chassis          String?
-  vehicleType      String?        // Tipo de veículo
+  vehicleType      String?        // Tipo de veículo (texto livre — legado)
+  /// Espécie (finalidade): códigos em @gleandroj/shared (ex.: PASSENGER_AUTOMOBILE)
+  vehicleSpecies      String?
+  /// Tipo de carroceria (passeio): códigos em @gleandroj/shared (ex.: BODY_SUV)
+  vehicleBodyType     String?
+  /// Tração / propulsão: códigos em @gleandroj/shared (ex.: TRACTION_AUTOMOTOR)
+  vehicleTraction     String?
+  /// Categoria de uso: códigos em @gleandroj/shared (ex.: USE_PRIVATE)
+  vehicleUseCategory  String?
   inactive         Boolean        @default(false)
   /// km/h; null = sem monitoramento de velocidade (alertas SPEEDING)
   speedLimit       Float?
