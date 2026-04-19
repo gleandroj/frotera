@@ -3,7 +3,6 @@ import { ConfigModule } from "@nestjs/config";
 import { CustomersModule } from "@/customers/customers.module";
 import { OrganizationsModule } from "@/organizations/organizations.module";
 import { PrismaModule } from "@/prisma/prisma.module";
-import { TrackersModule } from "@/trackers/trackers.module";
 import { TelemetryAlertsGateway } from "./telemetry-alerts.gateway";
 import { TelemetryAlertsStreamService } from "./telemetry-alerts-stream.service";
 import { TelemetryController } from "./telemetry.controller";
@@ -17,7 +16,6 @@ import { TelemetryCoreModule } from "./telemetry-core.module";
     ConfigModule,
     CustomersModule,
     OrganizationsModule,
-    TrackersModule,
     TelemetryCoreModule,
   ],
   controllers: [TelemetryController],

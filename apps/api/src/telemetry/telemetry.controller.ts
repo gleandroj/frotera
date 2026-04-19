@@ -47,7 +47,7 @@ export class TelemetryController {
 
   private ackMemberId(req: TelemetryRequest): string | null {
     const id = req.organizationMember?.id;
-    if (!id || id === "superadmin") return null;
+    if (!id) return null;
     return id;
   }
 
@@ -106,12 +106,15 @@ export class TelemetryController {
   listGeofences(
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
+    @Query("activeOnly") activeOnlyRaw: string | undefined,
     @Request() req: TelemetryRequest,
   ) {
+    const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
     return this.telemetryService.listGeofences(
       organizationId,
       req.allowedCustomerIds ?? null,
       filterCustomerId,
+      activeOnly,
     );
   }
 
