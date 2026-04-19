@@ -179,9 +179,13 @@ export class CustomersService {
   async list(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    activeOnly?: boolean,
+    inactiveOnly?: boolean,
   ): Promise<CustomerResponseDto[]> {
-    const where: { organizationId: string; id?: { in: string[] } } = {
+    const where: Prisma.CustomerWhereInput = {
       organizationId,
+      ...(activeOnly ? { inactive: false } : {}),
+      ...(inactiveOnly ? { inactive: true } : {}),
     };
     if (allowedCustomerIds !== null) {
       if (allowedCustomerIds.length === 0) return [];
@@ -204,6 +208,7 @@ export class CustomersService {
       organizationId: c.organizationId,
       parentId: c.parentId ?? undefined,
       name: c.name,
+      inactive: c.inactive,
       depth: depth(c.id),
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
@@ -252,6 +257,9 @@ export class CustomersService {
       });
       if (!parent) {
         throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+      }
+      if (parent.inactive) {
+        throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
       }
       if (allowedCustomerIds !== null && !allowedCustomerIds.includes(parentId)) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
@@ -321,6 +329,9 @@ export class CustomersService {
         if (!parent) {
           throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
         }
+        if (parent.inactive) {
+          throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
+        }
         if (dto.parentId === customerId) {
           throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
         }
@@ -351,32 +362,48 @@ export class CustomersService {
   ): Promise<void> {
     const customer = await this.prisma.customer.findFirst({
       where: { id: customerId, organizationId },
-      include: { children: true, vehicles: true },
+      include: {
+        _count: { select: { vehicles: true, drivers: true } },
+      },
     });
     if (!customer) {
       throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
     }
-    if (customer.parentId === null && isSuperAdmin !== true) {
-      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-    }
     if (allowedCustomerIds !== null && !allowedCustomerIds.includes(customerId)) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
-    if (customer.children.length > 0) {
+    if (customer.inactive) {
+      return;
+    }
+    if (customer.parentId === null && isSuperAdmin !== true) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+    if (customer._count.vehicles > 0 || customer._count.drivers > 0) {
       throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
     }
-    if (customer.vehicles.length > 0) {
-      throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
-    }
-    await this.prisma.customer.delete({ where: { id: customerId } });
+    await this.prisma.customer.update({
+      where: { id: customerId },
+      data: { inactive: true },
+    });
   }
 
-  private toResponse(c: { id: string; organizationId: string; parentId: string | null; name: string; createdAt: Date; updatedAt: Date }): CustomerResponseDto {
+  private toResponse(
+    c: {
+      id: string;
+      organizationId: string;
+      parentId: string | null;
+      name: string;
+      inactive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+  ): CustomerResponseDto {
     return {
       id: c.id,
       organizationId: c.organizationId,
       parentId: c.parentId ?? undefined,
       name: c.name,
+      inactive: c.inactive,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     };

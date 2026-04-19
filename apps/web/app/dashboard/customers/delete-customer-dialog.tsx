@@ -50,10 +50,10 @@ export function DeleteCustomerDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {t("customers.confirmDelete.title")}
+            {t("customers.confirmDeactivate.title")}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {t("customers.confirmDelete.description")}
+            {t("customers.confirmDeactivate.description")}
             {customer?.name ? (
               <span className="mt-2 block font-medium">{customer.name}</span>
             ) : null}
@@ -71,7 +71,7 @@ export function DeleteCustomerDialog({
             disabled={deleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {deleting ? t("common.loading") : t("common.delete")}
+            {deleting ? t("common.loading") : t("common.deactivate")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

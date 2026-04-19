@@ -14,6 +14,9 @@ export class CustomerResponseDto {
   @ApiProperty()
   name: string;
 
+  @ApiProperty({ description: "Soft-deactivated company" })
+  inactive: boolean;
+
   @ApiPropertyOptional({ description: "Depth in tree (0 = root)" })
   depth?: number;
 

@@ -79,6 +79,7 @@ model Customer {
   organizationId String
   parentId       String?
   name           String
+  inactive       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -96,6 +97,7 @@ model Customer {
 
   @@index([organizationId])
   @@index([parentId])
+  @@index([organizationId, inactive])
   @@map("customers")
 }
 

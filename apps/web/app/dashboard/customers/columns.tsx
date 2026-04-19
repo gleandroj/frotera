@@ -1,8 +1,9 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpDown, Ban, MoreVertical, Pencil } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -74,9 +75,16 @@ export function getCustomerColumns(
                 └
               </span>
             )}
-            <span className="font-medium truncate text-sm">
+            <span
+              className={`font-medium truncate text-sm ${c.inactive ? "text-muted-foreground" : ""}`}
+            >
               {c.name}
             </span>
+            {c.inactive ? (
+              <Badge variant="secondary" className="shrink-0 text-xs font-normal">
+                {t("customers.inactiveBadge")}
+              </Badge>
+            ) : null}
           </div>
         );
       },
@@ -130,13 +138,14 @@ export function getCustomerColumns(
                   </DropdownMenuItem>
                 )}
                 {canDeleteCustomer &&
+                  !customer.inactive &&
                   (isSuperAdmin || customer.parentId != null) && (
                   <DropdownMenuItem
                     onClick={() => onDelete(customer)}
                     className="text-destructive focus:text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t("common.delete")}
+                    <Ban className="mr-2 h-4 w-4" />
+                    {t("common.deactivate")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

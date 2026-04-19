@@ -81,9 +81,12 @@ export function CustomerFormDialog({
 
   const [parentComboboxOpen, setParentComboboxOpen] = useState(false);
 
-  const parentOptions = customers.filter(
-    (c) => !isEdit || c.id !== customer?.id
-  );
+  const parentOptions = customers.filter((c) => {
+    if (isEdit && c.id === customer?.id) return false;
+    if (!c.inactive) return true;
+    if (isEdit && c.id === customer?.parentId) return true;
+    return false;
+  });
 
   const customersSyncKey = useMemo(
     () => parentOptions.map((c) => c.id).join("|"),

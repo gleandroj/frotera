@@ -381,6 +381,7 @@ export interface Customer {
   organizationId: string;
   parentId?: string | null;
   name: string;
+  inactive: boolean;
   depth?: number;
   createdAt: string;
   updatedAt: string;
@@ -388,9 +389,9 @@ export interface Customer {
 
 export interface ListParams {
   customerId?: string | null;
-  /** Query param `activeOnly=true` — only non-inactive vehicles / active drivers / active geofences (per endpoint). */
+  /** Query param `activeOnly=true` — active customers, non-inactive vehicles, active drivers, active geofences (per endpoint). */
   activeOnly?: boolean;
-  /** Query param `inactiveOnly=true` — only inactive vehicles / inactive drivers / inactive geofences (per endpoint). */
+  /** Query param `inactiveOnly=true` — inactive customers, inactive vehicles, inactive drivers, inactive geofences (per endpoint). */
   inactiveOnly?: boolean;
 }
 
@@ -409,11 +410,7 @@ export const customersAPI = {
   list: (organizationId: string, params?: ListParams) =>
     externalApi.get<{ customers: Customer[] }>(
       `/api/organizations/${organizationId}/customers`,
-      {
-        params: params?.customerId
-          ? { customerId: params.customerId }
-          : undefined,
-      },
+      { params: buildListQueryParams(params) },
     ),
   create: (organizationId: string, data: { name: string; parentId?: string }) =>
     externalApi.post<Customer>(

@@ -45,8 +45,12 @@ export class CustomersController {
   async list(
     @Param("organizationId") organizationId: string,
     @Query("customerId") filterCustomerId: string | undefined,
+    @Query("activeOnly") activeOnlyRaw: string | undefined,
+    @Query("inactiveOnly") inactiveOnlyRaw: string | undefined,
     @Request() req: RequestWithMember,
   ): Promise<CustomersListResponseDto> {
+    const activeOnly = activeOnlyRaw === "true" || activeOnlyRaw === "1";
+    const inactiveOnly = inactiveOnlyRaw === "true" || inactiveOnlyRaw === "1";
     let effectiveAllowed = req.allowedCustomerIds;
     if (filterCustomerId) {
       const descendantIds = await this.customersService.getDescendantCustomerIds(
@@ -62,6 +66,8 @@ export class CustomersController {
     const customers = await this.customersService.list(
       organizationId,
       effectiveAllowed,
+      activeOnly,
+      inactiveOnly,
     );
     return { customers };
   }
@@ -122,9 +128,11 @@ export class CustomersController {
 
   @Delete(":customerId")
   @Permission(RoleModuleEnum.COMPANIES, RoleActionEnum.DELETE)
-  @ApiOperation({ summary: "Delete customer (fails if has children or vehicles)" })
+  @ApiOperation({
+    summary: "Deactivate customer (soft-delete; root requires super admin; blocked if vehicles or drivers)",
+  })
   @ApiResponse({ status: 200 })
-  @ApiResponse({ status: 400, description: "Has children or vehicles" })
+  @ApiResponse({ status: 400, description: "Has vehicles or drivers" })
   @ApiResponse({ status: 403, description: "Forbidden" })
   @ApiResponse({ status: 404, description: "Not found" })
   async delete(

@@ -7,6 +7,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  RecordStatusFilter,
+  RECORD_STATUS_ACTIVE,
+  listParamsForRecordStatus,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
 import { getCustomerColumns } from "./columns";
 import { CustomerFormDialog } from "./customer-form-dialog";
 import { DeleteCustomerDialog } from "./delete-customer-dialog";
@@ -23,15 +29,17 @@ export default function CustomersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ACTIVE);
 
   const fetchCustomers = useCallback(() => {
     if (!currentOrganization?.id) return;
     setLoading(true);
     setError(null);
     customersAPI
-      .list(currentOrganization.id, {
-        customerId: selectedCustomerId ?? undefined,
-      })
+      .list(
+        currentOrganization.id,
+        listParamsForRecordStatus(listStatus, selectedCustomerId ?? undefined),
+      )
       .then((res) => {
         const list = res.data?.customers ?? [];
         setCustomers(Array.isArray(list) ? list : []);
@@ -40,7 +48,7 @@ export default function CustomersPage() {
         setError(err?.response?.data?.message ?? t("common.error"));
       })
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, t]);
+  }, [currentOrganization?.id, selectedCustomerId, listStatus, t]);
 
   useEffect(() => {
     if (!currentOrganization?.id) {
@@ -98,16 +106,24 @@ export default function CustomersPage() {
         <p className="text-muted-foreground">{t("common.loading")}</p>
       )}
       {error && <p className="text-destructive">{error}</p>}
-      {!loading && !error && customers.length === 0 && (
-        <p className="text-muted-foreground">{t("customers.noCustomers")}</p>
-      )}
-      {!loading && !error && customers.length > 0 && (
+      {!loading && !error && (
         <DataTable<Customer, unknown>
           columns={columns}
           data={customers}
           filterPlaceholder={t("common.search")}
           filterColumnId="name"
-          noResultsLabel={t("customers.noResults")}
+          noResultsLabel={
+            customers.length === 0
+              ? t("customers.noCustomers")
+              : t("customers.noResults")
+          }
+          toolbarLeading={
+            <RecordStatusFilter
+              id="customers-list-status"
+              value={listStatus}
+              onValueChange={setListStatus}
+            />
+          }
         />
       )}
 
