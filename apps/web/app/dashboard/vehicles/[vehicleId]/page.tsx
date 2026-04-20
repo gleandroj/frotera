@@ -160,7 +160,7 @@ export default function VehicleDetailPage() {
   };
 
   const triggerClassName =
-    "rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold shrink-0";
+    "rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground/90 hover:border-border/40 data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold shrink-0 focus-visible:z-10";
 
   if (!currentOrganization) {
     return (
@@ -222,7 +222,7 @@ export default function VehicleDetailPage() {
 
       {!loading && !loadError && vehicle && (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full h-auto flex flex-row gap-0 p-0 bg-transparent border-b border-border rounded-none overflow-x-auto flex-nowrap">
+          <TabsList className="w-full h-auto flex flex-row flex-nowrap items-stretch justify-start gap-0 p-0 bg-transparent border-b border-border rounded-none overflow-x-auto">
             <TabsTrigger value="info" className={triggerClassName}>
               <Info className="h-4 w-4" />
               {t("vehicles.tabs.info")}
