@@ -15,6 +15,7 @@ interface WelcomeCredentialsEmailProps {
   loginUrl: string;
   appName: string;
   language?: string;
+  organizationName: string;
 }
 
 export const WelcomeCredentialsEmail = ({
@@ -23,6 +24,7 @@ export const WelcomeCredentialsEmail = ({
   temporaryPassword,
   loginUrl,
   appName,
+  organizationName,
   language,
 }: WelcomeCredentialsEmailProps) => {
   const translations = getEmailTranslations(language);
@@ -40,7 +42,7 @@ export const WelcomeCredentialsEmail = ({
       </Text>
 
       <Text className="text-black text-[14px] leading-[24px] mt-4">
-        {t.body}
+        {interpolateTemplate(t.body, { appName, organizationName })}
       </Text>
 
       <Section className="bg-gray-50 border border-gray-200 rounded-md p-6 my-6">

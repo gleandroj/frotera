@@ -19,7 +19,7 @@ export const emailTranslations = {
   welcomeCredentials: {
     subject: 'Bem-vindo ao {{appName}} — suas credenciais de acesso',
     greeting: 'Olá {{name}},',
-    body: 'Sua conta foi criada no {{appName}}. Use as credenciais abaixo para fazer seu primeiro acesso:',
+    body: 'Sua conta foi criada no {{appName}} para a organização {{organizationName}}. Use as credenciais abaixo para fazer seu primeiro acesso:',
     loginLabel: 'E-mail de acesso',
     passwordLabel: 'Senha temporária',
     warning: 'Por segurança, você será solicitado a criar uma nova senha no primeiro login.',

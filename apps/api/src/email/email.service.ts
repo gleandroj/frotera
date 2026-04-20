@@ -187,6 +187,7 @@ export class EmailService implements OnModuleInit {
     temporaryPassword,
     loginUrl,
     language,
+    organizationName,
   }: {
     to: string;
     name?: string | null;
@@ -194,6 +195,7 @@ export class EmailService implements OnModuleInit {
     temporaryPassword: string;
     loginUrl: string;
     language?: string;
+    organizationName: string;
   }) {
     const appName = this.configService.get("APP_NAME", "Frotera");
     const translations = getEmailTranslations(language);
@@ -205,6 +207,7 @@ export class EmailService implements OnModuleInit {
         temporaryPassword,
         loginUrl,
         appName,
+        organizationName,
         language,
       })
     );
