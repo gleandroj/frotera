@@ -67,7 +67,9 @@ export function AppSidebar() {
   const canEditCompanySettings = can(Module.COMPANIES, Action.EDIT);
   const canViewDashboard = can(Module.DASHBOARD, Action.VIEW);
   const canViewVehicles = can(Module.VEHICLES, Action.VIEW);
-  const canViewChecklist = can(Module.CHECKLIST, Action.VIEW);
+  const canViewChecklist =
+    can(Module.CHECKLIST, Action.VIEW) ||
+    can(Module.CHECKLIST_TEMPLATES, Action.VIEW);
   const canViewIncidents = can(Module.INCIDENTS, Action.VIEW);
   const canViewDrivers = can(Module.DRIVERS, Action.VIEW);
   const canViewDocuments = can(Module.DOCUMENTS, Action.VIEW);

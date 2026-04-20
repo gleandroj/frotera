@@ -84,8 +84,9 @@ export default function ChecklistPage() {
   const searchParams = useSearchParams();
   const { currentOrganization, selectedCustomerId } = useAuth();
   const { can, getScope } = usePermissions();
-  const canManageTemplates = can(Module.CHECKLIST, Action.EDIT);
-  const canDeleteTemplates = can(Module.CHECKLIST, Action.DELETE);
+  const canCreateTemplates = can(Module.CHECKLIST_TEMPLATES, Action.CREATE);
+  const canEditTemplates = can(Module.CHECKLIST_TEMPLATES, Action.EDIT);
+  const canDeleteTemplates = can(Module.CHECKLIST_TEMPLATES, Action.DELETE);
   const canFillChecklist = can(Module.CHECKLIST, Action.CREATE);
   const isChecklistAssignedScope = getScope(Module.CHECKLIST) === Scope.ASSIGNED;
 
@@ -365,7 +366,7 @@ export default function ChecklistPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {canManageTemplates && (
+                {canEditTemplates && (
                   <DropdownMenuItem
                     onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
                   >
@@ -511,7 +512,7 @@ export default function ChecklistPage() {
               {t("checklist.reportsLink")}
             </Button>
           )}
-          {activeTab === "templates" && canManageTemplates && (
+          {activeTab === "templates" && canCreateTemplates && (
             <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               {t("checklist.newTemplate")}

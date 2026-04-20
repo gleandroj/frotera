@@ -38,7 +38,7 @@ export class ChecklistController {
   // ─── Templates ──────────────────────────────────────────────────────────────
 
   @Get("templates")
-  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
+  @Permission(RoleModuleEnum.CHECKLIST_TEMPLATES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Listar templates de checklist" })
   listTemplates(
     @Param("organizationId") organizationId: string,
@@ -53,7 +53,7 @@ export class ChecklistController {
   }
 
   @Post("templates")
-  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.EDIT)
+  @Permission(RoleModuleEnum.CHECKLIST_TEMPLATES, RoleActionEnum.CREATE)
   @ApiOperation({ summary: "Criar template de checklist" })
   createTemplate(
     @Param("organizationId") organizationId: string,
@@ -64,7 +64,7 @@ export class ChecklistController {
   }
 
   @Get("templates/:templateId")
-  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
+  @Permission(RoleModuleEnum.CHECKLIST_TEMPLATES, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Buscar template por ID" })
   getTemplate(
     @Param("organizationId") organizationId: string,
@@ -75,7 +75,7 @@ export class ChecklistController {
   }
 
   @Patch("templates/:templateId")
-  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.EDIT)
+  @Permission(RoleModuleEnum.CHECKLIST_TEMPLATES, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Atualizar template" })
   updateTemplate(
     @Param("organizationId") organizationId: string,
@@ -92,7 +92,7 @@ export class ChecklistController {
   }
 
   @Delete("templates/:templateId")
-  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.DELETE)
+  @Permission(RoleModuleEnum.CHECKLIST_TEMPLATES, RoleActionEnum.DELETE)
   @ApiOperation({ summary: "Excluir/desativar template" })
   deleteTemplate(
     @Param("organizationId") organizationId: string,
