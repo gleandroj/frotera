@@ -16,11 +16,22 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
-# Optional Sentry source map upload (pass via --build-arg)
+# Public vars baked into the bundle at build time
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_FACEBOOK_APP_ID
+ARG NEXT_PUBLIC_SENTRY_DSN
+# Sentry source map upload (pass via --build-arg)
+ARG SENTRY_DSN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_ORG=$SENTRY_ORG \
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_FACEBOOK_APP_ID=$NEXT_PUBLIC_FACEBOOK_APP_ID \
+    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
+    SENTRY_DSN=$SENTRY_DSN \
+    SENTRY_ORG=$SENTRY_ORG \
     SENTRY_PROJECT=$SENTRY_PROJECT \
     SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 RUN pnpm --filter @gleandroj/shared build
