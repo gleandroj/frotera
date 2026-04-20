@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -48,11 +47,11 @@ import {
 import { useAuth } from "@/lib/hooks/use-auth";
 import { rolesAPI, type Role } from "@/lib/api/roles";
 import {
-  describeRole,
-  summarizeRolePermissions,
   summarizeRoleScope,
 } from "./role-display";
-import { RefreshCw, Search } from "lucide-react";
+import { RoleHelpPanel } from "./role-help-panel";
+import { cn } from "@/lib/utils";
+import { PanelRightClose, PanelRightOpen, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -208,10 +207,10 @@ export function MemberCreateSheet({
   const fullAccess = form.watch("fullAccess");
   const customerIds = form.watch("customerIds");
   const sendCredentials = form.watch("sendCredentials");
+  const [expanded, setExpanded] = useState(false);
   const selectedRole = roles.find((role) => role.id === form.watch("roleId"));
   const scopeSummary = summarizeRoleScope(t, selectedRole);
   const hasAssignedScope = scopeSummary.hasAssignedScope;
-  const rolePermissionSummary = summarizeRolePermissions(t, selectedRole);
 
   const loadCustomers = useCallback(() => {
     if (!currentOrganization?.id) return;
@@ -299,6 +298,7 @@ export function MemberCreateSheet({
       setSelectedDriverIds([]);
       setVehicleSearch("");
       setDriverSearch("");
+      setExpanded(false);
     }
   }, [open]);
 
@@ -398,7 +398,12 @@ export function MemberCreateSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
+      <SheetContent
+        className={cn(
+          "overflow-y-auto transition-[max-width] duration-300",
+          expanded ? "sm:max-w-5xl" : "sm:max-w-2xl",
+        )}
+      >
         <SheetHeader>
           <SheetTitle>{t("team.createUserDialog.newUserPageTitle")}</SheetTitle>
           <SheetDescription>
@@ -408,12 +413,24 @@ export function MemberCreateSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
-            className="space-y-6 mt-6"
-            autoComplete="off"
-          >
+        <button
+          type="button"
+          className="absolute right-12 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          onClick={() => setExpanded((v) => !v)}
+          title={expanded ? t("team.roleContext.collapsePanel") : t("team.roleContext.expandPanel")}
+        >
+          {expanded
+            ? <PanelRightClose className="h-4 w-4" />
+            : <PanelRightOpen className="h-4 w-4" />}
+        </button>
+
+        <div className={cn("mt-6", expanded && "grid grid-cols-[1fr_300px] gap-6 items-start")}>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
+              className="space-y-6"
+              autoComplete="off"
+            >
             <Card>
               <CardHeader>
                 <CardTitle>{t("team.createUserDialog.title")}</CardTitle>
@@ -485,41 +502,9 @@ export function MemberCreateSheet({
                   )}
                 />
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{t("team.roleContext.title")}</CardTitle>
-                    <CardDescription>{describeRole(t, selectedRole)}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{t("team.roleContext.scopeTitle")}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {scopeSummary.labels.length === 0 ? (
-                          <span className="text-sm text-muted-foreground">{t("team.roleContext.noScopeDefined")}</span>
-                        ) : (
-                          scopeSummary.labels.map((scope) => (
-                            <Badge key={scope} variant="secondary">
-                              {scope}
-                            </Badge>
-                          ))
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{scopeSummary.explanation}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{t("team.roleContext.permissionsTitle")}</p>
-                      {rolePermissionSummary.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t("team.roleContext.noPermissions")}</p>
-                      ) : (
-                        rolePermissionSummary.map((line) => (
-                          <p key={line} className="text-sm text-muted-foreground">
-                            {line}
-                          </p>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {!expanded && (
+                  <RoleHelpPanel role={selectedRole} t={t} />
+                )}
 
                 {sendCredentials ? (
                   <div className="rounded-md border bg-muted/40 p-4 space-y-2">
@@ -991,7 +976,14 @@ export function MemberCreateSheet({
               </CardContent>
             </Card>
           </form>
-        </Form>
+          </Form>
+
+          {expanded && (
+            <div className="sticky top-0 pt-0">
+              <RoleHelpPanel role={selectedRole} t={t} />
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );

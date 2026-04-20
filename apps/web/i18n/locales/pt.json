@@ -1407,7 +1407,9 @@
         "admin": "Papel com controle amplo sobre configurações e operação da organização.",
         "owner": "Papel com controle máximo da organização, incluindo gestão de usuários e configurações críticas.",
         "custom": "Papel personalizado. Revise as permissões e escopos abaixo para entender o nível de acesso."
-      }
+      },
+      "expandPanel": "Ver detalhes do papel",
+      "collapsePanel": "Recolher detalhes"
     },
     "table": {
       "name": "Nome",
