@@ -37,16 +37,6 @@ export const emailTranslations = {
     disclaimer: 'Se você não solicitou esta redefinição de senha, ignore este e-mail. Sua senha permanecerá inalterada.',
     regards: 'Atenciosamente,\nEquipe {{appName}}'
   },
-  invitation: {
-    subject: 'Você foi convidado para participar da {{organizationName}} no {{appName}}',
-    greeting: 'Olá,',
-    body: '{{inviterName}} ({{inviterEmail}}) convidou você para participar da {{organizationName}} no {{appName}}.',
-    instruction: 'Clique no botão abaixo para aceitar o convite:',
-    buttonText: 'Aceitar Convite',
-    footer: 'Se você não esperava este convite, pode ignorar este e-mail com segurança.',
-    alternativeText: 'Se o botão acima não funcionar, você também pode copiar e colar este link em seu navegador:',
-    regards: 'Atenciosamente,\nEquipe {{appName}}'
-  },
   calendarEvent: {
     appointment: {
       subject: 'Convite para Compromisso: {{eventTitle}}',
