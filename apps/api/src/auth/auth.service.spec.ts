@@ -26,7 +26,7 @@ const mockJwt: any = {
   verify: jest.fn(),
 };
 const mockConfig: any = {
-  get: jest.fn((k: string) => ({ JWT_SECRET: 's', JWT_REFRESH_SECRET: 'r', FRONTEND_URL: 'http://localhost:3000', APP_NAME: 'App' }[k])),
+  get: jest.fn((k: string) => ({ JWT_SECRET: 's', JWT_REFRESH_SECRET: 'r', APP_URL: 'http://localhost:3000', APP_NAME: 'App' }[k])),
 };
 const mockToken: any = {
   generateVerificationToken: jest.fn().mockReturnValue('vtok'),

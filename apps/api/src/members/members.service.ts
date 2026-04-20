@@ -245,7 +245,7 @@ export class MembersService {
       return created;
     });
 
-    const loginUrl = `${process.env.FRONTEND_URL || ""}/login`;
+    const loginUrl = `${process.env.APP_URL || ""}/login`;
     this.emailService
       .sendAccountCreatedEmail({ to: user.email, name: user.name, loginUrl, language: "pt" })
       .catch((err) => {

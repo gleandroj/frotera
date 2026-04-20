@@ -477,7 +477,7 @@ export class AuthService {
     });
 
     // Send password reset email
-    const appUrl = this.configService.get<string>("FRONTEND_URL");
+    const appUrl = this.configService.get<string>("APP_URL");
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
     await this.emailService.sendPasswordResetEmail({
@@ -562,7 +562,7 @@ export class AuthService {
     const token = this.tokenService.generateVerificationToken({
       email: user.email,
     });
-    const appUrl = this.configService.get<string>("FRONTEND_URL");
+    const appUrl = this.configService.get<string>("APP_URL");
     const verifyUrl = `${appUrl}/verify-email?token=${token}`;
     await this.emailService.sendVerificationEmail({
       to: user.email,
