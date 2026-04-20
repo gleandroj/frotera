@@ -1566,9 +1566,28 @@
     "sectionPersonal": "Dados Pessoais",
     "sectionCnh": "Habilitação (CNH)",
     "vehicleAssignments": "Veículos vinculados",
+    "assignVehicle": "Vincular veículo",
+    "vehicle": "Veículo",
+    "selectVehicle": "Selecione o veículo",
+    "assignmentStartDate": "Data de início",
+    "assignmentEndDate": "Data de fim",
+    "indeterminatePeriod": "Período indeterminado",
+    "indeterminatePeriodHint": "Quando ativo, o vínculo ficará sem data de fim.",
+    "indeterminateShort": "Indeterminado",
+    "primaryAssignmentHint": "Vínculo principal do motorista para o período selecionado.",
+    "endAssignment": "Encerrar vínculo",
+    "endAssignmentConfirm": "Tem certeza que deseja encerrar este vínculo agora?",
     "primary": "Principal",
     "assignmentActive": "Ativo",
     "assignmentEnded": "Encerrado",
+    "assignmentCreated": "Vínculo criado com sucesso.",
+    "assignmentEndedSuccess": "Vínculo encerrado com sucesso.",
+    "assignmentErrors": {
+      "requiredFields": "Selecione o veículo e a data de início.",
+      "invalidPeriod": "Período inválido. A data de fim deve ser maior que a data de início.",
+      "overlap": "Já existe vínculo para este motorista e veículo no período informado.",
+      "primaryOverlap": "Já existe vínculo principal deste motorista no período informado."
+    },
     "confirmDelete": {
       "title": "Excluir motorista",
       "description": "Tem certeza que deseja excluir este motorista? O registro será inativado (não removido permanentemente)."

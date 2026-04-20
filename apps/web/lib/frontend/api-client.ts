@@ -1135,7 +1135,7 @@ export const driversAPI = {
   assignVehicle: (
     organizationId: string,
     driverId: string,
-    payload: { vehicleId: string; isPrimary?: boolean }
+    payload: { vehicleId: string; isPrimary?: boolean; startDate?: string; endDate?: string }
   ) =>
     externalApi.post(
       `/api/organizations/${organizationId}/drivers/${driverId}/assign-vehicle`,

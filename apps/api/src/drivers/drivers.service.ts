@@ -283,6 +283,8 @@ export class DriversService {
     organizationId: string,
     dto: AssignVehicleDto,
   ): Promise<DriverVehicleAssignmentResponseDto> {
+    const { startDate, endDate } = this.parseAssignmentPeriod(dto);
+
     // Verificar que motorista e veículo pertencem à mesma organização
     const [driver, vehicle] = await Promise.all([
       this.prisma.driver.findFirst({ where: { id: driverId, organizationId, active: true } }),
@@ -292,20 +294,32 @@ export class DriversService {
     if (!driver) throw new NotFoundException(ApiCode.DRIVER_NOT_FOUND);
     if (!vehicle) throw new NotFoundException(ApiCode.VEHICLE_NOT_FOUND);
 
-    // Verificar se já existe vínculo ativo com este veículo
-    const existingActive = await this.prisma.driverVehicleAssignment.findFirst({
-      where: { driverId, vehicleId: dto.vehicleId, endDate: null },
+    const overlapWhere = this.buildOverlapWhere({
+      driverId,
+      startDate,
+      endDate,
+      vehicleId: dto.vehicleId,
     });
-    if (existingActive) {
-      throw new ConflictException(ApiCode.COMMON_ALREADY_EXISTS);
+
+    const overlappingAssignment = await this.prisma.driverVehicleAssignment.findFirst({
+      where: overlapWhere,
+    });
+    if (overlappingAssignment) {
+      throw new ConflictException(ApiCode.DRIVER_ASSIGNMENT_OVERLAP);
     }
 
-    // Se isPrimary = true, encerrar outros vínculos primários ativos deste motorista
     if (dto.isPrimary) {
-      await this.prisma.driverVehicleAssignment.updateMany({
-        where: { driverId, isPrimary: true, endDate: null },
-        data: { endDate: new Date() },
+      const overlappingPrimary = await this.prisma.driverVehicleAssignment.findFirst({
+        where: this.buildOverlapWhere({
+          driverId,
+          startDate,
+          endDate,
+          isPrimary: true,
+        }),
       });
+      if (overlappingPrimary) {
+        throw new ConflictException(ApiCode.DRIVER_PRIMARY_ASSIGNMENT_OVERLAP);
+      }
     }
 
     const assignment = await this.prisma.driverVehicleAssignment.create({
@@ -313,7 +327,8 @@ export class DriversService {
         driverId,
         vehicleId: dto.vehicleId,
         isPrimary: dto.isPrimary ?? false,
-        startDate: new Date(),
+        startDate,
+        endDate,
       },
       include: { vehicle: { select: { id: true, name: true, plate: true } } },
     });
@@ -406,6 +421,46 @@ export class DriversService {
       endDate: assignment.endDate?.toISOString() ?? null,
       isPrimary: assignment.isPrimary,
       vehicle: assignment.vehicle ?? undefined,
+    };
+  }
+
+  private parseAssignmentPeriod(dto: AssignVehicleDto): { startDate: Date; endDate: Date | null } {
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    const endDate = dto.endDate ? new Date(dto.endDate) : null;
+
+    if (Number.isNaN(startDate.getTime()) || (endDate && Number.isNaN(endDate.getTime()))) {
+      throw new BadRequestException(ApiCode.DRIVER_ASSIGNMENT_INVALID_PERIOD);
+    }
+
+    if (endDate && endDate <= startDate) {
+      throw new BadRequestException(ApiCode.DRIVER_ASSIGNMENT_INVALID_PERIOD);
+    }
+
+    return { startDate, endDate };
+  }
+
+  private buildOverlapWhere(params: {
+    driverId: string;
+    startDate: Date;
+    endDate: Date | null;
+    vehicleId?: string;
+    isPrimary?: boolean;
+  }) {
+    const intervalEnd = params.endDate ?? new Date('9999-12-31T23:59:59.999Z');
+
+    return {
+      driverId: params.driverId,
+      ...(params.vehicleId ? { vehicleId: params.vehicleId } : {}),
+      ...(params.isPrimary !== undefined ? { isPrimary: params.isPrimary } : {}),
+      AND: [
+        { startDate: { lte: intervalEnd } },
+        {
+          OR: [
+            { endDate: null },
+            { endDate: { gte: params.startDate } },
+          ],
+        },
+      ],
     };
   }
 }

@@ -5,15 +5,27 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { driversAPI, type Driver } from "@/lib/frontend/api-client";
+import { driversAPI, type Driver, type DriverVehicleAssignment } from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
 import { DriverFormDialog } from "../driver-form-dialog";
-import { Pencil, ArrowLeft } from "lucide-react";
+import { Pencil, ArrowLeft, Link2, Unlink } from "lucide-react";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
+import { AssignVehicleDialog } from "../assign-vehicle-dialog";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function DriverDetailPage() {
   const { t } = useTranslation();
@@ -25,6 +37,9 @@ export default function DriverDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
+  const [assignmentToUnassign, setAssignmentToUnassign] = useState<DriverVehicleAssignment | null>(null);
 
   const fetchDriver = () => {
     if (!currentOrganization?.id || !params.driverId) return;
@@ -42,6 +57,21 @@ export default function DriverDetailPage() {
   }, [currentOrganization?.id, params.driverId]);
 
   if (loading) return <SkeletonTable />;
+
+  const handleUnassign = async () => {
+    if (!currentOrganization?.id || !assignmentToUnassign) return;
+    setUnassigning(true);
+    try {
+      await driversAPI.unassignVehicle(currentOrganization.id, driver.id, assignmentToUnassign.vehicleId);
+      toast.success(t("drivers.assignmentEndedSuccess"));
+      setAssignmentToUnassign(null);
+      fetchDriver();
+    } catch {
+      toast.error(t("drivers.toastError"));
+    } finally {
+      setUnassigning(false);
+    }
+  };
 
   if (error || !driver) {
     return (
@@ -71,10 +101,16 @@ export default function DriverDetailPage() {
             <p className="text-muted-foreground">{t("drivers.driverInformation")}</p>
           </div>
         </div>
-        <Button onClick={() => setEditOpen(true)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          {t("common.edit")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
+            <Link2 className="mr-2 h-4 w-4" />
+            {t("drivers.assignVehicle")}
+          </Button>
+          <Button onClick={() => setEditOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            {t("common.edit")}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -139,19 +175,28 @@ export default function DriverDetailPage() {
             <CardContent>
               <ul className="space-y-2">
                 {driver.vehicleAssignments.map((a) => (
-                  <li key={a.id} className="flex items-center gap-3 text-sm">
+                  <li key={a.id} className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="font-mono">{a.vehicle?.plate ?? a.vehicleId}</span>
-                    <span className="text-muted-foreground">
-                      {a.vehicle?.name ?? ""}
+                    <span className="text-muted-foreground">{a.vehicle?.name ?? ""}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(a.startDate).toLocaleDateString("pt-BR")}
+                      {" - "}
+                      {a.endDate ? new Date(a.endDate).toLocaleDateString("pt-BR") : t("drivers.indeterminateShort")}
                     </span>
-                    {a.isPrimary && (
-                      <Badge variant="outline">{t("drivers.primary")}</Badge>
-                    )}
+                    {a.isPrimary && <Badge variant="outline">{t("drivers.primary")}</Badge>}
+                    {!a.endDate && <Badge variant="default">{t("drivers.assignmentActive")}</Badge>}
+                    {a.endDate && <Badge variant="secondary">{t("drivers.assignmentEnded")}</Badge>}
                     {!a.endDate && (
-                      <Badge variant="default">{t("drivers.assignmentActive")}</Badge>
-                    )}
-                    {a.endDate && (
-                      <Badge variant="secondary">{t("drivers.assignmentEnded")}</Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="ml-auto"
+                        onClick={() => setAssignmentToUnassign(a)}
+                      >
+                        <Unlink className="mr-2 h-4 w-4" />
+                        {t("drivers.endAssignment")}
+                      </Button>
                     )}
                   </li>
                 ))}
@@ -168,6 +213,30 @@ export default function DriverDetailPage() {
         organizationId={currentOrganization!.id}
         onSuccess={() => { setEditOpen(false); fetchDriver(); }}
       />
+      <AssignVehicleDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        organizationId={currentOrganization!.id}
+        driverId={driver.id}
+        onSuccess={fetchDriver}
+      />
+      <AlertDialog
+        open={!!assignmentToUnassign}
+        onOpenChange={(open) => !open && setAssignmentToUnassign(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("drivers.endAssignment")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("drivers.endAssignmentConfirm")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unassigning}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnassign} disabled={unassigning}>
+              {t("common.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

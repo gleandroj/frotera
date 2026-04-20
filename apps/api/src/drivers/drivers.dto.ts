@@ -123,6 +123,16 @@ export class AssignVehicleDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean;
+
+  @ApiPropertyOptional({ description: 'Data/hora de início do vínculo (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ description: 'Data/hora de fim do vínculo (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }
 
 export class DriverVehicleAssignmentResponseDto {
