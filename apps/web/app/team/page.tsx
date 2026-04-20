@@ -112,11 +112,11 @@ export default function TeamPage() {
     try {
       await organizationAPI.enableMember(currentOrganization.id, memberId);
       setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, isActive: true } : m)));
-      toast.success("Usuário reabilitado", {
-        description: "O usuário foi reabilitado com sucesso.",
+      toast.success(t('team.toastMessages.memberEnabled'), {
+        description: t('team.toastMessages.memberEnabledDescription'),
       });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || "Falha ao reabilitar usuário";
+      const errorMessage = err.response?.data?.message || err.message || t('team.errorMessages.failedToEnableMember');
       toast.error(t('team.toastMessages.error'), { description: errorMessage });
     }
   };
@@ -164,13 +164,13 @@ export default function TeamPage() {
   };
 
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return t('common.notAvailable');
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "N/A";
+      if (isNaN(date.getTime())) return t('common.notAvailable');
       return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
     } catch {
-      return "N/A";
+      return t('common.notAvailable');
     }
   };
 
@@ -207,7 +207,7 @@ export default function TeamPage() {
               checked={showInactive}
               onChange={(e) => setShowInactive(e.target.checked)}
             />
-            Mostrar desabilitados
+            {t('team.showInactive')}
           </label>
         </div>
         {canManageTeam && (
@@ -283,7 +283,7 @@ export default function TeamPage() {
                         <span className="font-medium">{member.user.name || t('team.noName')}</span>
                         {member.isActive === false && (
                           <Badge variant="secondary" className="text-xs">
-                            Desabilitado
+                            {t('team.inactiveBadge')}
                           </Badge>
                         )}
                       </div>
@@ -348,7 +348,7 @@ export default function TeamPage() {
                             )}
                             {canEnableTeam && member.isActive === false && (
                               <DropdownMenuItem onClick={() => enableMember(member.id)}>
-                                Reabilitar usuário
+                                {t('team.actions.enableMember')}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

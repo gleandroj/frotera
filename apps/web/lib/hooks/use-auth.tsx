@@ -8,6 +8,7 @@ import { toast } from "sonner"
 
 export interface OrganizationRole {
   id: string
+  key?: string
   name: string
   description?: string | null
   isSystem: boolean
@@ -223,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Force password change before accessing the app
       if (response.data.user.mustChangePassword) {
-        router.push("/alterar-senha")
+        router.push("/change-password")
         return response
       }
 

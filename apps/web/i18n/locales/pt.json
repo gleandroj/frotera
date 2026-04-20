@@ -502,6 +502,31 @@
         "description": "Este link de redefinição de senha é inválido ou expirou.",
         "requestNewLink": "Solicitar Novo Link",
         "backToLogin": "Voltar ao Login"
+      },
+      "toast": {
+        "invalidResetLink": "Link de redefinição inválido.",
+        "passwordsDoNotMatch": "As senhas não coincidem.",
+        "invalidResetToken": "Token de redefinição inválido.",
+        "failedToResetPassword": "Falha ao redefinir senha."
+      }
+    },
+    "changePasswordRequired": {
+      "title": "Alterar Senha",
+      "description": "Você está usando uma senha temporária. Crie uma nova senha para continuar.",
+      "currentPassword": "Senha temporária (atual)",
+      "currentPasswordPlaceholder": "Digite a senha temporária recebida",
+      "newPassword": "Nova senha",
+      "newPasswordPlaceholder": "Mínimo 8 caracteres",
+      "confirmNewPassword": "Confirmar nova senha",
+      "confirmNewPasswordPlaceholder": "Repita a nova senha",
+      "submit": "Alterar Senha",
+      "changing": "Alterando...",
+      "toast": {
+        "newPasswordMinLength": "A nova senha deve ter pelo menos 8 caracteres.",
+        "passwordsDoNotMatch": "As senhas não coincidem.",
+        "passwordChangedSuccessfully": "Senha alterada com sucesso!",
+        "currentPasswordIncorrect": "Senha atual incorreta.",
+        "failedToChangePassword": "Falha ao alterar a senha. Tente novamente."
       }
     },
     "branding": {
@@ -1339,6 +1364,8 @@
     "backToTeam": "Voltar aos usuários",
     "members": "Usuários",
     "invitations": "Convites",
+    "showInactive": "Mostrar desabilitados",
+    "inactiveBadge": "Desabilitado",
     "joined": "Entrou em",
     "noName": "Sem nome",
     "inviteMember": "Convidar Membro",
@@ -1415,6 +1442,7 @@
       "editMember": "Editar Membro",
       "promoteToAdmin": "Promover a Administrador",
       "demoteToMember": "Rebaixar a Membro",
+      "enableMember": "Reabilitar usuário",
       "removeMember": "Remover Membro",
       "resend": "Reenviar",
       "revoke": "Revogar"
@@ -1468,7 +1496,9 @@
       "invitationRevoked": "Convite revogado",
       "invitationRevokedDescription": "O convite foi revogado com sucesso",
       "userCreated": "Usuário criado",
-      "userCreatedDescription": "O usuário foi criado e já pode fazer login."
+      "userCreatedDescription": "O usuário foi criado e já pode fazer login.",
+      "memberEnabled": "Usuário reabilitado",
+      "memberEnabledDescription": "O usuário foi reabilitado com sucesso."
     },
     "errorMessages": {
       "failedToLoadMembers": "Falha ao carregar usuários",
@@ -1479,6 +1509,7 @@
       "failedToSendInvitation": "Falha ao enviar convite",
       "failedToResendInvitation": "Falha ao reenviar convite",
       "failedToRevokeInvitation": "Falha ao revogar convite",
+      "failedToEnableMember": "Falha ao reabilitar usuário",
       "failedToCreateUser": "Falha ao criar usuário",
       "invitationAlreadySent": "Convite já enviado",
       "invitationAlreadySentDescription": "Um convite já foi enviado para este email",

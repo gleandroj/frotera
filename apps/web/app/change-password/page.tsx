@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n/useTranslation";
 import { authAPI } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { AxiosError } from "axios";
@@ -17,7 +18,8 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { toast } from "sonner";
 
-export default function AlterarSenhaPage() {
+export default function ChangePasswordPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { refreshUser } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -29,12 +31,12 @@ export default function AlterarSenhaPage() {
     e.preventDefault();
 
     if (newPassword.length < 8) {
-      toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+      toast.error(t("auth.changePasswordRequired.toast.newPasswordMinLength"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
+      toast.error(t("auth.changePasswordRequired.toast.passwordsDoNotMatch"));
       return;
     }
 
@@ -42,18 +44,18 @@ export default function AlterarSenhaPage() {
     try {
       await authAPI.changePassword(currentPassword, newPassword);
       await refreshUser();
-      toast.success("Senha alterada com sucesso!");
+      toast.success(t("auth.changePasswordRequired.toast.passwordChangedSuccessfully"));
       router.push("/dashboard");
     } catch (error) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
         if (status === 401) {
-          toast.error("Senha atual incorreta.");
+          toast.error(t("auth.changePasswordRequired.toast.currentPasswordIncorrect"));
         } else {
-          toast.error("Falha ao alterar a senha. Tente novamente.");
+          toast.error(t("auth.changePasswordRequired.toast.failedToChangePassword"));
         }
       } else {
-        toast.error("Falha ao alterar a senha. Tente novamente.");
+        toast.error(t("auth.changePasswordRequired.toast.failedToChangePassword"));
       }
     } finally {
       setIsLoading(false);
@@ -67,23 +69,23 @@ export default function AlterarSenhaPage() {
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
             <div className="w-6 h-6 bg-white rounded"></div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">RS Frotas</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("auth.branding.companyName")}</h1>
         </div>
 
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-gray-900/80">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              Alterar Senha
+              {t("auth.changePasswordRequired.title")}
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Você está usando uma senha temporária. Crie uma nova senha para continuar.
+              {t("auth.changePasswordRequired.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Senha temporária (atual)
+                  {t("auth.changePasswordRequired.currentPassword")}
                 </Label>
                 <Input
                   id="currentPassword"
@@ -91,14 +93,14 @@ export default function AlterarSenhaPage() {
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Digite a senha temporária recebida"
+                  placeholder={t("auth.changePasswordRequired.currentPasswordPlaceholder")}
                   className="h-12 px-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nova senha
+                  {t("auth.changePasswordRequired.newPassword")}
                 </Label>
                 <Input
                   id="newPassword"
@@ -106,14 +108,14 @@ export default function AlterarSenhaPage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t("auth.changePasswordRequired.newPasswordPlaceholder")}
                   className="h-12 px-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Confirmar nova senha
+                  {t("auth.changePasswordRequired.confirmNewPassword")}
                 </Label>
                 <Input
                   id="confirmPassword"
@@ -121,7 +123,7 @@ export default function AlterarSenhaPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a nova senha"
+                  placeholder={t("auth.changePasswordRequired.confirmNewPasswordPlaceholder")}
                   className="h-12 px-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                 />
               </div>
@@ -134,10 +136,10 @@ export default function AlterarSenhaPage() {
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Alterando...</span>
+                    <span>{t("auth.changePasswordRequired.changing")}</span>
                   </div>
                 ) : (
-                  "Alterar Senha"
+                  t("auth.changePasswordRequired.submit")
                 )}
               </Button>
             </form>

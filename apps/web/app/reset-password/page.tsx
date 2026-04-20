@@ -32,21 +32,21 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      toast.error("Invalid reset link");
+      toast.error(t("auth.resetPassword.toast.invalidResetLink"));
       router.push("/forgot-password");
     }
-  }, [token, router]);
+  }, [token, router, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t("auth.resetPassword.toast.passwordsDoNotMatch"));
       return;
     }
 
     if (!token) {
-      toast.error("Invalid reset token");
+      toast.error(t("auth.resetPassword.toast.invalidResetToken"));
       return;
     }
 
@@ -59,9 +59,9 @@ export default function ResetPasswordPage() {
     } catch (error) {
       if (error instanceof AxiosError) {
         const errorData = error.response?.data;
-        toast.error(errorData?.error || "Failed to reset password");
+        toast.error(errorData?.error || t("auth.resetPassword.toast.failedToResetPassword"));
       } else {
-        toast.error("Failed to reset password");
+        toast.error(t("auth.resetPassword.toast.failedToResetPassword"));
       }
     } finally {
       setIsLoading(false);
