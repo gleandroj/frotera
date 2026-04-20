@@ -29,7 +29,8 @@ export interface NormalizedPosition {
   altitude?: number;
   speed?: number;
   heading?: number;
-  recordedAt: string; // ISO string
+  recordedAt: string; // ISO string — device clock (may be unreliable)
+  receivedAt?: string; // ISO string — server wall clock when packet arrived
   alarmFlags?: number;
   // GT06 status fields
   ignitionOn?: boolean;

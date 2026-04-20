@@ -37,6 +37,7 @@ export class TrackerRedisWriterService {
     const spd = position.speed != null ? String(position.speed) : "";
     const hdg = position.heading != null ? String(position.heading) : "";
     const rec = position.recordedAt;
+    const rcv = new Date().toISOString();
     const alarm = position.alarmFlags != null ? String(position.alarmFlags) : "";
     const ign = position.ignitionOn != null ? String(position.ignitionOn) : "";
     const volt = position.voltageLevel != null ? String(position.voltageLevel) : "";
@@ -59,6 +60,7 @@ export class TrackerRedisWriterService {
       "speed", spd,
       "heading", hdg,
       "recordedAt", rec,
+      "receivedAt", rcv,
       "alarmFlags", alarm,
       "ignitionOn", ign,
       "voltageLevel", volt,
@@ -79,6 +81,7 @@ export class TrackerRedisWriterService {
       speed: spd,
       heading: hdg,
       recordedAt: rec,
+      receivedAt: rcv,
       deviceId,
       imei,
     });
@@ -139,6 +142,7 @@ export class TrackerRedisWriterService {
       speed: data.speed ? parseFloat(data.speed) : undefined,
       heading: data.heading ? parseFloat(data.heading) : undefined,
       recordedAt: data.recordedAt ?? new Date().toISOString(),
+      receivedAt: data.receivedAt || undefined,
     };
   }
 }

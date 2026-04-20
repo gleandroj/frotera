@@ -496,20 +496,23 @@ export class TelemetryAlertsService {
     const thresholdMs = thresholdMin * 60 * 1000;
     const now = Date.now();
 
-    let recordedAtMs: number | null = null;
+    let lastReceivedAtMs: number | null = null;
     const last = await this.redisWriter.getLastPosition(device.id);
-    if (last?.recordedAt) {
-      recordedAtMs = new Date(last.recordedAt).getTime();
+    if (last?.receivedAt) {
+      lastReceivedAtMs = new Date(last.receivedAt).getTime();
+    } else if (last?.recordedAt) {
+      // Legacy entries written before receivedAt was added — fall back to recordedAt
+      lastReceivedAtMs = new Date(last.recordedAt).getTime();
     } else {
       const lastDb = await this.prisma.devicePosition.findFirst({
         where: { deviceId: device.id },
-        orderBy: { recordedAt: "desc" },
-        select: { recordedAt: true },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
       });
-      if (lastDb) recordedAtMs = lastDb.recordedAt.getTime();
+      if (lastDb) lastReceivedAtMs = lastDb.createdAt.getTime();
     }
 
-    if (recordedAtMs != null && now - recordedAtMs < thresholdMs) {
+    if (lastReceivedAtMs != null && now - lastReceivedAtMs < thresholdMs) {
       return;
     }
 
@@ -521,12 +524,12 @@ export class TelemetryAlertsService {
       deviceId: device.id,
       type: AlertType.DEVICE_OFFLINE,
       severity: AlertSeverity.CRITICAL,
-      message: `Dispositivo sem posição há mais de ${thresholdMin} minutos`,
+      message: `Dispositivo sem comunicação há mais de ${thresholdMin} minutos`,
       metadata: {
         thresholdMinutes: thresholdMin,
-        lastRecordedAt:
-          recordedAtMs != null
-            ? new Date(recordedAtMs).toISOString()
+        lastReceivedAt:
+          lastReceivedAtMs != null
+            ? new Date(lastReceivedAtMs).toISOString()
             : null,
       },
       dedupTtlSec: dedupSec,
