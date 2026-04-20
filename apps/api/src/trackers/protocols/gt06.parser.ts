@@ -540,7 +540,7 @@ export function nmeaDdmmToDecimal(value: number, negate: boolean): number {
  * then this same 18-byte block: 6B date **binary**, 1B GPS info, 4B+4B lat/lng **unsigned** / (30000×60),
  * 1B speed, 2B course/status (bit12=valid, bit10=north, bit11=west).
  *
- * **Short 18-byte** frames (e.g. internal simulator): 6B date **BCD**, signed int32 lat/lng scaled by
+ * **Short 18-byte** frames: 6B date **BCD**, signed int32 lat/lng scaled by
  * 30000 in the wire format, 1B speed (knots), 2B course (heading only is OK).
  *
  * **Other** devices: 6B BCD date, signed int32 / 300000, course bit15=fix, bit14=south, bit13=west.
