@@ -6,5 +6,7 @@
  * Stacked sheets (`hideOverlay`) must stay **below** floating pickers so menus opened
  * from inside a nested sheet still paint above that sheet’s panel.
  */
+/** Sheet/Dialog with dimming overlay — above map UIs (e.g. Leaflet panes/controls ~400–1000). */
+export const Z_MODAL = 1200
 export const Z_SHEET_STACKED = 1400
 export const Z_FLOATING = 1600
