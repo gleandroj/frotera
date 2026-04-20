@@ -98,7 +98,7 @@ const loginPageTranslations = {
   pages: {
     loginPage: {
       welcomeHeader: "Bem-vindo",
-      welcomeMessage: "Painel administrativo do Rotera",
+      welcomeMessage: "Painel administrativo do Frotera",
     },
   },
 };
@@ -377,7 +377,7 @@ const modelNavigationGroups: Record<string, string> = {
                 return baseResource;
               }),
               branding: {
-                companyName: "Rotera Admin",
+                companyName: "Frotera Admin",
                 withMadeWithLove: false,
               },
               locale: {

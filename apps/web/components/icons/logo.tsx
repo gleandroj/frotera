@@ -31,10 +31,10 @@ export function Logo({
   return (
     <div className={`flex flex-col items-start ${className}`}>
       <div className="flex items-baseline gap-0">
-        {/* Ro with gradient */}
+        {/* Fro with gradient */}
         <span className={`${sizeClasses[size]} font-bold`}>
           <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 bg-clip-text text-transparent">
-            Ro
+            Fro
           </span>
         </span>
         {/* tera */}

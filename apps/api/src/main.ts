@@ -93,8 +93,8 @@ async function bootstrap() {
 
   // Swagger setup
   const config = new DocumentBuilder()
-    .setTitle("Rotera API")
-    .setDescription("API do Sistema de Rastreamento e Gestão de Frotas Rotera")
+    .setTitle("Frotera API")
+    .setDescription("API do Sistema de Rastreamento e Gestão de Frotas Frotera")
     .setVersion("1.0")
     .addBearerAuth()
     .build();
