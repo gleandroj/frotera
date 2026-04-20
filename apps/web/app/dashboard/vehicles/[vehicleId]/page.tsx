@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
@@ -15,8 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import type { Vehicle } from "@/lib/frontend/api-client";
-import { ArrowLeft, Info, MapPin, Pencil } from "lucide-react";
+import { ArrowLeft, Info, MapPin, Pencil, ClipboardList, Fuel, FileText, Users, AlertTriangle } from "lucide-react";
 import { VehicleFormDialog } from "../vehicle-form-dialog";
+import { VehicleChecklistsTab } from "./tabs/vehicle-checklists-tab";
+import { VehicleFuelTab } from "./tabs/vehicle-fuel-tab";
+import { VehicleDocumentsTab } from "./tabs/vehicle-documents-tab";
+import { VehicleDriversTab } from "./tabs/vehicle-drivers-tab";
+import { VehicleIncidentsTab } from "./tabs/vehicle-incidents-tab";
 
 const DeviceMapDynamic = dynamic(
   () =>
@@ -63,15 +68,23 @@ function toPositionPoint(p: ApiPosition): PositionPoint {
 export default function VehicleDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const vehicleId = typeof params?.vehicleId === "string" ? params.vehicleId : null;
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
+  const canViewChecklist = can(Module.CHECKLIST, Action.VIEW);
+  const canViewFuel = can(Module.FUEL, Action.VIEW);
+  const canViewDocuments = can(Module.DOCUMENTS, Action.VIEW);
+  const canViewDrivers = can(Module.DRIVERS, Action.VIEW);
+  const canViewIncidents = can(Module.INCIDENTS, Action.VIEW);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [initialHistory, setInitialHistory] = useState<PositionPoint[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") ?? "info");
 
   const deviceId = vehicle?.trackerDevice?.id ?? null;
 
@@ -139,6 +152,16 @@ export default function VehicleDetailPage() {
     };
   }, [vehicleId, currentOrganization?.id, t]);
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (vehicleId) {
+      router.replace(`/dashboard/vehicles/${vehicleId}?tab=${value}`);
+    }
+  };
+
+  const triggerClassName =
+    "rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold shrink-0";
+
   if (!currentOrganization) {
     return (
       <div className="space-y-6">
@@ -158,6 +181,7 @@ export default function VehicleDetailPage() {
   }
 
   const displayName = vehicle?.name ?? vehicle?.plate ?? t("vehicles.vehicle");
+  const orgId = currentOrganization.id;
 
   return (
     <div className="space-y-6">
@@ -179,7 +203,7 @@ export default function VehicleDetailPage() {
               </p>
             </div>
           </div>
-          {vehicle && currentOrganization?.id && canEditVehicle && (
+          {vehicle && canEditVehicle && (
             <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={() => setEditDialogOpen(true)}>
               <Pencil className="h-4 w-4" />
               {t("common.edit")}
@@ -197,23 +221,48 @@ export default function VehicleDetailPage() {
       )}
 
       {!loading && !loadError && vehicle && (
-        <Tabs defaultValue="info" className="w-full">
-          <TabsList className="w-full max-w-md h-auto flex flex-row gap-0 p-0 bg-transparent border-b border-border rounded-none">
-            <TabsTrigger
-              value="info"
-              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold"
-            >
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="w-full h-auto flex flex-row gap-0 p-0 bg-transparent border-b border-border rounded-none overflow-x-auto flex-nowrap">
+            <TabsTrigger value="info" className={triggerClassName}>
               <Info className="h-4 w-4" />
               {t("vehicles.tabs.info")}
             </TabsTrigger>
-            <TabsTrigger
-              value="tracking"
-              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 gap-2 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold"
-            >
+            <TabsTrigger value="tracking" className={triggerClassName}>
               <MapPin className="h-4 w-4" />
               {t("vehicles.tabs.tracking")}
             </TabsTrigger>
+            {canViewChecklist && (
+              <TabsTrigger value="checklists" className={triggerClassName}>
+                <ClipboardList className="h-4 w-4" />
+                {t("vehicles.tabs.checklists")}
+              </TabsTrigger>
+            )}
+            {canViewFuel && (
+              <TabsTrigger value="fuel" className={triggerClassName}>
+                <Fuel className="h-4 w-4" />
+                {t("vehicles.tabs.fuel")}
+              </TabsTrigger>
+            )}
+            {canViewDocuments && (
+              <TabsTrigger value="documents" className={triggerClassName}>
+                <FileText className="h-4 w-4" />
+                {t("vehicles.tabs.documents")}
+              </TabsTrigger>
+            )}
+            {canViewDrivers && (
+              <TabsTrigger value="drivers" className={triggerClassName}>
+                <Users className="h-4 w-4" />
+                {t("vehicles.tabs.drivers")}
+              </TabsTrigger>
+            )}
+            {canViewIncidents && (
+              <TabsTrigger value="incidents" className={triggerClassName}>
+                <AlertTriangle className="h-4 w-4" />
+                {t("vehicles.tabs.incidents")}
+              </TabsTrigger>
+            )}
           </TabsList>
+
           <TabsContent value="info" className="mt-6">
             <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm space-y-6">
               <div>
@@ -395,6 +444,7 @@ export default function VehicleDetailPage() {
               </div>
             </div>
           </TabsContent>
+
           <TabsContent value="tracking" className="mt-6">
             {vehicle.trackerDevice ? (
               <>
@@ -430,6 +480,56 @@ export default function VehicleDetailPage() {
               </div>
             )}
           </TabsContent>
+
+          {canViewChecklist && activeTab === "checklists" && (
+            <TabsContent value="checklists" className="mt-6">
+              <VehicleChecklistsTab
+                vehicleId={vehicleId}
+                organizationId={orgId}
+                customerId={selectedCustomerId}
+              />
+            </TabsContent>
+          )}
+
+          {canViewFuel && activeTab === "fuel" && (
+            <TabsContent value="fuel" className="mt-6">
+              <VehicleFuelTab
+                vehicleId={vehicleId}
+                organizationId={orgId}
+                customerId={selectedCustomerId}
+              />
+            </TabsContent>
+          )}
+
+          {canViewDocuments && activeTab === "documents" && (
+            <TabsContent value="documents" className="mt-6">
+              <VehicleDocumentsTab
+                vehicleId={vehicleId}
+                organizationId={orgId}
+                customerId={selectedCustomerId}
+              />
+            </TabsContent>
+          )}
+
+          {canViewDrivers && activeTab === "drivers" && (
+            <TabsContent value="drivers" className="mt-6">
+              <VehicleDriversTab
+                vehicleId={vehicleId}
+                organizationId={orgId}
+                customerId={selectedCustomerId}
+              />
+            </TabsContent>
+          )}
+
+          {canViewIncidents && activeTab === "incidents" && (
+            <TabsContent value="incidents" className="mt-6">
+              <VehicleIncidentsTab
+                vehicleId={vehicleId}
+                organizationId={orgId}
+                customerId={selectedCustomerId}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       )}
 

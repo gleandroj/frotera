@@ -148,7 +148,10 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Motorista. Preenche checklists e abastecimentos próprios.',
     color: '#D97706',
     permissions: [
+      { module: 'VEHICLES',  actions: ['VIEW'],                 scope: 'ASSIGNED' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ASSIGNED' },
+      { module: 'COMPANIES', actions: ['VIEW'],                 scope: 'ASSIGNED' },
+      { module: 'DRIVERS',   actions: ['VIEW'],                 scope: 'ASSIGNED' },
       { module: 'DOCUMENTS', actions: ['VIEW'],                 scope: 'ASSIGNED' },
       { module: 'CHECKLIST', actions: ['VIEW','CREATE'],        scope: 'ASSIGNED' },
       { module: 'CHECKLIST_TEMPLATES', actions: ['VIEW'],       scope: 'ASSIGNED' },
