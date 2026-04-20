@@ -50,7 +50,7 @@ export default function TeamPage() {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
-  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ALL);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ACTIVE);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
