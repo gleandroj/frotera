@@ -51,6 +51,7 @@ import {
 } from "./role-display";
 import { RoleHelpPanel } from "./role-help-panel";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { PanelRightClose, PanelRightOpen, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -208,6 +209,8 @@ export function MemberCreateSheet({
   const customerIds = form.watch("customerIds");
   const sendCredentials = form.watch("sendCredentials");
   const [expanded, setExpanded] = useState(true);
+  const isMobile = useIsMobile();
+  const showRoleSidePanel = expanded && !isMobile;
   const selectedRole = roles.find((role) => role.id === form.watch("roleId"));
   const scopeSummary = summarizeRoleScope(t, selectedRole);
   const hasAssignedScope = scopeSummary.hasAssignedScope;
@@ -403,7 +406,7 @@ export function MemberCreateSheet({
       <SheetContent
         className={cn(
           "overflow-y-auto transition-[max-width] duration-300",
-          expanded ? "sm:max-w-5xl" : "sm:max-w-2xl",
+          showRoleSidePanel ? "sm:max-w-5xl" : "sm:max-w-2xl",
         )}
       >
         <SheetHeader>
@@ -415,18 +418,20 @@ export function MemberCreateSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <button
-          type="button"
-          className="absolute right-12 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          onClick={() => setExpanded((v) => !v)}
-          title={expanded ? t("team.roleContext.collapsePanel") : t("team.roleContext.expandPanel")}
-        >
-          {expanded
-            ? <PanelRightClose className="h-4 w-4" />
-            : <PanelRightOpen className="h-4 w-4" />}
-        </button>
+        {!isMobile && (
+          <button
+            type="button"
+            className="absolute right-12 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? t("team.roleContext.collapsePanel") : t("team.roleContext.expandPanel")}
+          >
+            {expanded
+              ? <PanelRightClose className="h-4 w-4" />
+              : <PanelRightOpen className="h-4 w-4" />}
+          </button>
+        )}
 
-        <div className={cn("mt-6", expanded && "grid grid-cols-[1fr_300px] gap-6 items-start")}>
+        <div className={cn("mt-6", showRoleSidePanel && "grid grid-cols-[1fr_300px] gap-6 items-start")}>
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
@@ -976,7 +981,7 @@ export function MemberCreateSheet({
           </form>
           </Form>
 
-          {expanded && (
+          {showRoleSidePanel && (
             <div className="sticky top-0 pt-0">
               <RoleHelpPanel role={selectedRole} t={t} />
             </div>

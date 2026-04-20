@@ -52,6 +52,7 @@ import {
 } from "./role-display";
 import { RoleHelpPanel } from "./role-help-panel";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { PanelRightClose, PanelRightOpen, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -136,6 +137,8 @@ export function MemberEditSheet({
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [driverSearch, setDriverSearch] = useState("");
   const [expanded, setExpanded] = useState(true);
+  const isMobile = useIsMobile();
+  const showRoleSidePanel = expanded && !isMobile;
 
   const schema = z
     .object({
@@ -359,7 +362,7 @@ export function MemberEditSheet({
       <SheetContent
         className={cn(
           "overflow-y-auto transition-[max-width] duration-300",
-          expanded ? "sm:max-w-5xl" : "sm:max-w-2xl",
+          showRoleSidePanel ? "sm:max-w-5xl" : "sm:max-w-2xl",
         )}
       >
         <SheetHeader>
@@ -373,16 +376,18 @@ export function MemberEditSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <button
-          type="button"
-          className="absolute right-12 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          onClick={() => setExpanded((v) => !v)}
-          title={expanded ? t("team.roleContext.collapsePanel") : t("team.roleContext.expandPanel")}
-        >
-          {expanded
-            ? <PanelRightClose className="h-4 w-4" />
-            : <PanelRightOpen className="h-4 w-4" />}
-        </button>
+        {!isMobile && (
+          <button
+            type="button"
+            className="absolute right-12 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? t("team.roleContext.collapsePanel") : t("team.roleContext.expandPanel")}
+          >
+            {expanded
+              ? <PanelRightClose className="h-4 w-4" />
+              : <PanelRightOpen className="h-4 w-4" />}
+          </button>
+        )}
 
         {loadingMember ? (
           <div className="flex items-center justify-center py-12">
@@ -393,7 +398,7 @@ export function MemberEditSheet({
             <p className="text-muted-foreground">{t("team.memberNotFound")}</p>
           </div>
         ) : (
-          <div className={cn("mt-6", expanded && "grid grid-cols-[1fr_300px] gap-6 items-start")}>
+          <div className={cn("mt-6", showRoleSidePanel && "grid grid-cols-[1fr_300px] gap-6 items-start")}>
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmit, onRhfInvalidSubmit(form, t))}
@@ -834,7 +839,7 @@ export function MemberEditSheet({
             </form>
           </Form>
 
-          {expanded && (
+          {showRoleSidePanel && (
             <div className="sticky top-0">
               <RoleHelpPanel role={selectedRole} t={t} />
             </div>
