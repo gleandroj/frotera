@@ -149,12 +149,6 @@ export class OrganizationsService {
       throw new ForbiddenException(ApiCode.ORGANIZATION_NOT_FOUND);
     }
 
-    const usersPerm = membership.role.permissions.find((p) => p.module === 'USERS');
-    const canEdit = usersPerm?.actions?.includes('EDIT' as any) ?? false;
-    if (!canEdit) {
-      throw new ForbiddenException(ApiCode.ORGANIZATION_NOT_FOUND);
-    }
-
     const updatedOrganization = await this.prisma.organization.update({
       where: { id: organizationId },
       data: {

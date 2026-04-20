@@ -47,9 +47,10 @@ export class OrganizationsController {
   }
 
   @Patch(':organizationId')
-  @ApiOperation({ summary: 'Update organization details' })
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Update organization details (superadmin only)' })
   @ApiResponse({ status: 200, type: UpdateOrganizationResponseDto })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only OWNER and ADMIN can update organization' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Superadmin only' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async updateOrganization(
     @Request() req: ExpressRequest & { user: { userId: string } },
