@@ -14,7 +14,7 @@ import {
 import { DriverFormDialog } from "../driver-form-dialog";
 import { Pencil, ArrowLeft, Link2, Unlink } from "lucide-react";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
-import { AssignVehicleDialog } from "../assign-vehicle-dialog";
+import { AssignVehicleSheet } from "../assign-vehicle-sheet";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -213,11 +213,12 @@ export default function DriverDetailPage() {
         organizationId={currentOrganization!.id}
         onSuccess={() => { setEditOpen(false); fetchDriver(); }}
       />
-      <AssignVehicleDialog
+      <AssignVehicleSheet
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
         organizationId={currentOrganization!.id}
         driverId={driver.id}
+        driverName={driver.name}
         onSuccess={fetchDriver}
       />
       <AlertDialog

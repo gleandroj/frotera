@@ -5,11 +5,13 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { driversAPI, vehiclesAPI, type Vehicle } from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,15 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { DatePicker } from "@/components/ui/date-picker";
 
-interface AssignVehicleDialogProps {
+interface AssignVehicleSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string;
   driverId: string;
+  driverName?: string;
   onSuccess: () => void;
 }
 
@@ -56,13 +59,14 @@ function assignmentErrorMessage(t: (key: string) => string, code?: string) {
   return t("drivers.toastError");
 }
 
-export function AssignVehicleDialog({
+export function AssignVehicleSheet({
   open,
   onOpenChange,
   organizationId,
   driverId,
+  driverName,
   onSuccess,
-}: AssignVehicleDialogProps) {
+}: AssignVehicleSheetProps) {
   const { t } = useTranslation();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
@@ -129,13 +133,14 @@ export function AssignVehicleDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("drivers.assignVehicle")}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle>{t("drivers.assignVehicle")}</SheetTitle>
+          {driverName && <SheetDescription>{driverName}</SheetDescription>}
+        </SheetHeader>
 
-        <div className="space-y-4">
+        <div className="mt-6 space-y-4">
           <div className="space-y-2">
             <Label>{t("drivers.vehicle")}</Label>
             <Select value={vehicleId} onValueChange={setVehicleId} disabled={loadingVehicles}>
@@ -155,7 +160,7 @@ export function AssignVehicleDialog({
 
           <div className="space-y-2">
             <Label>{t("drivers.assignmentStartDate")}</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <DatePicker value={startDate} onChange={setStartDate} />
           </div>
 
           <div className="flex items-center justify-between rounded-md border p-3">
@@ -169,7 +174,7 @@ export function AssignVehicleDialog({
           {!isIndeterminate && (
             <div className="space-y-2">
               <Label>{t("drivers.assignmentEndDate")}</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <DatePicker value={endDate} onChange={setEndDate} allowClear />
             </div>
           )}
 
@@ -180,17 +185,17 @@ export function AssignVehicleDialog({
             </div>
             <Switch checked={isPrimary} onCheckedChange={setIsPrimary} />
           </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="button" onClick={handleSubmit} disabled={submitting || !canSubmit}>
-              {submitting ? t("common.saving") : t("drivers.assignVehicle")}
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <SheetFooter className="mt-6 flex flex-row justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={submitting || !canSubmit}>
+            {submitting ? t("common.saving") : t("drivers.assignVehicle")}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

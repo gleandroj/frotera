@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreVertical, Pencil, Trash2, Eye } from "lucide-react";
+import { ArrowUpDown, MoreVertical, Pencil, Trash2, Eye, Link2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,24 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 export interface DriverColumnsOptions {
   onEdit: (driver: Driver) => void;
   onDelete: (driver: Driver) => void;
+  onAssignVehicle?: (driver: Driver) => void;
   canEdit?: boolean;
   canDelete?: boolean;
+  canAssignVehicle?: boolean;
 }
 
 export function getDriverColumns(
   t: TFunction,
   options: DriverColumnsOptions,
 ): ColumnDef<Driver>[] {
-  const { onEdit, onDelete, canEdit = true, canDelete = true } = options;
+  const {
+    onEdit,
+    onDelete,
+    onAssignVehicle,
+    canEdit = true,
+    canDelete = true,
+    canAssignVehicle = false,
+  } = options;
 
   return [
     {
@@ -111,6 +120,12 @@ export function getDriverColumns(
                   <DropdownMenuItem onClick={() => onEdit(driver)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     {t("common.edit")}
+                  </DropdownMenuItem>
+                )}
+                {canAssignVehicle && onAssignVehicle && driver.active && (
+                  <DropdownMenuItem onClick={() => onAssignVehicle(driver)}>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    {t("drivers.assignVehicle")}
                   </DropdownMenuItem>
                 )}
                 {canDelete && (

@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import { getDriverColumns } from "./columns";
 import { DriverFormDialog } from "./driver-form-dialog";
 import { DeleteDriverDialog } from "./delete-driver-dialog";
+import { AssignVehicleSheet } from "./assign-vehicle-sheet";
 import {
   RecordStatusFilter,
   RECORD_STATUS_ALL,
@@ -32,6 +33,7 @@ export default function DriversPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [deleteDriver, setDeleteDriver] = useState<Driver | null>(null);
+  const [assignDriver, setAssignDriver] = useState<Driver | null>(null);
 
   const fetchDrivers = useCallback(() => {
     if (!currentOrganization?.id) return;
@@ -56,8 +58,10 @@ export default function DriversPage() {
     () => getDriverColumns(t, {
       onEdit: setEditDriver,
       onDelete: setDeleteDriver,
+      onAssignVehicle: setAssignDriver,
       canEdit: canEditDriver,
       canDelete: canDeleteDriver,
+      canAssignVehicle: canEditDriver,
     }),
     [t, canEditDriver, canDeleteDriver],
   );
@@ -128,6 +132,15 @@ export default function DriversPage() {
         driver={deleteDriver}
         organizationId={currentOrganization.id}
         onOpenChange={(o) => { if (!o) setDeleteDriver(null); }}
+        onSuccess={fetchDrivers}
+      />
+
+      <AssignVehicleSheet
+        open={!!assignDriver}
+        onOpenChange={(o) => { if (!o) setAssignDriver(null); }}
+        organizationId={currentOrganization.id}
+        driverId={assignDriver?.id ?? ""}
+        driverName={assignDriver?.name}
         onSuccess={fetchDrivers}
       />
     </div>
