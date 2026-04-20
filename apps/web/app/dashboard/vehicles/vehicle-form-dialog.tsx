@@ -233,6 +233,21 @@ export function VehicleFormDialog({
   const isEdit = !!vehicle;
   const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
 
+  const ensureCustomerInList = async (
+    list: Customer[],
+    ensureCustomerId?: string,
+  ): Promise<Customer[]> => {
+    if (!ensureCustomerId || list.some((c) => c.id === ensureCustomerId)) {
+      return list;
+    }
+    try {
+      const { data } = await customersAPI.get(organizationId, ensureCustomerId);
+      return [...list, data];
+    } catch {
+      return list;
+    }
+  };
+
   const [devices, setDevices] = useState<TrackerDeviceOption[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -282,14 +297,19 @@ export function VehicleFormDialog({
     if (!open || !organizationId) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(organizationId)
-      .then((res) => {
+      .list(organizationId, { activeOnly: true })
+      .then(async (res) => {
         const list = res.data?.customers ?? [];
-        setCustomers(Array.isArray(list) ? list : []);
+        const normalized = Array.isArray(list) ? list : [];
+        const withCurrent = await ensureCustomerInList(
+          normalized,
+          isEdit ? vehicle?.customerId ?? undefined : undefined,
+        );
+        setCustomers(withCurrent);
       })
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));
-  }, [open, organizationId]);
+  }, [open, organizationId, isEdit, vehicle?.customerId]);
 
   const handleSubmit = async (values: VehicleFormValues) => {
     const base = {
@@ -377,10 +397,15 @@ export function VehicleFormDialog({
   const refreshCustomersList = () => {
     if (!organizationId) return;
     customersAPI
-      .list(organizationId)
-      .then((res) => {
+      .list(organizationId, { activeOnly: true })
+      .then(async (res) => {
         const list = res.data?.customers ?? [];
-        setCustomers(Array.isArray(list) ? list : []);
+        const normalized = Array.isArray(list) ? list : [];
+        const withCurrent = await ensureCustomerInList(
+          normalized,
+          isEdit ? vehicle?.customerId ?? undefined : undefined,
+        );
+        setCustomers(withCurrent);
       })
       .catch(() => setCustomers([]));
   };

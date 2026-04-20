@@ -160,6 +160,21 @@ function DriverFormDialogBody({
   const { can } = usePermissions();
   const isEdit = !!driver;
 
+  const ensureCustomerInList = async (
+    list: Customer[],
+    ensureCustomerId?: string,
+  ): Promise<Customer[]> => {
+    if (!ensureCustomerId || list.some((c) => c.id === ensureCustomerId)) {
+      return list;
+    }
+    try {
+      const { data } = await customersAPI.get(organizationId, ensureCustomerId);
+      return [...list, data];
+    } catch {
+      return list;
+    }
+  };
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
@@ -185,11 +200,18 @@ function DriverFormDialogBody({
     if (!open || !organizationId) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(organizationId)
-      .then((res) => setCustomers(res.data?.customers ?? []))
+      .list(organizationId, { activeOnly: true })
+      .then(async (res) => {
+        const list = Array.isArray(res.data?.customers) ? res.data.customers : [];
+        const withCurrent = await ensureCustomerInList(
+          list,
+          isEdit ? driver?.customerId ?? undefined : undefined,
+        );
+        setCustomers(withCurrent);
+      })
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));
-  }, [open, organizationId]);
+  }, [open, organizationId, isEdit, driver?.customerId]);
 
   const handleSubmit = async (values: DriverFormValues) => {
     const payload = {
@@ -233,8 +255,15 @@ function DriverFormDialogBody({
   const refreshCustomersList = () => {
     if (!organizationId) return;
     customersAPI
-      .list(organizationId)
-      .then((res) => setCustomers(res.data?.customers ?? []))
+      .list(organizationId, { activeOnly: true })
+      .then(async (res) => {
+        const list = Array.isArray(res.data?.customers) ? res.data.customers : [];
+        const withCurrent = await ensureCustomerInList(
+          list,
+          isEdit ? driver?.customerId ?? undefined : undefined,
+        );
+        setCustomers(withCurrent);
+      })
       .catch(() => setCustomers([]));
   };
 

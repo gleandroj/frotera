@@ -137,7 +137,7 @@ export function GeofenceFormDialog({
     if (!open || isEdit || !organizationId) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(organizationId)
+      .list(organizationId, { activeOnly: true })
       .then((res) => setCustomers(res.data?.customers ?? []))
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));
@@ -146,7 +146,7 @@ export function GeofenceFormDialog({
   const refreshCustomersSilently = () => {
     if (!organizationId) return;
     customersAPI
-      .list(organizationId)
+      .list(organizationId, { activeOnly: true })
       .then((res) => setCustomers(res.data?.customers ?? []))
       .catch(() => setCustomers([]));
   };

@@ -169,7 +169,7 @@ export function IncidentFormSheet({
   const refreshCustomersSilently = () => {
     if (!organizationId) return;
     customersAPI
-      .list(organizationId)
+      .list(organizationId, { activeOnly: true })
       .then((res) => setCustomers(res.data?.customers ?? []))
       .catch(() => setCustomers([]));
   };
@@ -239,7 +239,7 @@ export function IncidentFormSheet({
     if (!open || isEdit || !organizationId) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(organizationId)
+      .list(organizationId, { activeOnly: true })
       .then((res) => setCustomers(res.data?.customers ?? []))
       .catch(() => setCustomers([]))
       .finally(() => setLoadingCustomers(false));

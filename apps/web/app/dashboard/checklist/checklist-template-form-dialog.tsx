@@ -252,7 +252,7 @@ export function ChecklistTemplateFormDialog({
     if (!open || !organizationId) return;
     setLoadingCustomers(true);
     customersAPI
-      .list(organizationId)
+      .list(organizationId, { activeOnly: true })
       .then((res) => {
         const list = res.data?.customers ?? [];
         setCustomers(Array.isArray(list) ? list : []);
@@ -375,6 +375,7 @@ export function ChecklistTemplateFormDialog({
                 {loadingCustomers
                   ? "—"
                   : customers.find((c) => c.id === template?.customerId)?.name ??
+                    template?.customerName ??
                     template?.customerId ??
                     "—"}
               </p>

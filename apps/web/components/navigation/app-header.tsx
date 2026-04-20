@@ -75,7 +75,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     }
     setLoadingCustomers(true);
     customersAPI
-      .list(currentOrganization.id)
+      .list(currentOrganization.id, { activeOnly: true })
       .then((res) => {
         const list = res.data?.customers ?? [];
         setHeaderCustomers(Array.isArray(list) ? list : []);

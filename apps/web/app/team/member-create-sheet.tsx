@@ -197,7 +197,10 @@ export function MemberCreateSheet({
     customersAPI
       .list(
         currentOrganization.id,
-        selectedCustomerId ? { customerId: selectedCustomerId } : undefined,
+        {
+          ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
+          activeOnly: true,
+        },
       )
       .then((res) => {
         const list = res.data?.customers ?? [];
