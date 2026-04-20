@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+**/.next
+**/dist
+**/.turbo
+
+# Environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Git
+.git
+.gitignore
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Test & coverage
+**/coverage
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+
+# IDE
+.vscode
+.idea
+**/*.swp
