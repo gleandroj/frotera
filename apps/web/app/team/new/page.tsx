@@ -33,11 +33,28 @@ import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import { organizationAPI, customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { rolesAPI, type Role } from "@/lib/api/roles";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
+const FRIENDLY_PASSWORD_WORDS = [
+  "Frota", "Veiculo", "Caminhao", "Onibus", "Motor",
+  "Diesel", "Rota", "Carga", "Reboque", "Pneu",
+  "Tanque", "Placa", "Eixo", "Chassis", "Painel",
+];
+
+function generateFriendlyPassword(): string {
+  const word = FRIENDLY_PASSWORD_WORDS[Math.floor(Math.random() * FRIENDLY_PASSWORD_WORDS.length)];
+  // Avoid ambiguous digits: 0, 1
+  const safeDigits = "23456789";
+  let number = "";
+  for (let i = 0; i < 4; i++) {
+    number += safeDigits[Math.floor(Math.random() * safeDigits.length)];
+  }
+  return `${word}.${number}`;
+}
 
 function getDescendantIds(
   customerId: string,
@@ -78,6 +95,7 @@ export default function NewUserPage() {
         .string({ required_error: t("team.createUserDialog.validation.emailRequired") })
         .email(t("team.createUserDialog.validation.emailInvalid"))
         .max(254, t("team.createUserDialog.validation.emailTooLong")),
+      sendCredentials: z.boolean().default(false),
       password: z
         .string({ required_error: t("team.createUserDialog.validation.passwordRequired") })
         .min(8, t("team.createUserDialog.validation.passwordMinLength")),
@@ -109,6 +127,7 @@ export default function NewUserPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       email: "",
+      sendCredentials: false,
       password: "",
       confirmPassword: "",
       name: "",
@@ -123,6 +142,7 @@ export default function NewUserPage() {
   const { isSubmitting } = form.formState;
   const fullAccess = form.watch("fullAccess");
   const customerIds = form.watch("customerIds");
+  const sendCredentials = form.watch("sendCredentials");
 
   const loadCustomers = useCallback(() => {
     if (!currentOrganization?.id) return;
@@ -183,6 +203,7 @@ export default function NewUserPage() {
         customerIds: values.fullAccess ? undefined : values.customerIds,
         isSuperAdmin: user?.isSuperAdmin ? values.isSuperAdmin : undefined,
         isSystemUser: user?.isSuperAdmin ? values.isSystemUser : undefined,
+        sendCredentials: values.sendCredentials || undefined,
       });
       toast.success(t("team.toastMessages.userCreated"), {
         description: t("team.toastMessages.userCreatedDescription"),
@@ -297,44 +318,98 @@ export default function NewUserPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("team.createUserDialog.passwordLabel")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder={t("team.createUserDialog.passwordPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {t("team.createUserDialog.confirmPasswordLabel")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder={t("team.createUserDialog.confirmPasswordPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="sendCredentials"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(v) => {
+                          field.onChange(v === true);
+                          if (v === true) {
+                            const pwd = generateFriendlyPassword();
+                            form.setValue("password", pwd);
+                            form.setValue("confirmPassword", pwd);
+                          } else {
+                            form.setValue("password", "");
+                            form.setValue("confirmPassword", "");
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">
+                      Enviar credenciais por email (senha temporária)
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              {sendCredentials ? (
+                <div className="rounded-md border bg-muted/40 p-4 space-y-2">
+                  <p className="text-sm font-medium">Senha temporária gerada</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded bg-background border px-3 py-2 text-base font-mono tracking-widest">
+                      {form.watch("password")}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const pwd = generateFriendlyPassword();
+                        form.setValue("password", pwd);
+                        form.setValue("confirmPassword", pwd);
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Esta senha será enviada ao usuário por email. Ele deverá alterá-la no primeiro acesso.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("team.createUserDialog.passwordLabel")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder={t("team.createUserDialog.passwordPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t("team.createUserDialog.confirmPasswordLabel")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder={t("team.createUserDialog.confirmPasswordPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               <FormField
                 control={form.control}

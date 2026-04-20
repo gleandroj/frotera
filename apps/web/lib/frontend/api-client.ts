@@ -244,16 +244,16 @@ export const authAPI = {
   login: (email: string, password: string, twoFactorCode?: string) =>
     externalApi.post("/api/auth/login", { email, password, twoFactorCode }),
   signup: (
-    email: string, 
-    password: string, 
-    name?: string, 
+    email: string,
+    password: string,
+    name?: string,
     language?: string,
     organizationName?: string
   ) =>
-    externalApi.post("/api/auth/signup", { 
-      email, 
-      password, 
-      name, 
+    externalApi.post("/api/auth/signup", {
+      email,
+      password,
+      name,
       language,
       organizationName
     }),
@@ -269,6 +269,8 @@ export const authAPI = {
     externalApi.post("/api/auth/verify-email", { token }),
   updateLanguage: (language: string) =>
     externalApi.patch("/api/auth/language", { language }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    externalApi.post("/api/auth/change-password", { currentPassword, newPassword }),
 };
 
 export type TrackerDiscoveryLoginRow = {
@@ -346,6 +348,7 @@ export const organizationAPI = {
       customerIds?: string[];
       isSuperAdmin?: boolean;
       isSystemUser?: boolean;
+      sendCredentials?: boolean;
     }
   ) =>
     externalApi.post(

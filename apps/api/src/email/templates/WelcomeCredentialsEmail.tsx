@@ -1,27 +1,32 @@
 import {
   Button,
   Heading,
+  Section,
   Text,
 } from '@react-email/components';
 import * as React from 'react';
 import { BaseEmail } from './BaseEmail';
 import { getEmailTranslations, interpolateTemplate } from '../translations';
 
-interface AccountCreatedEmailProps {
+interface WelcomeCredentialsEmailProps {
   name?: string;
+  email: string;
+  temporaryPassword: string;
   loginUrl: string;
   appName: string;
   language?: string;
 }
 
-export const AccountCreatedEmail = ({
+export const WelcomeCredentialsEmail = ({
   name,
+  email,
+  temporaryPassword,
   loginUrl,
   appName,
   language,
-}: AccountCreatedEmailProps) => {
+}: WelcomeCredentialsEmailProps) => {
   const translations = getEmailTranslations(language);
-  const t = translations.accountCreated;
+  const t = translations.welcomeCredentials;
   const displayName = name?.trim() || 'usuário';
 
   return (
@@ -36,6 +41,25 @@ export const AccountCreatedEmail = ({
 
       <Text className="text-black text-[14px] leading-[24px] mt-4">
         {t.body}
+      </Text>
+
+      <Section className="bg-gray-50 border border-gray-200 rounded-md p-6 my-6">
+        <Text className="text-black text-[13px] leading-[20px] font-semibold mb-1">
+          {t.loginLabel}
+        </Text>
+        <Text className="text-gray-700 text-[14px] leading-[24px] font-mono mb-4">
+          {email}
+        </Text>
+        <Text className="text-black text-[13px] leading-[20px] font-semibold mb-1">
+          {t.passwordLabel}
+        </Text>
+        <Text className="text-[20px] leading-[28px] font-mono font-bold tracking-widest text-[#5469d4]">
+          {temporaryPassword}
+        </Text>
+      </Section>
+
+      <Text className="text-orange-600 text-[13px] leading-[20px] mt-2">
+        {t.warning}
       </Text>
 
       <Button

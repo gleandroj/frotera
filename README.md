@@ -1,4 +1,4 @@
-# RS Frotas
+# Rotera
 
 ## User Flags (`isSuperAdmin` vs `isSystemUser`)
 

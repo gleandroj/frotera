@@ -60,6 +60,14 @@ export class CreateMemberDto {
   @IsArray()
   @IsString({ each: true })
   customerIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Send login credentials (email + temporary password) to the new user via email',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  sendCredentials?: boolean;
 }
 
 export class UpdateMemberDto {

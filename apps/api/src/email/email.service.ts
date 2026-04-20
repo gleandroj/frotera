@@ -5,6 +5,7 @@ import * as nodemailer from "nodemailer";
 import { AccountCreatedEmail } from "./templates/AccountCreatedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
 import { VerificationEmail } from "./templates/VerificationEmail";
+import { WelcomeCredentialsEmail } from "./templates/WelcomeCredentialsEmail";
 import { getEmailTranslations, interpolateTemplate } from "./translations";
 
 @Injectable()
@@ -66,12 +67,13 @@ export class EmailService implements OnModuleInit {
   }
 
   public async sendMail(mailOptions: nodemailer.SendMailOptions) {
-    const appName = this.configService.get("APP_NAME", "RS Frotas");
+    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appDomain = this.configService.get("APP_DOMAIN", "example.com");
     return this.sendMailInternal({
       ...mailOptions,
       from: this.configService.get(
         "SMTP_FROM",
-        `"${appName}" <noreply@neo.radisa.com.br>`
+        `"${appName}" <noreply@${appDomain}>`
       ),
     });
   }
@@ -87,7 +89,7 @@ export class EmailService implements OnModuleInit {
     loginUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "RS Frotas");
+    const appName = this.configService.get("APP_NAME", "Rotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -121,7 +123,7 @@ export class EmailService implements OnModuleInit {
     verificationUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "RS Frotas");
+    const appName = this.configService.get("APP_NAME", "Rotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -155,7 +157,7 @@ export class EmailService implements OnModuleInit {
     resetUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "RS Frotas");
+    const appName = this.configService.get("APP_NAME", "Rotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -168,6 +170,46 @@ export class EmailService implements OnModuleInit {
     );
 
     const subject = interpolateTemplate(translations.passwordReset.subject, {
+      appName,
+    });
+
+    await this.sendMail({
+      to,
+      subject,
+      html,
+    });
+  }
+
+  async sendWelcomeCredentialsEmail({
+    to,
+    name,
+    email,
+    temporaryPassword,
+    loginUrl,
+    language,
+  }: {
+    to: string;
+    name?: string | null;
+    email: string;
+    temporaryPassword: string;
+    loginUrl: string;
+    language?: string;
+  }) {
+    const appName = this.configService.get("APP_NAME", "Rotera");
+    const translations = getEmailTranslations(language);
+
+    const html = await render(
+      WelcomeCredentialsEmail({
+        name: name ?? "",
+        email,
+        temporaryPassword,
+        loginUrl,
+        appName,
+        language,
+      })
+    );
+
+    const subject = interpolateTemplate(translations.welcomeCredentials.subject, {
       appName,
     });
 

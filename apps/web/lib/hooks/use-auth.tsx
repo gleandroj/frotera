@@ -35,12 +35,13 @@ export interface User {
   id: string
   email: string
   name: string | null
-  phoneNumber: string | null // Add this line
-  language: string | null // User's preferred language
+  phoneNumber: string | null
+  language: string | null
   twoFactorEnabled: boolean
   twoFactorVerified: boolean
   emailVerified: Date | null
   isSuperAdmin: boolean
+  mustChangePassword?: boolean
 }
 
 const CURRENT_CUSTOMER_ID_KEY = "currentCustomerId"
@@ -218,6 +219,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set language cookie based on user's preference
       if (response.data.user.language) {
         await setLanguageCookie(response.data.user.language)
+      }
+
+      // Force password change before accessing the app
+      if (response.data.user.mustChangePassword) {
+        router.push("/alterar-senha")
+        return response
       }
 
       // Handle return URL if present

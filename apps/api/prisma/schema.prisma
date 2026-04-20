@@ -26,6 +26,9 @@ model User {
   isSuperAdmin Boolean @default(false)
   isSystemUser Boolean @default(false)
 
+  // Force password change on next login (e.g. temp passwords)
+  mustChangePassword Boolean @default(false)
+
   // Relations
   memberships OrganizationMember[]
   invitations Invitation[]

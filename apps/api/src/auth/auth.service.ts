@@ -104,6 +104,7 @@ export class AuthService {
         /** Needed by the app immediately after login (e.g. allow root customer creation). */
         isSuperAdmin: user.isSuperAdmin === true,
         twoFactorVerified: !!twoFactorCode,
+        mustChangePassword: user.mustChangePassword,
       },
       tokens,
     };
@@ -529,6 +530,26 @@ export class AuthService {
     return {
       message: "Password has been reset successfully. You can now login with your new password.",
     };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException(ApiCode.USER_NOT_FOUND);
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException(ApiCode.AUTH_INVALID_CREDENTIALS);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword, mustChangePassword: false },
+    });
+
+    return { message: "Password changed successfully" };
   }
 
   async logout(user: any) {

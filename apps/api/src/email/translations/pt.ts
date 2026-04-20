@@ -16,6 +16,17 @@ export const emailTranslations = {
     footer: 'Se você não esperava esta criação de conta, entre em contato com o administrador da organização.',
     regards: 'Atenciosamente,\nEquipe {{appName}}'
   },
+  welcomeCredentials: {
+    subject: 'Bem-vindo ao {{appName}} — suas credenciais de acesso',
+    greeting: 'Olá {{name}},',
+    body: 'Sua conta foi criada no {{appName}}. Use as credenciais abaixo para fazer seu primeiro acesso:',
+    loginLabel: 'E-mail de acesso',
+    passwordLabel: 'Senha temporária',
+    warning: 'Por segurança, você será solicitado a criar uma nova senha no primeiro login.',
+    buttonText: 'Acessar o Sistema',
+    footer: 'Se você não esperava esta conta, entre em contato com o administrador da organização.',
+    regards: 'Atenciosamente,\nEquipe {{appName}}'
+  },
   passwordReset: {
     subject: 'Redefinir sua senha para {{appName}}',
     greeting: 'Olá {{name}},',

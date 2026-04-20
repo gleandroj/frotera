@@ -15,6 +15,7 @@ import {
 } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import {
+  ChangePasswordDto,
   DisableTwoFactorDto,
   ForgotPasswordDto,
   LoginDto,
@@ -210,6 +211,19 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "Invalid or expired token" })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("change-password")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Change password (clears mustChangePassword flag)" })
+  @ApiResponse({ status: 200, description: "Password changed successfully" })
+  @ApiResponse({ status: 401, description: "Invalid current password" })
+  async changePassword(
+    @Request() req: RequestWithUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(req.user.userId, dto.currentPassword, dto.newPassword);
   }
 
   @UseGuards(JwtAuthGuard)

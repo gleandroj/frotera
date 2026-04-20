@@ -282,12 +282,34 @@ export class MembersService {
       return created;
     });
 
-    const loginUrl = `${process.env.APP_URL || ""}/login`;
-    this.emailService
-      .sendAccountCreatedEmail({ to: user.email, name: user.name, loginUrl, language: "pt" })
-      .catch((err) => {
-        console.error("[MembersService] Failed to send account-created email:", err);
+    if (data.sendCredentials) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { mustChangePassword: true },
       });
+    }
+
+    const loginUrl = `${process.env.APP_URL || ""}/login`;
+    if (data.sendCredentials) {
+      this.emailService
+        .sendWelcomeCredentialsEmail({
+          to: user.email,
+          name: user.name,
+          email: user.email,
+          temporaryPassword: data.password,
+          loginUrl,
+          language: "pt",
+        })
+        .catch((err) => {
+          console.error("[MembersService] Failed to send welcome credentials email:", err);
+        });
+    } else {
+      this.emailService
+        .sendAccountCreatedEmail({ to: user.email, name: user.name, loginUrl, language: "pt" })
+        .catch((err) => {
+          console.error("[MembersService] Failed to send account-created email:", err);
+        });
+    }
 
     return {
       message: ApiCode.MEMBER_CREATED_SUCCESSFULLY,
