@@ -77,7 +77,7 @@ export function GeofenceFormDialog({
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
-  const { user, selectedCustomerId } = useAuth();
+  const { user, selectedCustomerId, currentOrganization } = useAuth();
   const { can } = usePermissions();
   const canCreateCompany = can(Module.COMPANIES, Action.CREATE);
   const isEdit = !!zone;
@@ -449,7 +449,7 @@ export function GeofenceFormDialog({
         selectedCustomerId ??
         (pickedCustomerId.trim() ? pickedCustomerId.trim() : undefined)
       }
-      allowRootCreation={user?.isSuperAdmin ?? false}
+      allowRootCreation={user?.isSuperAdmin === true || currentOrganization?.role?.key === 'ORGANIZATION_OWNER'}
       hideOverlay
       onSuccess={(created) => {
         refreshCustomersSilently();

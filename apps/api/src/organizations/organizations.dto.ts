@@ -55,6 +55,7 @@ export class OrganizationResponseDto {
   @ApiProperty({ description: "Role of the current user in this organization" })
   role: {
     id: string;
+    key?: string;
     name: string;
     description?: string | null;
     isSystem: boolean;

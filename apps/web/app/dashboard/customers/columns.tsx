@@ -24,6 +24,7 @@ export interface CustomerColumnsOptions {
   canEditCustomer: boolean;
   canDeleteCustomer: boolean;
   isSuperAdmin: boolean;
+  isOrganizationOwner?: boolean;
 }
 
 function getParentName(customers: Customer[], parentId: string | null | undefined): string {
@@ -43,6 +44,7 @@ export function getCustomerColumns(
     canEditCustomer,
     canDeleteCustomer,
     isSuperAdmin,
+    isOrganizationOwner,
   } = options;
 
   const columns: ColumnDef<Customer>[] = [
@@ -139,7 +141,7 @@ export function getCustomerColumns(
                 )}
                 {canDeleteCustomer &&
                   !customer.inactive &&
-                  (isSuperAdmin || customer.parentId != null) && (
+                  (isSuperAdmin || isOrganizationOwner || customer.parentId != null) && (
                   <DropdownMenuItem
                     onClick={() => onDelete(customer)}
                     className="text-destructive focus:text-destructive"

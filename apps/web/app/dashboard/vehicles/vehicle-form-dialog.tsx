@@ -228,7 +228,7 @@ export function VehicleFormDialog({
   hideOverlay = false,
 }: VehicleFormDialogProps) {
   const { t } = useTranslation();
-  const { user, selectedCustomerId } = useAuth();
+  const { user, selectedCustomerId, currentOrganization } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!vehicle;
   const canEditVehicle = can(Module.VEHICLES, Action.EDIT);
@@ -1143,7 +1143,7 @@ export function VehicleFormDialog({
         (customerId?.trim() ? customerId.trim() : null) ??
         undefined
       }
-      allowRootCreation={user?.isSuperAdmin ?? false}
+      allowRootCreation={user?.isSuperAdmin === true || currentOrganization?.role?.key === 'ORGANIZATION_OWNER'}
       hideOverlay
       onSuccess={(created) => {
         refreshCustomersList();

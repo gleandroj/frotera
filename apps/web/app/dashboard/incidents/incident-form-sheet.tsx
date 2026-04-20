@@ -105,7 +105,7 @@ export function IncidentFormSheet({
   onSuccess,
 }: IncidentFormSheetProps) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, currentOrganization } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!incident;
   const canCreateVehicle = can(Module.VEHICLES, Action.CREATE);
@@ -741,7 +741,7 @@ export function IncidentFormSheet({
               selectedCustomerId ??
               (explicitCustomerId.trim() ? explicitCustomerId.trim() : undefined)
             }
-            allowRootCreation={user?.isSuperAdmin ?? false}
+            allowRootCreation={user?.isSuperAdmin === true || currentOrganization?.role?.key === 'ORGANIZATION_OWNER'}
             hideOverlay
             onSuccess={(created) => {
               refreshCustomersSilently();

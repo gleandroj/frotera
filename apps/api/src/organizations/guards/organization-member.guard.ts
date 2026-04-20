@@ -44,7 +44,7 @@ export class OrganizationMemberGuard implements CanActivate {
     request.organizationMember = membership;
     request.isOrganizationOwner = membership.role.key === SystemRoleKey.ORGANIZATION_OWNER;
 
-    if (request.user?.isSuperAdmin) {
+    if (request.user?.isSuperAdmin || request.isOrganizationOwner) {
       request.allowedCustomerIds = null;
       return true;
     }

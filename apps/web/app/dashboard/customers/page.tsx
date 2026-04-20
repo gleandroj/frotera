@@ -67,8 +67,9 @@ export default function CustomersPage() {
         canEditCustomer,
         canDeleteCustomer,
         isSuperAdmin: user?.isSuperAdmin === true,
+        isOrganizationOwner: currentOrganization?.role?.key === 'ORGANIZATION_OWNER',
       }),
-    [t, customers, canEditCustomer, canDeleteCustomer, user?.isSuperAdmin],
+    [t, customers, canEditCustomer, canDeleteCustomer, user?.isSuperAdmin, currentOrganization?.role?.key],
   );
 
   if (!currentOrganization) {
@@ -135,7 +136,7 @@ export default function CustomersPage() {
         customers={customers}
         onSuccess={fetchCustomers}
         defaultParentId={selectedCustomerId ?? undefined}
-        allowRootCreation={user?.isSuperAdmin ?? false}
+        allowRootCreation={user?.isSuperAdmin === true || currentOrganization?.role?.key === 'ORGANIZATION_OWNER'}
       />
       <CustomerFormDialog
         open={!!editCustomer}

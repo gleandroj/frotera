@@ -14,6 +14,7 @@ import {
 function formatRole(role: any) {
   return {
     id: role.id,
+    key: role.key,
     name: role.name,
     description: role.description,
     isSystem: role.isSystem,

@@ -156,7 +156,7 @@ function DriverFormDialogBody({
   defaultCustomerId,
 }: DriverFormDialogProps) {
   const { t } = useTranslation();
-  const { user, selectedCustomerId } = useAuth();
+  const { user, selectedCustomerId, currentOrganization } = useAuth();
   const { can } = usePermissions();
   const isEdit = !!driver;
 
@@ -567,7 +567,7 @@ function DriverFormDialogBody({
           (customerId?.trim() ? customerId.trim() : null) ??
           undefined
         }
-        allowRootCreation={user?.isSuperAdmin ?? false}
+        allowRootCreation={user?.isSuperAdmin === true || currentOrganization?.role?.key === 'ORGANIZATION_OWNER'}
         hideOverlay
         onSuccess={(created) => {
           refreshCustomersList();
