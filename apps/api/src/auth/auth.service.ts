@@ -103,6 +103,7 @@ export class AuthService {
         emailVerified: user.emailVerified,
         /** Needed by the app immediately after login (e.g. allow root customer creation). */
         isSuperAdmin: user.isSuperAdmin === true,
+        isSystemUser: user.isSystemUser === true,
         twoFactorVerified: !!twoFactorCode,
         mustChangePassword: user.mustChangePassword,
       },
@@ -305,6 +306,7 @@ export class AuthService {
         twoFactorEnabled: true,
         emailVerified: true,
         isSuperAdmin: true,
+        isSystemUser: true,
       },
     });
 

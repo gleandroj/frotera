@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 import {
   Select,
   SelectContent,
@@ -281,8 +282,17 @@ const TRACKER_COMMANDS: TrackerCommands = {
 
 export default function HelpPage() {
   const { t } = useTranslation();
+  const { canAccessTrackerHelp } = usePermissions();
   const [trackerType, setTrackerType] = useState<TrackerType>("xt40");
   const categories = TRACKER_COMMANDS[trackerType] ?? [];
+
+  if (!canAccessTrackerHelp) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-muted-foreground">{t("common.forbidden")}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

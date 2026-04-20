@@ -61,7 +61,7 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
-  const { can, canGlobal, canAnyModule } = usePermissions();
+  const { can, canGlobal, canAnyModule, canAccessTrackerHelp } = usePermissions();
   const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
   const canViewTracking = can(Module.TRACKING, Action.VIEW);
@@ -158,12 +158,14 @@ export function AppSidebar() {
         current: pathname.startsWith("/dashboard/vehicles"),
       });
     }
-    items.push({
-      name: t("navigation.items.help"),
-      href: "/dashboard/help",
-      icon: HelpCircle,
-      current: pathname.startsWith("/dashboard/help"),
-    });
+    if (canAccessTrackerHelp) {
+      items.push({
+        name: t("navigation.items.help"),
+        href: "/dashboard/help",
+        icon: HelpCircle,
+        current: pathname.startsWith("/dashboard/help"),
+      });
+    }
     if (canViewChecklist) {
       items.push({
         name: t("navigation.items.checklist"),
@@ -234,6 +236,7 @@ export function AppSidebar() {
     return items;
   }, [
     t, pathname, canViewTracking, canViewDashboard, canViewVehicles,
+    canAccessTrackerHelp,
     canViewChecklist, canViewIncidents, canViewDrivers, canViewDocuments,
     canViewFuel, canViewAnyFuelReport, canViewTelemetry, canViewCustomers,
     unreadTelemetry,

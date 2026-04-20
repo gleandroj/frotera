@@ -55,6 +55,7 @@ const mockUser = {
   twoFactorEnabled: false,
   twoFactorSecret: null,
   isSuperAdmin: false,
+  isSystemUser: false,
 };
 
 describe('AuthService', () => {
@@ -89,6 +90,7 @@ describe('AuthService', () => {
       expect(result.tokens).toBeDefined();
       expect(result.user.email).toBe('test@example.com');
       expect(result.user.isSuperAdmin).toBe(false);
+      expect(result.user.isSystemUser).toBe(false);
       expect(result.user.twoFactorVerified).toBe(false);
     });
 

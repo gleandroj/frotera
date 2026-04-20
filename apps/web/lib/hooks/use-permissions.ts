@@ -37,8 +37,16 @@ export enum Scope {
   ASSIGNED = 'ASSIGNED',
 }
 
+const ORGANIZATION_OWNER_KEY = "ORGANIZATION_OWNER";
+
 export function usePermissions() {
   const { user, currentOrganization, organizations } = useAuth();
+
+  /** Tracker SMS / server reference — visible only to privileged accounts. */
+  const canAccessTrackerHelp =
+    user?.isSuperAdmin === true ||
+    user?.isSystemUser === true ||
+    currentOrganization?.role?.key === ORGANIZATION_OWNER_KEY;
 
   function can(module: Module, action: Action): boolean {
     if (!currentOrganization) return false;
@@ -102,5 +110,6 @@ export function usePermissions() {
     canManageUsers,
     canEditUsers,
     canDeleteUsers,
+    canAccessTrackerHelp,
   };
 }

@@ -42,6 +42,7 @@ export interface User {
   twoFactorVerified: boolean
   emailVerified: Date | null
   isSuperAdmin: boolean
+  isSystemUser?: boolean
   mustChangePassword?: boolean
 }
 
