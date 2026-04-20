@@ -1454,7 +1454,17 @@
       "description": "Alterar função e acesso às empresas de {{name}}",
       "saveButton": "Salvar alterações",
       "saving": "Salvando...",
-      "editingSelfHint": "Apenas o dono da organização pode alterar sua função e acesso às empresas."
+      "editingSelfHint": "Apenas o dono da organização pode alterar sua função e acesso às empresas.",
+      "assignedVehicles": "Veículos atribuídos",
+      "assignedVehiclesHint": "Restringe o acesso aos veículos selecionados (além das empresas atribuídas).",
+      "assignedDrivers": "Motoristas atribuídos",
+      "assignedDriversHint": "Dá acesso a esses motoristas e aos veículos ativos atribuídos a eles.",
+      "vehicleSearchPlaceholder": "Buscar veículo...",
+      "driverSearchPlaceholder": "Buscar motorista...",
+      "selectAllVehicles": "Selecionar todos",
+      "deselectAllVehicles": "Limpar seleção",
+      "selectAllDrivers": "Selecionar todos",
+      "deselectAllDrivers": "Limpar seleção"
     },
     "confirmDialogs": {
       "revokeInvitation": {
