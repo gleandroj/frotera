@@ -4,6 +4,10 @@
 import * as Sentry from "@sentry/nextjs";
 
 export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+
   // Edge (middleware, edge routes): Sentry must be initialized via instrumentation.
   if (process.env.NEXT_RUNTIME === "edge") {
     Sentry.init({
@@ -13,3 +17,5 @@ export async function register() {
     });
   }
 }
+
+export const onRequestError = Sentry.captureRequestError;
