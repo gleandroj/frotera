@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { Prisma, PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import * as fs from "node:fs";
