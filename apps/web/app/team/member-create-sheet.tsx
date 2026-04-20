@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -37,9 +38,20 @@ import {
 } from "@/components/ui/sheet";
 import { useTranslation } from "@/i18n/useTranslation";
 import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
-import { organizationAPI, customersAPI, type Customer } from "@/lib/frontend/api-client";
+import {
+  organizationAPI,
+  customersAPI,
+  vehiclesAPI,
+  driversAPI,
+  type Customer,
+} from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { rolesAPI, type Role } from "@/lib/api/roles";
+import {
+  describeRole,
+  summarizeRolePermissions,
+  summarizeRoleScope,
+} from "./role-display";
 import { RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -135,6 +147,12 @@ export function MemberCreateSheet({
   const [customerSearch, setCustomerSearch] = useState("");
   const [currentUserRestricted, setCurrentUserRestricted] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<{ id: string; name: string; plate: string }[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+  const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
+  const [vehicleSearch, setVehicleSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
 
   const schema = z
     .object({
@@ -190,6 +208,10 @@ export function MemberCreateSheet({
   const fullAccess = form.watch("fullAccess");
   const customerIds = form.watch("customerIds");
   const sendCredentials = form.watch("sendCredentials");
+  const selectedRole = roles.find((role) => role.id === form.watch("roleId"));
+  const scopeSummary = summarizeRoleScope(t, selectedRole);
+  const hasAssignedScope = scopeSummary.hasAssignedScope;
+  const rolePermissionSummary = summarizeRolePermissions(t, selectedRole);
 
   const loadCustomers = useCallback(() => {
     if (!currentOrganization?.id) return;
@@ -227,6 +249,29 @@ export function MemberCreateSheet({
   }, [open, currentOrganization?.id]);
 
   useEffect(() => {
+    if (!open || !currentOrganization?.id) return;
+    vehiclesAPI
+      .list(currentOrganization.id)
+      .then((res) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as any)?.vehicles ?? [];
+        setAvailableVehicles(
+          list.map((vehicle: any) => ({
+            id: vehicle.id,
+            name: vehicle.name ?? "",
+            plate: vehicle.plate ?? "",
+          })),
+        );
+      })
+      .catch(() => setAvailableVehicles([]));
+    driversAPI
+      .list(currentOrganization.id)
+      .then((res) => setAvailableDrivers(res.data?.drivers ?? []))
+      .catch(() => setAvailableDrivers([]));
+  }, [open, currentOrganization?.id]);
+
+  useEffect(() => {
     if (!open || !currentOrganization?.id || !user?.id) return;
     organizationAPI.getMembers(currentOrganization.id).then((res) => {
       const members = res.data?.memberships ?? [];
@@ -250,6 +295,10 @@ export function MemberCreateSheet({
         isSystemUser: false,
       });
       setCustomerSearch("");
+      setSelectedVehicleIds([]);
+      setSelectedDriverIds([]);
+      setVehicleSearch("");
+      setDriverSearch("");
     }
   }, [open]);
 
@@ -259,9 +308,30 @@ export function MemberCreateSheet({
     return customers.filter((c) => c.name.toLowerCase().includes(q));
   }, [customers, customerSearch]);
 
+  const filteredVehicles = useMemo(
+    () =>
+      availableVehicles.filter(
+        (vehicle) =>
+          !vehicleSearch.trim() ||
+          vehicle.name.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
+          vehicle.plate.toLowerCase().includes(vehicleSearch.toLowerCase()),
+      ),
+    [availableVehicles, vehicleSearch],
+  );
+
+  const filteredDrivers = useMemo(
+    () =>
+      availableDrivers.filter(
+        (driver) =>
+          !driverSearch.trim() ||
+          driver.name.toLowerCase().includes(driverSearch.toLowerCase()),
+      ),
+    [availableDrivers, driverSearch],
+  );
+
   const handleSubmit = async (values: CreateUserFormValues) => {
     try {
-      await organizationAPI.createMember(currentOrganization!.id, {
+      const response = await organizationAPI.createMember(currentOrganization!.id, {
         email: values.email,
         password: values.password,
         name: values.name?.trim() || undefined,
@@ -272,6 +342,24 @@ export function MemberCreateSheet({
         isSystemUser: user?.isSuperAdmin ? values.isSystemUser : undefined,
         sendCredentials: values.sendCredentials || undefined,
       });
+      const createdMemberId = response.data?.member?.id;
+      const selectedRoleAtSubmit = roles.find((role) => role.id === values.roleId);
+      const shouldAssignRelatedData =
+        createdMemberId != null && summarizeRoleScope(t, selectedRoleAtSubmit).hasAssignedScope;
+      if (shouldAssignRelatedData) {
+        await Promise.all([
+          organizationAPI.setMemberVehicles(
+            currentOrganization!.id,
+            createdMemberId,
+            selectedVehicleIds,
+          ),
+          organizationAPI.setMemberDrivers(
+            currentOrganization!.id,
+            createdMemberId,
+            selectedDriverIds,
+          ),
+        ]);
+      }
       toast.success(t("team.toastMessages.userCreated"), {
         description: t("team.toastMessages.userCreatedDescription"),
       });
@@ -396,6 +484,42 @@ export function MemberCreateSheet({
                     </FormItem>
                   )}
                 />
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{t("team.roleContext.title")}</CardTitle>
+                    <CardDescription>{describeRole(t, selectedRole)}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{t("team.roleContext.scopeTitle")}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {scopeSummary.labels.length === 0 ? (
+                          <span className="text-sm text-muted-foreground">{t("team.roleContext.noScopeDefined")}</span>
+                        ) : (
+                          scopeSummary.labels.map((scope) => (
+                            <Badge key={scope} variant="secondary">
+                              {scope}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{scopeSummary.explanation}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{t("team.roleContext.permissionsTitle")}</p>
+                      {rolePermissionSummary.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t("team.roleContext.noPermissions")}</p>
+                      ) : (
+                        rolePermissionSummary.map((line) => (
+                          <p key={line} className="text-sm text-muted-foreground">
+                            {line}
+                          </p>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {sendCredentials ? (
                   <div className="rounded-md border bg-muted/40 p-4 space-y-2">
@@ -673,6 +797,177 @@ export function MemberCreateSheet({
                               </div>
                             );
                           })
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasAssignedScope && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{t("team.editDialog.assignedVehicles")}</CardTitle>
+                      <CardDescription>
+                        {t("team.roleContext.assignedVehiclesHint")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder={t("team.roleContext.vehicleSearchPlaceholder")}
+                          value={vehicleSearch}
+                          onChange={(e) => setVehicleSearch(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setSelectedVehicleIds([
+                              ...new Set([
+                                ...selectedVehicleIds,
+                                ...filteredVehicles.map((vehicle) => vehicle.id),
+                              ]),
+                            ])
+                          }
+                        >
+                          {t("team.editDialog.selectAllVehicles")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const toRemove = new Set(filteredVehicles.map((vehicle) => vehicle.id));
+                            setSelectedVehicleIds(
+                              selectedVehicleIds.filter((vehicleId) => !toRemove.has(vehicleId)),
+                            );
+                          }}
+                        >
+                          {t("team.editDialog.deselectAllVehicles")}
+                        </Button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
+                        {availableVehicles.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {t("team.roleContext.noVehiclesAvailable")}
+                          </p>
+                        ) : filteredVehicles.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {t("team.roleContext.noVehiclesForFilter")}
+                          </p>
+                        ) : (
+                          filteredVehicles.map((vehicle) => (
+                            <div key={vehicle.id} className="flex items-center space-x-2 py-1.5">
+                              <Checkbox
+                                id={`create-vehicle-${vehicle.id}`}
+                                checked={selectedVehicleIds.includes(vehicle.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedVehicleIds(
+                                    checked === true
+                                      ? [...selectedVehicleIds, vehicle.id]
+                                      : selectedVehicleIds.filter((id) => id !== vehicle.id),
+                                  );
+                                }}
+                              />
+                              <label
+                                htmlFor={`create-vehicle-${vehicle.id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {vehicle.name}{" "}
+                                <span className="text-muted-foreground">({vehicle.plate})</span>
+                              </label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasAssignedScope && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{t("team.editDialog.assignedDrivers")}</CardTitle>
+                      <CardDescription>
+                        {t("team.roleContext.assignedDriversHint")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder={t("team.editDialog.driverSearchPlaceholder")}
+                          value={driverSearch}
+                          onChange={(e) => setDriverSearch(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setSelectedDriverIds([
+                              ...new Set([
+                                ...selectedDriverIds,
+                                ...filteredDrivers.map((driver) => driver.id),
+                              ]),
+                            ])
+                          }
+                        >
+                          {t("team.editDialog.selectAllDrivers")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const toRemove = new Set(filteredDrivers.map((driver) => driver.id));
+                            setSelectedDriverIds(
+                              selectedDriverIds.filter((driverId) => !toRemove.has(driverId)),
+                            );
+                          }}
+                        >
+                          {t("team.editDialog.deselectAllDrivers")}
+                        </Button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
+                        {availableDrivers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {t("team.roleContext.noDriversAvailable")}
+                          </p>
+                        ) : filteredDrivers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {t("team.roleContext.noDriversForFilter")}
+                          </p>
+                        ) : (
+                          filteredDrivers.map((driver) => (
+                            <div key={driver.id} className="flex items-center space-x-2 py-1.5">
+                              <Checkbox
+                                id={`create-driver-${driver.id}`}
+                                checked={selectedDriverIds.includes(driver.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedDriverIds(
+                                    checked === true
+                                      ? [...selectedDriverIds, driver.id]
+                                      : selectedDriverIds.filter((id) => id !== driver.id),
+                                  );
+                                }}
+                              />
+                              <label
+                                htmlFor={`create-driver-${driver.id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {driver.name}
+                              </label>
+                            </div>
+                          ))
                         )}
                       </div>
                     </CardContent>

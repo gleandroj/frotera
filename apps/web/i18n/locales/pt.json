@@ -1379,6 +1379,35 @@
         "customerAccessRequired": "Selecione ao menos uma empresa ou marque \"Acesso completo à organização\"."
       }
     },
+    "roleContext": {
+      "title": "Entendimento do papel",
+      "scopeTitle": "Escopo de acesso",
+      "permissionsTitle": "Permissões por módulo",
+      "selectRoleHint": "Selecione um papel para visualizar detalhes de acesso.",
+      "selectRoleScopeHint": "Selecione um papel para verificar o escopo de acesso.",
+      "noScopeDefined": "Nenhum escopo definido.",
+      "noPermissions": "Sem permissões para exibir.",
+      "noActionsDefined": "Sem ações definidas",
+      "scopeUnknown": "Escopo não identificado para este papel.",
+      "scopeMixed": "Este papel combina acesso amplo e acesso por atribuição. Revise as permissões e configure atribuições quando necessário.",
+      "scopeGlobalOnly": "Este papel possui acesso global para os módulos permitidos.",
+      "scopeAssignedOnly": "Este papel depende de atribuições de veículos e motoristas para liberar acesso aos dados operacionais.",
+      "assignedVehiclesHint": "Este papel requer atribuição. Selecione os veículos que este usuário pode acessar.",
+      "assignedDriversHint": "Selecione os motoristas vinculados a este usuário para limitar o escopo operacional.",
+      "vehicleSearchPlaceholder": "Buscar por nome ou placa",
+      "noVehiclesAvailable": "Nenhum veículo cadastrado. Cadastre veículos para realizar atribuições.",
+      "noVehiclesForFilter": "Nenhum veículo encontrado para o filtro informado.",
+      "noDriversAvailable": "Nenhum motorista cadastrado. Cadastre motoristas para realizar atribuições.",
+      "noDriversForFilter": "Nenhum motorista encontrado para o filtro informado.",
+      "fallbackByRole": {
+        "driver": "Papel focado na operação de campo, com acesso restrito ao necessário para execução da rota.",
+        "viewer": "Papel de consulta, indicado para acompanhamento sem poderes de alteração de dados.",
+        "operator": "Papel operacional para monitoramento e ajustes do dia a dia, sem acesso administrativo total.",
+        "admin": "Papel com controle amplo sobre configurações e operação da organização.",
+        "owner": "Papel com controle máximo da organização, incluindo gestão de usuários e configurações críticas.",
+        "custom": "Papel personalizado. Revise as permissões e escopos abaixo para entender o nível de acesso."
+      }
+    },
     "table": {
       "name": "Nome",
       "email": "Email",

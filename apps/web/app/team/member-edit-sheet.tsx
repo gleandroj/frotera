@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -47,6 +48,11 @@ import {
 import { useAuth } from "@/lib/hooks/use-auth";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { rolesAPI, type Role } from "@/lib/api/roles";
+import {
+  describeRole,
+  summarizeRolePermissions,
+  summarizeRoleScope,
+} from "./role-display";
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -276,7 +282,19 @@ export function MemberEditSheet({
   const canEditOwnAccess = can(Module.USERS, Action.EDIT);
   const disableRoleAndAccess = isEditingSelf && !canEditOwnAccess;
   const selectedRole = roles.find((r) => r.id === form.watch("roleId"));
-  const hasAssignedScope = selectedRole?.permissions?.some((p) => p.scope === "ASSIGNED") ?? false;
+  const scopeSummary = summarizeRoleScope(t, selectedRole);
+  const hasAssignedScope = scopeSummary.hasAssignedScope;
+  const rolePermissionSummary = summarizeRolePermissions(t, selectedRole);
+  const filteredVehicles = availableVehicles.filter(
+    (vehicle) =>
+      !vehicleSearch.trim() ||
+      vehicle.name.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
+      vehicle.plate.toLowerCase().includes(vehicleSearch.toLowerCase()),
+  );
+  const filteredDrivers = availableDrivers.filter(
+    (driver) =>
+      !driverSearch.trim() || driver.name.toLowerCase().includes(driverSearch.toLowerCase()),
+  );
 
   const handleSubmit = async (values: EditMemberFormValues) => {
     if (!currentOrganization || !member) return;
@@ -409,6 +427,42 @@ export function MemberEditSheet({
                       </FormItem>
                     )}
                   />
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{t("team.roleContext.title")}</CardTitle>
+                      <CardDescription>{describeRole(t, selectedRole)}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{t("team.roleContext.scopeTitle")}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {scopeSummary.labels.length === 0 ? (
+                            <span className="text-sm text-muted-foreground">{t("team.roleContext.noScopeDefined")}</span>
+                          ) : (
+                            scopeSummary.labels.map((scope) => (
+                              <Badge key={scope} variant="secondary">
+                                {scope}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{scopeSummary.explanation}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{t("team.roleContext.permissionsTitle")}</p>
+                        {rolePermissionSummary.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">{t("team.roleContext.noPermissions")}</p>
+                        ) : (
+                          rolePermissionSummary.map((line) => (
+                            <p key={line} className="text-sm text-muted-foreground">
+                              {line}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {newPassword.length > 0 && (
                     <FormField
@@ -688,9 +742,16 @@ export function MemberEditSheet({
                           </Button>
                         </div>
                         <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
-                          {availableVehicles
-                            .filter(v => !vehicleSearch.trim() || v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || v.plate.toLowerCase().includes(vehicleSearch.toLowerCase()))
-                            .map(v => (
+                          {availableVehicles.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t("team.roleContext.noVehiclesAvailable")}
+                            </p>
+                          ) : filteredVehicles.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t("team.roleContext.noVehiclesForFilter")}
+                            </p>
+                          ) : (
+                            filteredVehicles.map(v => (
                               <div key={v.id} className="flex items-center space-x-2 py-1.5">
                                 <Checkbox
                                   id={`vehicle-${v.id}`}
@@ -705,7 +766,8 @@ export function MemberEditSheet({
                                   {v.name} <span className="text-muted-foreground">({v.plate})</span>
                                 </label>
                               </div>
-                            ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -738,9 +800,16 @@ export function MemberEditSheet({
                           </Button>
                         </div>
                         <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
-                          {availableDrivers
-                            .filter(d => !driverSearch.trim() || d.name.toLowerCase().includes(driverSearch.toLowerCase()))
-                            .map(d => (
+                          {availableDrivers.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t("team.roleContext.noDriversAvailable")}
+                            </p>
+                          ) : filteredDrivers.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t("team.roleContext.noDriversForFilter")}
+                            </p>
+                          ) : (
+                            filteredDrivers.map(d => (
                               <div key={d.id} className="flex items-center space-x-2 py-1.5">
                                 <Checkbox
                                   id={`driver-${d.id}`}
@@ -755,7 +824,8 @@ export function MemberEditSheet({
                                   {d.name}
                                 </label>
                               </div>
-                            ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
