@@ -204,6 +204,8 @@ export class MembersService {
       (p) => p.module === "USERS",
     );
     const canCreate = usersPerm?.actions?.includes("CREATE" as any) ?? false;
+    const actorIsOrganizationOwner =
+      userMembership.role.key === SystemRoleKey.ORGANIZATION_OWNER;
     if (!canCreate) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
@@ -230,9 +232,9 @@ export class MembersService {
       }
     }
 
-    // Only superadmin can assign ORGANIZATION_OWNER role
+    // ORG owner can delegate ownership inside the same organization
     if (targetRole.key === SystemRoleKey.ORGANIZATION_OWNER) {
-      if (userRecord?.isSuperAdmin !== true) {
+      if (userRecord?.isSuperAdmin !== true && !actorIsOrganizationOwner) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
     }
@@ -241,9 +243,13 @@ export class MembersService {
       data.customerRestricted ?? (data.customerIds?.length ? true : false);
     const customerIdsToValidate = data.customerIds ?? [];
 
-    // COMPANY_OWNER must always be assigned to at least one specific company
+    // Non-owners cannot grant full-org access to COMPANY_OWNER.
+    // Organization owners can intentionally delegate full-org access.
     if (targetRole.key === SystemRoleKey.COMPANY_OWNER) {
-      if (!customerRestricted || customerIdsToValidate.length === 0) {
+      if (
+        !actorIsOrganizationOwner &&
+        (!customerRestricted || customerIdsToValidate.length === 0)
+      ) {
         throw new BadRequestException({
           errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS,
         });
@@ -441,6 +447,8 @@ export class MembersService {
       (p) => p.module === "USERS",
     );
     const canEdit = usersPerm?.actions?.includes("EDIT" as any) ?? false;
+    const actorIsOrganizationOwner =
+      userMembership.role.key === SystemRoleKey.ORGANIZATION_OWNER;
     if (!canEdit) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
@@ -495,9 +503,9 @@ export class MembersService {
           errorCode: ApiCode.COMMON_INVALID_INPUT,
         });
       }
-      // Only superadmin can assign ORGANIZATION_OWNER role
+      // ORG owner can delegate ownership inside the same organization
       if (targetRole.key === SystemRoleKey.ORGANIZATION_OWNER) {
-        if (userRecord?.isSuperAdmin !== true) {
+        if (userRecord?.isSuperAdmin !== true && !actorIsOrganizationOwner) {
           throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
         }
       }

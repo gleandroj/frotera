@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CustomersService } from '../customers/customers.service';
 import { AuthService } from '../auth/auth.service';
 import { EmailService } from '../email/email.service';
+import { SystemRoleKey } from '../roles/roles.dto';
 
 describe('MembersService - Dependency Resolution', () => {
   let service: MembersService;
@@ -26,6 +27,9 @@ describe('MembersService - Dependency Resolution', () => {
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
+    },
+    organization: {
+      findUnique: jest.fn(),
     },
     role: {
       findFirst: jest.fn(),
@@ -161,6 +165,8 @@ describe('MembersService - Dependency Resolution', () => {
           },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
+          vehicles: { select: { vehicle: { select: { id: true, name: true, plate: true } } } },
+          drivers: { select: { driver: { select: { id: true, name: true } } } },
         },
         orderBy: { createdAt: 'asc' },
       });
@@ -317,6 +323,173 @@ describe('MembersService - Dependency Resolution', () => {
         where: { id: memberId },
         data: { active: false },
       });
+    });
+  });
+
+  describe('createMember ownership rules', () => {
+    const userId = 'user-1';
+    const orgId = 'org-1';
+
+    const usersPermission = {
+      id: 'perm-users',
+      module: 'USERS',
+      actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
+      scope: 'ALL',
+    };
+
+    const buildActorMembership = (roleKey: SystemRoleKey) => ({
+      id: 'member-actor',
+      userId,
+      organizationId: orgId,
+      customerRestricted: false,
+      role: {
+        key: roleKey,
+        permissions: [usersPermission],
+      },
+    });
+
+    const buildRole = (key: SystemRoleKey) => ({
+      id: `role-${key.toLowerCase()}`,
+      key,
+      name: key,
+      description: null,
+      isSystem: true,
+      color: '#000000',
+      organizationId: null,
+      permissions: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const buildCreatedMember = (roleKey: SystemRoleKey) => ({
+      id: 'member-created',
+      userId: 'new-user-id',
+      organizationId: orgId,
+      roleId: `role-${roleKey.toLowerCase()}`,
+      active: true,
+      customerRestricted: false,
+      createdAt: new Date(),
+      user: {
+        id: 'new-user-id',
+        email: 'new@user.com',
+        name: 'New User',
+        createdAt: new Date(),
+        isSuperAdmin: false,
+        isSystemUser: false,
+      },
+      role: {
+        ...buildRole(roleKey),
+        permissions: [],
+      },
+      customers: [],
+      vehicles: [],
+      drivers: [],
+    });
+
+    beforeEach(() => {
+      mockPrisma.organizationMember.findFirst.mockReset();
+      mockPrisma.role.findFirst.mockReset();
+      mockPrisma.user.findUnique.mockReset();
+      mockPrisma.$transaction.mockReset();
+      mockPrisma.organization.findUnique.mockReset();
+      mockCustomersService.getAllowedCustomerIds.mockReset();
+      mockCustomersService.getRootCustomerIds.mockReset();
+      mockAuthService.createUserWithPassword.mockReset();
+      mockEmailService.sendAccountCreatedEmail.mockClear();
+    });
+
+    it('blocks non-owner from assigning ORGANIZATION_OWNER', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuperAdmin: false });
+      mockPrisma.organizationMember.findFirst
+        .mockResolvedValueOnce(buildActorMembership(SystemRoleKey.COMPANY_ADMIN))
+        .mockResolvedValueOnce(null);
+      mockPrisma.role.findFirst.mockResolvedValue(
+        buildRole(SystemRoleKey.ORGANIZATION_OWNER),
+      );
+
+      const result = service.createMember(userId, orgId, {
+        email: 'new@user.com',
+        password: '12345678',
+        roleId: 'role-organization_owner',
+      });
+
+      await expect(result).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows org owner to assign ORGANIZATION_OWNER in same org', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuperAdmin: false });
+      mockPrisma.organizationMember.findFirst
+        .mockResolvedValueOnce(buildActorMembership(SystemRoleKey.ORGANIZATION_OWNER))
+        .mockResolvedValueOnce(null);
+      mockPrisma.role.findFirst.mockResolvedValue(
+        buildRole(SystemRoleKey.ORGANIZATION_OWNER),
+      );
+      mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
+      mockAuthService.createUserWithPassword.mockResolvedValue({
+        id: 'new-user-id',
+        email: 'new@user.com',
+        name: 'New User',
+      });
+      mockPrisma.$transaction.mockImplementation(async (cb: any) =>
+        cb({
+          organizationMember: {
+            create: jest
+              .fn()
+              .mockResolvedValue(buildCreatedMember(SystemRoleKey.ORGANIZATION_OWNER)),
+          },
+        }),
+      );
+      mockPrisma.organization.findUnique.mockResolvedValue({
+        id: orgId,
+        name: 'Org',
+      });
+
+      const result = await service.createMember(userId, orgId, {
+        email: 'new@user.com',
+        password: '12345678',
+        roleId: 'role-organization_owner',
+      });
+
+      expect(result.member.role.name).toBe(SystemRoleKey.ORGANIZATION_OWNER);
+    });
+
+    it('allows org owner to create COMPANY_OWNER with full access', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuperAdmin: false });
+      mockPrisma.organizationMember.findFirst
+        .mockResolvedValueOnce(buildActorMembership(SystemRoleKey.ORGANIZATION_OWNER))
+        .mockResolvedValueOnce(null);
+      mockPrisma.role.findFirst.mockResolvedValue(
+        buildRole(SystemRoleKey.COMPANY_OWNER),
+      );
+      mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
+      mockAuthService.createUserWithPassword.mockResolvedValue({
+        id: 'new-user-id',
+        email: 'new@user.com',
+        name: 'New User',
+      });
+      mockPrisma.$transaction.mockImplementation(async (cb: any) =>
+        cb({
+          organizationMember: {
+            create: jest
+              .fn()
+              .mockResolvedValue(buildCreatedMember(SystemRoleKey.COMPANY_OWNER)),
+          },
+        }),
+      );
+      mockPrisma.organization.findUnique.mockResolvedValue({
+        id: orgId,
+        name: 'Org',
+      });
+
+      const result = await service.createMember(userId, orgId, {
+        email: 'new@user.com',
+        password: '12345678',
+        roleId: 'role-company_owner',
+        customerRestricted: false,
+      });
+
+      expect(result.member.customerRestricted).toBe(false);
+      expect(result.member.role.name).toBe(SystemRoleKey.COMPANY_OWNER);
     });
   });
 });
