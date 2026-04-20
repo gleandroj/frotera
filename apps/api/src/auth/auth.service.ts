@@ -189,8 +189,10 @@ export class AuthService {
     email: string;
     password: string;
     name?: string;
+    isSuperAdmin?: boolean;
+    isSystemUser?: boolean;
   }): Promise<{ id: string; email: string; name: string | null }> {
-    const { email, password, name } = data;
+    const { email, password, name, isSuperAdmin, isSystemUser } = data;
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -209,6 +211,8 @@ export class AuthService {
         name: name || null,
         language: "pt",
         emailVerified: new Date(),
+        isSuperAdmin: isSuperAdmin === true,
+        isSystemUser: isSystemUser === true,
       },
       select: { id: true, email: true, name: true },
     });

@@ -27,6 +27,22 @@ export class CreateMemberDto {
   @IsString()
   name?: string;
 
+  @ApiPropertyOptional({
+    description: 'Grants global super admin privileges (super admin actor only)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSuperAdmin?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Marks account as system/internal user (super admin actor only)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSystemUser?: boolean;
+
   @ApiProperty({ description: 'Role ID to assign to the new member' })
   @IsString()
   roleId: string;
@@ -81,6 +97,20 @@ export class UpdateMemberDto {
   @IsString()
   @MinLength(8)
   newPassword?: string;
+
+  @ApiPropertyOptional({
+    description: 'Grants global super admin privileges (super admin actor only)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSuperAdmin?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Marks account as system/internal user (super admin actor only)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSystemUser?: boolean;
 }
 
 export class MemberResponseDto {
@@ -109,6 +139,8 @@ export class MemberResponseDto {
     email: string;
     name: string | null;
     createdAt: Date;
+    isSuperAdmin?: boolean;
+    isSystemUser?: boolean;
   };
 }
 

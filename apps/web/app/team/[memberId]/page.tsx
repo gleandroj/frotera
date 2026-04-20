@@ -46,7 +46,13 @@ import { toast } from "sonner";
 
 interface TeamMember {
   id: string;
-  user: { id: string; name: string | null; email: string };
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    isSuperAdmin?: boolean;
+    isSystemUser?: boolean;
+  };
   role: {
     id: string;
     name: string;
@@ -110,6 +116,8 @@ export default function EditMemberPage() {
       email: z.string().default(""),
       newPassword: z.string().default(""),
       confirmPassword: z.string().default(""),
+      isSuperAdmin: z.boolean().default(false),
+      isSystemUser: z.boolean().default(false),
     })
     .refine(
       (data) => !data.newPassword || data.newPassword === data.confirmPassword,
@@ -128,6 +136,8 @@ export default function EditMemberPage() {
       email: "",
       newPassword: "",
       confirmPassword: "",
+      isSuperAdmin: false,
+      isSystemUser: false,
     },
   });
 
@@ -155,6 +165,8 @@ export default function EditMemberPage() {
             email: found.user.email,
             newPassword: "",
             confirmPassword: "",
+            isSuperAdmin: found.user.isSuperAdmin === true,
+            isSystemUser: found.user.isSystemUser === true,
           });
         }
       })
@@ -229,6 +241,8 @@ export default function EditMemberPage() {
         name: values.name || undefined,
         email: values.email !== member.user.email ? values.email : undefined,
         newPassword: values.newPassword || undefined,
+        isSuperAdmin: user?.isSuperAdmin ? values.isSuperAdmin : undefined,
+        isSystemUser: user?.isSuperAdmin ? values.isSystemUser : undefined,
       });
       toast.success(t("team.toastMessages.memberUpdated"), {
         description: t("team.toastMessages.memberUpdatedDescription"),
@@ -427,6 +441,53 @@ export default function EditMemberPage() {
                   </FormItem>
                 )}
               />
+
+              {user?.isSuperAdmin === true && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Flags administrativas</CardTitle>
+                    <CardDescription>
+                      `isSuperAdmin` concede permissao global; `isSystemUser` marca conta tecnica/interna.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="isSuperAdmin"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(v) => field.onChange(v === true)}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Is Super Admin
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isSystemUser"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(v) => field.onChange(v === true)}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Is System User
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {!currentUserRestricted && !disableRoleAndAccess && (
                 <FormField

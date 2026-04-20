@@ -53,6 +53,11 @@ export class MembersService {
     organizationId: string,
     filterCustomerId?: string,
   ): Promise<MembersListResponseDto> {
+    const requestingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
     const organizationMember = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
     });
@@ -64,11 +69,20 @@ export class MembersService {
     let members = await this.prisma.organizationMember.findMany({
       where: {
         organizationId,
-        user: { isSuperAdmin: false, isSystemUser: false },
+        ...(requestingUser?.isSuperAdmin === true
+          ? {}
+          : { user: { isSuperAdmin: false, isSystemUser: false } }),
       },
       include: {
         user: {
-          select: { id: true, email: true, name: true, createdAt: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true,
+            isSuperAdmin: true,
+            isSystemUser: true,
+          },
         },
         role: { include: { permissions: true } },
         customers: { include: { customer: true } },
@@ -142,12 +156,24 @@ export class MembersService {
     organizationId: string,
     data: CreateMemberDto
   ): Promise<CreateMemberResponseDto> {
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
     const userMembership = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
       include: { role: { include: { permissions: true } } },
     });
 
     if (!userMembership) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+
+    if (
+      userRecord?.isSuperAdmin !== true &&
+      (data.isSuperAdmin !== undefined || data.isSystemUser !== undefined)
+    ) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
@@ -217,6 +243,8 @@ export class MembersService {
       email: data.email,
       password: data.password,
       name: data.name,
+      isSuperAdmin: userRecord?.isSuperAdmin === true ? data.isSuperAdmin : undefined,
+      isSystemUser: userRecord?.isSuperAdmin === true ? data.isSystemUser : undefined,
     });
 
     let customerIdsToStore =
@@ -237,7 +265,16 @@ export class MembersService {
               : undefined,
         },
         include: {
-          user: { select: { id: true, email: true, name: true, createdAt: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              createdAt: true,
+              isSuperAdmin: true,
+              isSystemUser: true,
+            },
+          },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
         },
@@ -271,12 +308,24 @@ export class MembersService {
     memberId: string,
     data: UpdateMemberDto
   ): Promise<UpdateMemberResponseDto> {
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
     const userMembership = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
       include: { role: { include: { permissions: true } } },
     });
 
     if (!userMembership) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+
+    if (
+      userRecord?.isSuperAdmin !== true &&
+      (data.isSuperAdmin !== undefined || data.isSystemUser !== undefined)
+    ) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
@@ -376,10 +425,20 @@ export class MembersService {
     }
 
     const updatedMember = await this.prisma.$transaction(async (tx) => {
-      const userUpdateData: { name?: string; email?: string; password?: string } = {};
+      const userUpdateData: {
+        name?: string;
+        email?: string;
+        password?: string;
+        isSuperAdmin?: boolean;
+        isSystemUser?: boolean;
+      } = {};
       if (data.name !== undefined) userUpdateData.name = data.name;
       if (data.email !== undefined) userUpdateData.email = data.email.toLowerCase();
       if (hashedPassword !== undefined) userUpdateData.password = hashedPassword;
+      if (userRecord?.isSuperAdmin === true) {
+        if (data.isSuperAdmin !== undefined) userUpdateData.isSuperAdmin = data.isSuperAdmin;
+        if (data.isSystemUser !== undefined) userUpdateData.isSystemUser = data.isSystemUser;
+      }
 
       if (Object.keys(userUpdateData).length > 0) {
         await tx.user.update({ where: { id: memberToUpdate.userId }, data: userUpdateData });
@@ -403,7 +462,16 @@ export class MembersService {
       return tx.organizationMember.findUniqueOrThrow({
         where: { id: memberId },
         include: {
-          user: { select: { id: true, email: true, name: true, createdAt: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              createdAt: true,
+              isSuperAdmin: true,
+              isSystemUser: true,
+            },
+          },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
         },

@@ -1,5 +1,12 @@
 # RS Frotas
 
+## User Flags (`isSuperAdmin` vs `isSystemUser`)
+
+- `isSuperAdmin`: grants elevated global admin access (guards and administrative features).
+- `isSystemUser`: marks an account as an internal/system account, primarily for classification and filtering in member/team visibility scenarios.
+- They are independent flags: a user can have one, both, or none.
+- In team member create/edit flows, only actors who are already super admins can set or update these two flags.
+
 ## First Time Setup
 
 ### 1. Install dependencies

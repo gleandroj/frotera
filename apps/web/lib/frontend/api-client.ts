@@ -344,6 +344,8 @@ export const organizationAPI = {
       roleId: string;
       customerRestricted?: boolean;
       customerIds?: string[];
+      isSuperAdmin?: boolean;
+      isSystemUser?: boolean;
     }
   ) =>
     externalApi.post(
@@ -360,6 +362,8 @@ export const organizationAPI = {
       name?: string;
       email?: string;
       newPassword?: string;
+      isSuperAdmin?: boolean;
+      isSystemUser?: boolean;
     }
   ) =>
     externalApi.patch(

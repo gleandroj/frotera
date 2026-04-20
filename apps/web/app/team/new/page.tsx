@@ -88,6 +88,8 @@ export default function NewUserPage() {
       roleId: z.string().min(1, t("team.createUserDialog.validation.roleRequired")),
       fullAccess: z.boolean().default(false),
       customerIds: z.array(z.string()).default([]),
+      isSuperAdmin: z.boolean().default(false),
+      isSystemUser: z.boolean().default(false),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: t("team.createUserDialog.validation.confirmPasswordMatch"),
@@ -113,6 +115,8 @@ export default function NewUserPage() {
       roleId: defaultRoleId,
       fullAccess: false,
       customerIds: [],
+      isSuperAdmin: false,
+      isSystemUser: false,
     },
   });
 
@@ -177,6 +181,8 @@ export default function NewUserPage() {
         roleId: values.roleId,
         customerRestricted: !values.fullAccess,
         customerIds: values.fullAccess ? undefined : values.customerIds,
+        isSuperAdmin: user?.isSuperAdmin ? values.isSuperAdmin : undefined,
+        isSystemUser: user?.isSuperAdmin ? values.isSystemUser : undefined,
       });
       toast.success(t("team.toastMessages.userCreated"), {
         description: t("team.toastMessages.userCreatedDescription"),
@@ -354,6 +360,53 @@ export default function NewUserPage() {
                   </FormItem>
                 )}
               />
+
+              {user?.isSuperAdmin === true && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Flags administrativas</CardTitle>
+                    <CardDescription>
+                      `isSuperAdmin` concede permissao global; `isSystemUser` marca conta tecnica/interna.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="isSuperAdmin"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(v) => field.onChange(v === true)}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Is Super Admin
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isSystemUser"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(v) => field.onChange(v === true)}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Is System User
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {!currentUserRestricted && (
                 <FormField
