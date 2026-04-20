@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { driversAPI, type Driver, type DriverVehicleAssignment } from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,9 @@ export default function DriverDetailPage() {
   const { currentOrganization } = useAuth();
   const params = useParams<{ driverId: string }>();
   const router = useRouter();
+
+  const { can } = usePermissions();
+  const canEditDriver = can(Module.DRIVERS, Action.EDIT);
 
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,16 +105,18 @@ export default function DriverDetailPage() {
             <p className="text-muted-foreground">{t("drivers.driverInformation")}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
-            <Link2 className="mr-2 h-4 w-4" />
-            {t("drivers.assignVehicle")}
-          </Button>
-          <Button onClick={() => setEditOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            {t("common.edit")}
-          </Button>
-        </div>
+        {canEditDriver && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
+              <Link2 className="mr-2 h-4 w-4" />
+              {t("drivers.assignVehicle")}
+            </Button>
+            <Button onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {t("common.edit")}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -186,7 +192,7 @@ export default function DriverDetailPage() {
                     {a.isPrimary && <Badge variant="outline">{t("drivers.primary")}</Badge>}
                     {!a.endDate && <Badge variant="default">{t("drivers.assignmentActive")}</Badge>}
                     {a.endDate && <Badge variant="secondary">{t("drivers.assignmentEnded")}</Badge>}
-                    {!a.endDate && (
+                    {!a.endDate && canEditDriver && (
                       <Button
                         type="button"
                         size="sm"
