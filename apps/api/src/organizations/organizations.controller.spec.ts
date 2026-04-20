@@ -29,7 +29,7 @@ describe('OrganizationsController', () => {
 
   const mockRole = {
     id: 'role-owner',
-    name: 'Dono da Empresa',
+    name: 'Dono da Organização',
     description: 'Owner role',
     isSystem: true,
     color: '#FF0000',
@@ -231,7 +231,7 @@ describe('OrganizationsController', () => {
       );
 
       expect(result.role).toBeDefined();
-      expect(result.role.name).toBe('Dono da Empresa');
+      expect(result.role.name).toBe('Dono da Organização');
       expect(result.joinedAt).toBeDefined();
     });
 

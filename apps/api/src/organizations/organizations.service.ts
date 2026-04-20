@@ -53,13 +53,13 @@ export class OrganizationsService {
 
     const currency = user?.language?.toLowerCase() === "pt" ? "BRL" : "USD";
 
-    // Get COMPANY_OWNER role (global system role)
+    // Get ORGANIZATION_OWNER role (global system role)
     const ownerRole = await this.prisma.role.findFirst({
-      where: { name: 'Dono da Empresa', isSystem: true, organizationId: null },
+      where: { key: 'ORGANIZATION_OWNER', isSystem: true, organizationId: null },
       include: { permissions: true },
     });
     if (!ownerRole) {
-      throw new Error('System role COMPANY_OWNER not found. Run seed first.');
+      throw new Error('System role ORGANIZATION_OWNER not found. Run seed first.');
     }
 
     const organization = await this.prisma.organization.create({

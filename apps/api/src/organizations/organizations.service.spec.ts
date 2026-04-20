@@ -44,7 +44,8 @@ describe('OrganizationsService', () => {
 
   const mockOwnerRole = {
     id: 'role-owner',
-    name: 'Dono da Empresa',
+    key: 'ORGANIZATION_OWNER',
+    name: 'Dono da Organização',
     description: 'Owner role',
     isSystem: true,
     color: '#FF0000',
@@ -163,7 +164,7 @@ describe('OrganizationsService', () => {
       };
 
       await expect(service.createOrganization(userId, dto)).rejects.toThrow(
-        'System role COMPANY_OWNER not found. Run seed first.',
+        'System role ORGANIZATION_OWNER not found. Run seed first.',
       );
     });
 
@@ -268,7 +269,7 @@ describe('OrganizationsService', () => {
 
       expect(result.id).toBe(orgId);
       expect(result.name).toBe('Test Organization');
-      expect(result.role.name).toBe('Dono da Empresa');
+      expect(result.role.name).toBe('Dono da Organização');
       expect(result.joinedAt).toEqual(mockMember.createdAt);
     });
 

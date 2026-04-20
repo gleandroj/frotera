@@ -251,7 +251,7 @@ async function seedAdminUser(ownerRoleId: string) {
   });
 
   console.log(`✅ Organization created: ${organization.name}`);
-  console.log(`✅ Admin added as Dono da Empresa`);
+  console.log(`✅ Admin added as Dono da Organização`);
 
   return {
     adminUserCreated: true,
@@ -361,7 +361,7 @@ async function main() {
   if (options.seedAdminUser) {
     console.log("👤 Seeding Admin User & Organization");
     console.log("-------------------------------------");
-    const adminResult = await seedAdminUser(roleIds.COMPANY_OWNER);
+    const adminResult = await seedAdminUser(roleIds.ORGANIZATION_OWNER);
     adminUserCreated = adminResult.adminUserCreated;
     organizationCreated = adminResult.organizationCreated;
     organizationName = adminResult.organizationName || "";
@@ -386,7 +386,7 @@ async function main() {
     if (organizationCreated) {
       console.log(`   ✓ Organization created: ${organizationName}`);
       console.log(`   ✓ Currency: BRL`);
-      console.log(`   ✓ Admin role: Dono da Empresa`);
+      console.log(`   ✓ Admin role: Dono da Organização`);
     } else {
       console.log(`   - Organization already exists or was not created`);
     }
