@@ -30,7 +30,7 @@ export function VehicleIncidentsTab({ vehicleId, organizationId, customerId }: V
           vehicleId,
           ...(customerId ? { customerId } : {}),
         });
-        if (!cancelled) setIncidents(res.data.incidents ?? res.data);
+        if (!cancelled) setIncidents(res.data.incidents);
       } catch {
         if (!cancelled) toast.error(t('common.error'));
       } finally {
