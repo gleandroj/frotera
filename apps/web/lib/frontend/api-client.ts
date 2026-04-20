@@ -224,14 +224,12 @@ externalApi.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle other errors
-    if (error.response?.status === 403) {
-      // Forbidden - might need 2FA verification
+    // Keep 2FA login handling in the login form flow.
+    if (error.response?.status === 403 || error.response?.status === 400) {
       const errorData = error.response.data as any;
-      if (errorData.error?.includes("2FA")) {
-        if (typeof window !== "undefined") {
-          window.location.href = "/2fa-verify";
-        }
+      const errorCode = errorData?.errorCode ?? errorData?.message;
+      if (errorCode === "AUTH_2FA_REQUIRED") {
+        return Promise.reject(error);
       }
     }
 

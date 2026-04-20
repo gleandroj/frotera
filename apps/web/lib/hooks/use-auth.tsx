@@ -208,12 +208,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store tokens in localStorage
       setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken)
 
-      // Handle 2FA flow
-      if (response.data.requires2FA) {
-        router.push("/2fa-verify")
-        return response
-      }
-
       setUser(response.data.user)
       await refreshOrganizations()
 
@@ -224,14 +218,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Force password change before accessing the app
       if (response.data.user.mustChangePassword) {
-        router.push("/change-password")
+        if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+          router.push("/change-password")
+        }
         return response
       }
 
       // Handle return URL if present
       const params = new URLSearchParams(window.location.search)
       const returnUrl = params.get("from")
-      router.push(returnUrl || "/dashboard")
+      if (window.location.pathname !== "/login") {
+        router.push(returnUrl || "/dashboard")
+      }
 
       return response
     } catch (error) {

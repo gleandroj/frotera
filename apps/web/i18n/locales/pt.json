@@ -436,6 +436,8 @@
     "hasAccount": "Já tem uma conta?",
     "USER_ALREADY_EXISTS": "Usuário já existe",
     "AUTH_INVALID_CREDENTIALS": "Email ou senha inválidos",
+    "AUTH_2FA_REQUIRED": "Digite o código de autenticação de dois fatores para continuar.",
+    "AUTH_INVALID_2FA_CODE": "Código de autenticação de dois fatores inválido.",
     "AUTH_ACCOUNT_NOT_VERIFIED": "Conta não verificada. Email de verificação enviado. Verifique sua caixa de entrada ou spam para ativar sua conta.",
     "AUTH_SIGNUP_DISABLED": "O cadastro público está desativado.",
     "switchToSignup": "Cadastre-se",

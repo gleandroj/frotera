@@ -3,10 +3,7 @@
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,18 +78,20 @@ export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthF
     } catch (error) {
       if (error instanceof AxiosError) {
         const errorData = error.response?.data;
-        const code = errorData?.errorCode;
-        const errorMessage = code ? t(`auth.${code}`) :
-          code || errorData?.error || t('auth.invalidCredentials');
-        // Check for 2FA requirement (403 status)
-        if (error.response?.status === 403 && errorData?.requires2FA) {
+        const errorCode = errorData?.errorCode ?? errorData?.message;
+
+        if (errorCode === "AUTH_2FA_REQUIRED") {
           setStep("2fa");
           setIsLoading(false);
           return;
         }
+
+        const errorMessage = errorCode
+          ? t(`auth.${errorCode}`)
+          : errorData?.error || t("auth.invalidCredentials");
         toast.error(errorMessage);
       } else {
-        toast.error(error instanceof Error ? error.message : t('auth.invalidCredentials'));
+        toast.error(error instanceof Error ? error.message : t("auth.invalidCredentials"));
       }
       setIsLoading(false);
     }
@@ -109,7 +108,9 @@ export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthF
     } catch (error) {
       let message = "";
       if (error instanceof AxiosError) {
-        message = error.response?.data?.error;
+        const errorData = error.response?.data;
+        const errorCode = errorData?.errorCode ?? errorData?.message;
+        message = errorCode ? t(`auth.${errorCode}`) : errorData?.error;
       }
       message =
         message ||
