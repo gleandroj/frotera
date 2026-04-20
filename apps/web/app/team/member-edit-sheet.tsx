@@ -598,11 +598,13 @@ export function MemberEditSheet({
                             className="pl-9"
                           />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
+                            className="min-h-9 w-full whitespace-normal px-2 text-center text-xs leading-tight sm:w-auto sm:px-3 sm:text-sm"
+                            title={t("team.createUserDialog.selectAllCustomersTitle")}
                             onClick={() => {
                               const idsToAdd = filteredCustomers.flatMap((c) =>
                                 c.parentId != null && customerIds.includes(c.parentId)
@@ -620,6 +622,8 @@ export function MemberEditSheet({
                             type="button"
                             variant="outline"
                             size="sm"
+                            className="min-h-9 w-full whitespace-normal px-2 text-center text-xs leading-tight sm:w-auto sm:px-3 sm:text-sm"
+                            title={t("team.createUserDialog.deselectAllCustomersTitle")}
                             onClick={() => {
                               const idsToRemove = new Set(
                                 filteredCustomers.flatMap((c) => [
