@@ -19,6 +19,8 @@ import {
 function orgAccess(req: OrgScopedRequest): ChecklistOrgAccess {
   return {
     allowedCustomerIds: req.allowedCustomerIds ?? null,
+    allowedVehicleIds: req.allowedVehicleIds ?? null,
+    memberId: req.organizationMember.id,
     isSuperAdmin: req.user.isSuperAdmin === true,
   };
 }

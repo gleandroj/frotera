@@ -40,6 +40,8 @@ import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
 import {
   organizationAPI,
   customersAPI,
+  vehiclesAPI,
+  driversAPI,
   type Customer,
 } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
@@ -72,6 +74,8 @@ interface TeamMember {
   joinedAt: string;
   customerRestricted?: boolean;
   customers?: { id: string; name: string }[];
+  vehicles?: { id: string; name: string; plate: string }[];
+  drivers?: { id: string; name: string }[];
 }
 
 function getDescendantIds(
@@ -120,10 +124,16 @@ export function MemberEditSheet({
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerSearch, setCustomerSearch] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<{ id: string; name: string; plate: string }[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+  const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
+  const [vehicleSearch, setVehicleSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
 
   const schema = z
     .object({
-      roleId: z.string().min(1, t("team.inviteDialog.validation.roleRequired")),
+      roleId: z.string().min(1, t("team.createUserDialog.validation.roleRequired")),
       fullAccess: z.boolean().default(false),
       customerIds: z.array(z.string()).default([]),
       name: z.string().default(""),
@@ -182,6 +192,8 @@ export function MemberEditSheet({
             isSuperAdmin: found.user.isSuperAdmin === true,
             isSystemUser: found.user.isSystemUser === true,
           });
+          setSelectedVehicleIds(found.vehicles?.map((v) => v.id) ?? []);
+          setSelectedDriverIds(found.drivers?.map((d) => d.id) ?? []);
         }
       })
       .catch(() => {
@@ -218,6 +230,19 @@ export function MemberEditSheet({
   }, [open, loadCustomers]);
 
   useEffect(() => {
+    if (!open || !currentOrganization?.id) return;
+    vehiclesAPI.list(currentOrganization.id)
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as any)?.vehicles ?? [];
+        setAvailableVehicles(list.map((v: any) => ({ id: v.id, name: v.name ?? '', plate: v.plate ?? '' })));
+      })
+      .catch(() => setAvailableVehicles([]));
+    driversAPI.list(currentOrganization.id)
+      .then((res) => setAvailableDrivers(res.data?.drivers ?? []))
+      .catch(() => setAvailableDrivers([]));
+  }, [open, currentOrganization?.id]);
+
+  useEffect(() => {
     if (!open) return;
     if (!currentOrganization?.id) return;
     rolesAPI
@@ -247,6 +272,8 @@ export function MemberEditSheet({
   const isEditingSelf = member?.user.id === user?.id;
   const canEditOwnAccess = can(Module.USERS, Action.EDIT);
   const disableRoleAndAccess = isEditingSelf && !canEditOwnAccess;
+  const selectedRole = roles.find((r) => r.id === form.watch("roleId"));
+  const hasAssignedScope = selectedRole?.permissions?.some((p) => p.scope === "ASSIGNED") ?? false;
 
   const handleSubmit = async (values: EditMemberFormValues) => {
     if (!currentOrganization || !member) return;
@@ -261,6 +288,10 @@ export function MemberEditSheet({
         isSuperAdmin: user?.isSuperAdmin ? values.isSuperAdmin : undefined,
         isSystemUser: user?.isSuperAdmin ? values.isSystemUser : undefined,
       });
+      await Promise.all([
+        organizationAPI.setMemberVehicles(currentOrganization.id, member.id, selectedVehicleIds),
+        organizationAPI.setMemberDrivers(currentOrganization.id, member.id, selectedDriverIds),
+      ]);
       toast.success(t("team.toastMessages.memberUpdated"), {
         description: t("team.toastMessages.memberUpdatedDescription"),
       });
@@ -407,7 +438,7 @@ export function MemberEditSheet({
                     name="roleId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("team.inviteDialog.roleLabel")}</FormLabel>
+                        <FormLabel>{t("team.createUserDialog.roleLabel")}</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -494,7 +525,7 @@ export function MemberEditSheet({
                             />
                           </FormControl>
                           <FormLabel className="font-normal cursor-pointer">
-                            {t("team.inviteDialog.fullAccess")}
+                            {t("team.createUserDialog.fullAccess")}
                           </FormLabel>
                         </FormItem>
                       )}
@@ -622,6 +653,106 @@ export function MemberEditSheet({
                               );
                             })
                           )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {hasAssignedScope && !disableRoleAndAccess && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{t("team.editDialog.assignedVehicles")}</CardTitle>
+                        <CardDescription>{t("team.editDialog.assignedVehiclesHint")}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder={t("team.editDialog.vehicleSearchPlaceholder")}
+                            value={vehicleSearch}
+                            onChange={(e) => setVehicleSearch(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm"
+                            onClick={() => setSelectedVehicleIds([...new Set([...selectedVehicleIds, ...availableVehicles.filter(v => v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || v.plate.toLowerCase().includes(vehicleSearch.toLowerCase())).map(v => v.id)])])}>
+                            {t("team.editDialog.selectAllVehicles")}
+                          </Button>
+                          <Button type="button" variant="outline" size="sm"
+                            onClick={() => { const toRemove = new Set(availableVehicles.filter(v => v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || v.plate.toLowerCase().includes(vehicleSearch.toLowerCase())).map(v => v.id)); setSelectedVehicleIds(selectedVehicleIds.filter(id => !toRemove.has(id))); }}>
+                            {t("team.editDialog.deselectAllVehicles")}
+                          </Button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
+                          {availableVehicles
+                            .filter(v => !vehicleSearch.trim() || v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || v.plate.toLowerCase().includes(vehicleSearch.toLowerCase()))
+                            .map(v => (
+                              <div key={v.id} className="flex items-center space-x-2 py-1.5">
+                                <Checkbox
+                                  id={`vehicle-${v.id}`}
+                                  checked={selectedVehicleIds.includes(v.id)}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedVehicleIds(checked === true
+                                      ? [...selectedVehicleIds, v.id]
+                                      : selectedVehicleIds.filter(id => id !== v.id));
+                                  }}
+                                />
+                                <label htmlFor={`vehicle-${v.id}`} className="text-sm cursor-pointer flex-1">
+                                  {v.name} <span className="text-muted-foreground">({v.plate})</span>
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {hasAssignedScope && !disableRoleAndAccess && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{t("team.editDialog.assignedDrivers")}</CardTitle>
+                        <CardDescription>{t("team.editDialog.assignedDriversHint")}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder={t("team.editDialog.driverSearchPlaceholder")}
+                            value={driverSearch}
+                            onChange={(e) => setDriverSearch(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm"
+                            onClick={() => setSelectedDriverIds([...new Set([...selectedDriverIds, ...availableDrivers.filter(d => d.name.toLowerCase().includes(driverSearch.toLowerCase())).map(d => d.id)])])}>
+                            {t("team.editDialog.selectAllDrivers")}
+                          </Button>
+                          <Button type="button" variant="outline" size="sm"
+                            onClick={() => { const toRemove = new Set(availableDrivers.filter(d => d.name.toLowerCase().includes(driverSearch.toLowerCase())).map(d => d.id)); setSelectedDriverIds(selectedDriverIds.filter(id => !toRemove.has(id))); }}>
+                            {t("team.editDialog.deselectAllDrivers")}
+                          </Button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto rounded-md border p-3 space-y-1">
+                          {availableDrivers
+                            .filter(d => !driverSearch.trim() || d.name.toLowerCase().includes(driverSearch.toLowerCase()))
+                            .map(d => (
+                              <div key={d.id} className="flex items-center space-x-2 py-1.5">
+                                <Checkbox
+                                  id={`driver-${d.id}`}
+                                  checked={selectedDriverIds.includes(d.id)}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedDriverIds(checked === true
+                                      ? [...selectedDriverIds, d.id]
+                                      : selectedDriverIds.filter(id => id !== d.id));
+                                  }}
+                                />
+                                <label htmlFor={`driver-${d.id}`} className="text-sm cursor-pointer flex-1">
+                                  {d.name}
+                                </label>
+                              </div>
+                            ))}
                         </div>
                       </CardContent>
                     </Card>

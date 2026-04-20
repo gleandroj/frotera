@@ -317,7 +317,7 @@ async function seedAppSettings() {
       signupCreateOrganizationEnabled: false,
     },
   });
-  console.log("✅ App settings created (invitation-only: signup disabled, create org on signup disabled)");
+  console.log("✅ App settings created (public signup disabled, create org on signup disabled)");
 }
 
 async function main() {

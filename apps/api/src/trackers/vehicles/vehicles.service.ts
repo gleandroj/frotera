@@ -20,6 +20,19 @@ type VehicleWithDeviceAndCustomer = Prisma.VehicleGetPayload<{
   include: { trackerDevice: true; customer: true };
 }>;
 
+function buildVehicleScope(
+  allowedCustomerIds: string[] | null,
+  allowedVehicleIds: string[] | null,
+): any {
+  const clauses: any[] = [];
+  if (allowedCustomerIds !== null) clauses.push({ customerId: { in: allowedCustomerIds } });
+  if (allowedVehicleIds !== null && allowedVehicleIds.length > 0)
+    clauses.push({ id: { in: allowedVehicleIds } });
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { OR: clauses };
+}
+
 @Injectable()
 export class VehiclesService {
   constructor(
@@ -109,6 +122,7 @@ export class VehiclesService {
     id: string,
     dto: UpdateVehicleDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<VehicleResponseDto> {
     const existing = await this.prisma.vehicle.findFirst({
       where: { id, organizationId },
@@ -169,16 +183,21 @@ export class VehiclesService {
     organizationId: string,
     vehicleId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<VehicleResponseDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: vehicleId, organizationId },
       include: { trackerDevice: true, customer: true },
     });
     if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
-    if (allowedCustomerIds !== null) {
-      if (!allowedCustomerIds.includes(vehicle.customerId)) {
-        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-      }
+
+    // Check OR scope
+    const hasCustomerAccess = allowedCustomerIds === null || allowedCustomerIds.includes(vehicle.customerId);
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(vehicleId));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
     return this.toResponse(vehicle as VehicleWithDeviceAndCustomer);
   }
@@ -186,6 +205,7 @@ export class VehiclesService {
   async listByOrganization(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
     filterCustomerIds?: string[] | null,
     activeOnly?: boolean,
     inactiveOnly?: boolean,
@@ -195,13 +215,30 @@ export class VehiclesService {
       ...(activeOnly ? { inactive: false } : {}),
       ...(inactiveOnly ? { inactive: true } : {}),
     };
-    const effectiveIds = filterCustomerIds !== undefined && filterCustomerIds !== null
-      ? filterCustomerIds
-      : allowedCustomerIds;
-    if (effectiveIds !== null) {
-      if (effectiveIds.length === 0) return [];
-      where.customerId = { in: effectiveIds };
+
+    // When filterCustomerIds is specified, use it; otherwise use the scope-based logic
+    if (filterCustomerIds !== undefined && filterCustomerIds !== null) {
+      if (filterCustomerIds.length === 0) return [];
+      where.customerId = { in: filterCustomerIds };
+    } else {
+      // Apply OR logic for customer and vehicle IDs
+      const scope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+      if (Object.keys(scope).length === 0) {
+        // Full access case
+      } else if (scope.OR) {
+        where.OR = scope.OR;
+      } else if (scope.customerId) {
+        where.customerId = scope.customerId;
+      } else if (scope.id) {
+        where.id = scope.id;
+      }
+
+      // Special case: if both empty arrays and no customer access, return empty
+      if (allowedVehicleIds !== null && allowedVehicleIds.length === 0 && allowedCustomerIds === null) {
+        return [];
+      }
     }
+
     const list = await this.prisma.vehicle.findMany({
       where,
       include: { trackerDevice: true, customer: true },
@@ -212,16 +249,32 @@ export class VehiclesService {
   async listFleetStatus(
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
     filterCustomerIds?: string[] | null,
   ): Promise<FleetVehicleStatusDto[]> {
     const where: Prisma.VehicleWhereInput = { organizationId };
-    const effectiveIds =
-      filterCustomerIds !== undefined && filterCustomerIds !== null
-        ? filterCustomerIds
-        : allowedCustomerIds;
-    if (effectiveIds !== null) {
-      if (effectiveIds.length === 0) return [];
-      where.customerId = { in: effectiveIds };
+
+    // When filterCustomerIds is specified, use it; otherwise use the scope-based logic
+    if (filterCustomerIds !== undefined && filterCustomerIds !== null) {
+      if (filterCustomerIds.length === 0) return [];
+      where.customerId = { in: filterCustomerIds };
+    } else {
+      // Apply OR logic for customer and vehicle IDs
+      const scope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+      if (Object.keys(scope).length === 0) {
+        // Full access case
+      } else if (scope.OR) {
+        where.OR = scope.OR;
+      } else if (scope.customerId) {
+        where.customerId = scope.customerId;
+      } else if (scope.id) {
+        where.id = scope.id;
+      }
+
+      // Special case: if both empty arrays and no customer access, return empty
+      if (allowedVehicleIds !== null && allowedVehicleIds.length === 0 && allowedCustomerIds === null) {
+        return [];
+      }
     }
     const list = await this.prisma.vehicle.findMany({
       where,
@@ -259,16 +312,21 @@ export class VehiclesService {
   async delete(
     id: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<void> {
-    if (allowedCustomerIds !== null) {
-      const vehicle = await this.prisma.vehicle.findUnique({
-        where: { id },
-        select: { customerId: true },
-      });
-      if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
-      if (!allowedCustomerIds.includes(vehicle.customerId)) {
-        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
-      }
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id },
+      select: { customerId: true },
+    });
+    if (!vehicle) throw new NotFoundException(ApiCode.ORGANIZATION_NOT_FOUND);
+
+    // Check OR scope
+    const hasCustomerAccess = allowedCustomerIds === null || allowedCustomerIds.includes(vehicle.customerId);
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(id));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
     await this.prisma.vehicle.delete({ where: { id } });
   }

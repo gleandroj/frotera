@@ -83,6 +83,7 @@ export class VehiclesController {
     return this.vehiclesService.listByOrganization(
       organizationId,
       req.allowedCustomerIds,
+      req.allowedVehicleIds,
       filterIds,
       activeOnly,
       inactiveOnly,
@@ -111,7 +112,7 @@ export class VehiclesController {
           ? filterSet
           : filterSet.filter((id) => req.allowedCustomerIds!.includes(id));
     }
-    return this.vehiclesService.listFleetStatus(organizationId, req.allowedCustomerIds, filterIds);
+    return this.vehiclesService.listFleetStatus(organizationId, req.allowedCustomerIds, req.allowedVehicleIds, filterIds);
   }
 
   @Get(":vehicleId")
@@ -129,6 +130,7 @@ export class VehiclesController {
       organizationId,
       vehicleId,
       req.allowedCustomerIds,
+      req.allowedVehicleIds,
     );
   }
 
@@ -148,12 +150,14 @@ export class VehiclesController {
       organizationId,
       vehicleId,
       req.allowedCustomerIds,
+      req.allowedVehicleIds,
     );
     return this.vehiclesService.update(
       organizationId,
       vehicleId,
       body,
       req.allowedCustomerIds,
+      req.allowedVehicleIds,
     );
   }
 
@@ -172,7 +176,8 @@ export class VehiclesController {
       organizationId,
       vehicleId,
       req.allowedCustomerIds,
+      req.allowedVehicleIds,
     );
-    await this.vehiclesService.delete(vehicleId, req.allowedCustomerIds);
+    await this.vehiclesService.delete(vehicleId, req.allowedCustomerIds, req.allowedVehicleIds);
   }
 }

@@ -10,6 +10,19 @@ import { ApiCode } from "@/common/api-codes.enum";
 import { CustomersService } from "@/customers/customers.service";
 import { PrismaService } from "@/prisma/prisma.service";
 import { S3Service } from "@/utils/s3.service";
+
+function buildVehicleScope(
+  allowedCustomerIds: string[] | null,
+  allowedVehicleIds: string[] | null,
+): any {
+  const clauses: any[] = [];
+  if (allowedCustomerIds !== null) clauses.push({ customerId: { in: allowedCustomerIds } });
+  if (allowedVehicleIds !== null && allowedVehicleIds.length > 0)
+    clauses.push({ vehicleId: { in: allowedVehicleIds } });
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { OR: clauses };
+}
 import {
   assertIncidentAttachmentMime,
   INCIDENT_ATTACHMENT_UPLOAD_MAX_BYTES,
@@ -137,6 +150,7 @@ export class IncidentsService {
     organizationId: string,
     filters: IncidentFiltersDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const {
       type,
@@ -163,12 +177,25 @@ export class IncidentsService {
       if (dateTo) where.date.lte = new Date(dateTo);
     }
 
-    const customerFilter = await this.resolveListCustomerIds(
-      organizationId,
-      allowedCustomerIds,
-      filterCustomerId,
-    );
-    if (customerFilter) where.customerId = customerFilter;
+    // When filterCustomerId is specified, use customer scope only
+    if (filterCustomerId) {
+      const customerFilter = await this.resolveListCustomerIds(
+        organizationId,
+        allowedCustomerIds,
+        filterCustomerId,
+      );
+      if (customerFilter) where.customerId = customerFilter;
+    } else {
+      // Apply OR logic for vehicle and customer IDs
+      const vehicleScope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+      if (vehicleScope.OR) {
+        where.OR = vehicleScope.OR;
+      } else if (vehicleScope.customerId) {
+        where.customerId = vehicleScope.customerId;
+      } else if (vehicleScope.vehicleId) {
+        where.vehicleId = vehicleScope.vehicleId;
+      }
+    }
 
     const skip = (page - 1) * limit;
     const [incidents, total] = await Promise.all([
@@ -200,6 +227,7 @@ export class IncidentsService {
     organizationId: string,
     dto: CreateIncidentDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const member = await this.getMember(userId, organizationId);
 
@@ -209,6 +237,13 @@ export class IncidentsService {
 
     const customerId = await this.resolveCustomerIdForCreate(organizationId, dto);
     this.assertIncidentCustomerAccess(customerId, allowedCustomerIds);
+
+    // Check vehicle ID access if vehicle is specified
+    if (dto.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(dto.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
 
     return this.prisma.incident.create({
       data: {
@@ -241,9 +276,17 @@ export class IncidentsService {
     organizationId: string,
     id: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const incident = await this.findOrFail(id, organizationId);
     this.assertIncidentCustomerAccess(incident.customerId, allowedCustomerIds);
+
+    // Check vehicle ID access
+    if (incident.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(incident.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     return incident;
   }
 
@@ -252,11 +295,20 @@ export class IncidentsService {
     id: string,
     dto: UpdateIncidentDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const existing = await this.findOrFail(id, organizationId);
     this.assertIncidentCustomerAccess(existing.customerId, allowedCustomerIds);
 
-    if (dto.vehicleId) await this.assertVehicleInOrg(dto.vehicleId, organizationId);
+    if (dto.vehicleId) {
+      await this.assertVehicleInOrg(dto.vehicleId, organizationId);
+      // Check vehicle ID access
+      if (allowedVehicleIds !== null) {
+        if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(dto.vehicleId)) {
+          throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+        }
+      }
+    }
     if (dto.driverId !== undefined) {
       const d = dto.driverId?.trim();
       if (d) await this.assertDriverInOrg(d, organizationId);
@@ -339,9 +391,16 @@ export class IncidentsService {
     });
   }
 
-  async remove(organizationId: string, id: string, allowedCustomerIds: string[] | null) {
+  async remove(organizationId: string, id: string, allowedCustomerIds: string[] | null, allowedVehicleIds: string[] | null = null) {
     const existing = await this.findOrFail(id, organizationId);
     this.assertIncidentCustomerAccess(existing.customerId, allowedCustomerIds);
+
+    // Check vehicle ID access
+    if (existing.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(existing.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     await this.prisma.incident.delete({ where: { id } });
     return { success: true };
   }
@@ -351,9 +410,17 @@ export class IncidentsService {
     incidentId: string,
     dto: AddAttachmentDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const inc = await this.findOrFail(incidentId, organizationId);
     this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
+
+    // Check vehicle ID access
+    if (inc.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(inc.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     return this.prisma.incidentAttachment.create({
       data: {
         incidentId,
@@ -371,9 +438,17 @@ export class IncidentsService {
     originalName: string,
     mimetype: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const inc = await this.findOrFail(incidentId, organizationId);
     this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
+
+    // Check vehicle ID access
+    if (inc.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(inc.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     assertIncidentAttachmentMime(mimetype);
     if (buffer.length > INCIDENT_ATTACHMENT_UPLOAD_MAX_BYTES) {
       throw new BadRequestException(
@@ -399,9 +474,17 @@ export class IncidentsService {
     incidentId: string,
     attachmentId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ) {
     const inc = await this.findOrFail(incidentId, organizationId);
     this.assertIncidentCustomerAccess(inc.customerId, allowedCustomerIds);
+
+    // Check vehicle ID access
+    if (inc.vehicleId && allowedVehicleIds !== null) {
+      if (allowedVehicleIds.length === 0 || !allowedVehicleIds.includes(inc.vehicleId)) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
     const attachment = await this.prisma.incidentAttachment.findFirst({
       where: { id: attachmentId, incidentId },
     });
@@ -415,6 +498,7 @@ export class IncidentsService {
     dateFrom: string | undefined,
     dateTo: string | undefined,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
     filterCustomerId?: string,
   ) {
     const dateFilter: Prisma.DateTimeFilter = {};
@@ -423,12 +507,26 @@ export class IncidentsService {
 
     const baseWhere: Prisma.IncidentWhereInput = { organizationId };
     if (dateFrom || dateTo) baseWhere.date = dateFilter;
-    const customerFilter = await this.resolveListCustomerIds(
-      organizationId,
-      allowedCustomerIds,
-      filterCustomerId,
-    );
-    if (customerFilter) baseWhere.customerId = customerFilter;
+
+    // When filterCustomerId is specified, use customer scope only
+    if (filterCustomerId) {
+      const customerFilter = await this.resolveListCustomerIds(
+        organizationId,
+        allowedCustomerIds,
+        filterCustomerId,
+      );
+      if (customerFilter) baseWhere.customerId = customerFilter;
+    } else {
+      // Apply OR logic for vehicle and customer IDs
+      const vehicleScope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+      if (vehicleScope.OR) {
+        baseWhere.OR = vehicleScope.OR;
+      } else if (vehicleScope.customerId) {
+        baseWhere.customerId = vehicleScope.customerId;
+      } else if (vehicleScope.vehicleId) {
+        baseWhere.vehicleId = vehicleScope.vehicleId;
+      }
+    }
 
     const [byType, byStatus, costAgg, openCount] = await Promise.all([
       this.prisma.incident.groupBy({

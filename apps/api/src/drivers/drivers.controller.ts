@@ -55,6 +55,7 @@ export class DriversController {
       customerId,
       activeOnly,
       inactiveOnly,
+      req.allowedDriverIds,
     );
     return { drivers };
   }

@@ -3,7 +3,12 @@ import { ChecklistService } from "./checklist.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { S3Service } from "../utils/s3.service";
 
-const fullOrgAccess = { allowedCustomerIds: null as string[] | null, isSuperAdmin: false };
+const fullOrgAccess = {
+  allowedCustomerIds: null as string[] | null,
+  allowedVehicleIds: null as string[] | null,
+  memberId: "test-member-id",
+  isSuperAdmin: false,
+};
 
 describe("ChecklistService", () => {
   let service: ChecklistService;

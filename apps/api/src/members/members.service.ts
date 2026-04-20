@@ -88,6 +88,8 @@ export class MembersService {
         },
         role: { include: { permissions: true } },
         customers: { include: { customer: true } },
+        vehicles: { select: { vehicle: { select: { id: true, name: true, plate: true } } } },
+        drivers: { select: { driver: { select: { id: true, name: true } } } },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -165,6 +167,8 @@ export class MembersService {
             id: mc.customer.id,
             name: mc.customer.name,
           })) ?? [],
+        vehicles: (member.vehicles ?? []).map((mv: any) => mv.vehicle),
+        drivers: (member.drivers ?? []).map((md: any) => md.driver),
         user: member.user,
       })),
     };
@@ -335,6 +339,8 @@ export class MembersService {
           },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
+          vehicles: { select: { vehicle: { select: { id: true, name: true, plate: true } } } },
+          drivers: { select: { driver: { select: { id: true, name: true } } } },
         },
       });
       return created;
@@ -397,6 +403,8 @@ export class MembersService {
             id: mc.customer.id,
             name: mc.customer.name,
           })) ?? [],
+        vehicles: (member.vehicles ?? []).map((mv: any) => mv.vehicle),
+        drivers: (member.drivers ?? []).map((md: any) => md.driver),
         user: member.user,
       },
     };
@@ -630,6 +638,8 @@ export class MembersService {
           },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
+          vehicles: { select: { vehicle: { select: { id: true, name: true, plate: true } } } },
+          drivers: { select: { driver: { select: { id: true, name: true } } } },
         },
       });
     });
@@ -647,6 +657,8 @@ export class MembersService {
             id: mc.customer.id,
             name: mc.customer.name,
           })) ?? [],
+        vehicles: (updatedMember.vehicles ?? []).map((mv: any) => mv.vehicle),
+        drivers: (updatedMember.drivers ?? []).map((md: any) => md.driver),
         user: updatedMember.user,
       },
     };
@@ -792,5 +804,76 @@ export class MembersService {
     });
 
     return { message: ApiCode.MEMBER_ENABLED_SUCCESSFULLY };
+  }
+
+  async setMemberVehicles(
+    organizationId: string,
+    memberId: string,
+    vehicleIds: string[],
+  ): Promise<void> {
+    // Verify membership belongs to org
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { id: memberId, organizationId },
+    });
+    if (!membership) throw new NotFoundException(ApiCode.MEMBER_NOT_FOUND);
+
+    // Validate all vehicleIds belong to this org
+    if (vehicleIds.length > 0) {
+      const vehicles = await this.prisma.vehicle.findMany({
+        where: { id: { in: vehicleIds }, organizationId },
+        select: { id: true },
+      });
+      if (vehicles.length !== vehicleIds.length)
+        throw new BadRequestException({
+          errorCode: ApiCode.COMMON_INVALID_INPUT,
+        });
+    }
+
+    // Replace: delete all existing, create new
+    await this.prisma.$transaction([
+      this.prisma.organizationMemberVehicle.deleteMany({
+        where: { organizationMemberId: memberId },
+      }),
+      ...(vehicleIds.length > 0
+        ? [this.prisma.organizationMemberVehicle.createMany({
+            data: vehicleIds.map((vehicleId) => ({ organizationMemberId: memberId, vehicleId })),
+            skipDuplicates: true,
+          })]
+        : []),
+    ]);
+  }
+
+  async setMemberDrivers(
+    organizationId: string,
+    memberId: string,
+    driverIds: string[],
+  ): Promise<void> {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { id: memberId, organizationId },
+    });
+    if (!membership) throw new NotFoundException(ApiCode.MEMBER_NOT_FOUND);
+
+    if (driverIds.length > 0) {
+      const drivers = await this.prisma.driver.findMany({
+        where: { id: { in: driverIds }, organizationId },
+        select: { id: true },
+      });
+      if (drivers.length !== driverIds.length)
+        throw new BadRequestException({
+          errorCode: ApiCode.COMMON_INVALID_INPUT,
+        });
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.organizationMemberDriver.deleteMany({
+        where: { organizationMemberId: memberId },
+      }),
+      ...(driverIds.length > 0
+        ? [this.prisma.organizationMemberDriver.createMany({
+            data: driverIds.map((driverId) => ({ organizationMemberId: memberId, driverId })),
+            skipDuplicates: true,
+          })]
+        : []),
+    ]);
   }
 }

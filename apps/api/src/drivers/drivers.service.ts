@@ -32,14 +32,18 @@ export class DriversService {
     filterCustomerId?: string,
     activeOnly?: boolean,
     inactiveOnly?: boolean,
+    allowedDriverIds: string[] | null = null,
   ): Promise<DriverResponseDto[]> {
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
       organizationId,
     );
 
-    // Se membro tem acesso restrito e não há clientes atribuídos, retorna vazio
-    if (allowedCustomerIds !== null && allowedCustomerIds.length === 0) {
+    // Se ambos os escopos de acesso são vazios, retorna vazio
+    if (
+      (allowedCustomerIds !== null && allowedCustomerIds.length === 0) &&
+      (allowedDriverIds !== null && allowedDriverIds.length === 0)
+    ) {
       return [];
     }
 
@@ -65,8 +69,20 @@ export class DriversService {
         return [];
       }
       where.customerId = { in: effectiveIds };
-    } else if (allowedCustomerIds !== null) {
-      where.customerId = { in: allowedCustomerIds };
+    } else {
+      // Apply OR logic for customer and driver IDs
+      const scopeClauses: any[] = [];
+      if (allowedCustomerIds !== null) {
+        scopeClauses.push({ customerId: { in: allowedCustomerIds } });
+      }
+      if (allowedDriverIds !== null && allowedDriverIds.length > 0) {
+        scopeClauses.push({ id: { in: allowedDriverIds } });
+      }
+      if (scopeClauses.length > 1) {
+        where.OR = scopeClauses;
+      } else if (scopeClauses.length === 1) {
+        Object.assign(where, scopeClauses[0]);
+      }
     }
 
     const rows = await this.prisma.driver.findMany({

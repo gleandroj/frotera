@@ -2,6 +2,10 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseG
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '../auth/guards/permission.guard';
+import { Permission } from '../auth/decorators/permission.decorator';
+import { OrganizationMemberGuard } from '../organizations/guards/organization-member.guard';
+import { RoleActionEnum, RoleModuleEnum } from '../roles/roles.dto';
 import {
   CreateMemberDto,
   CreateMemberResponseDto,
@@ -9,6 +13,8 @@ import {
   MembersListResponseDto,
   UpdateMemberDto,
   UpdateMemberResponseDto,
+  AssignMemberVehiclesDto,
+  AssignMemberDriversDto,
 } from './members.dto';
 import { MembersService } from './members.service';
 
@@ -95,5 +101,41 @@ export class MembersController {
     @Param('memberId') memberId: string,
   ): Promise<DeleteMemberResponseDto> {
     return this.membersService.enableMember(req.user.userId, organizationId, memberId);
+  }
+
+  @Patch(':memberId/vehicles')
+  @UseGuards(OrganizationMemberGuard, PermissionGuard)
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
+  @ApiOperation({ summary: 'Assign vehicles to a member' })
+  @ApiResponse({ status: 200, description: 'Member vehicles updated' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  async setMemberVehicles(
+    @Request() req: JwtAuthenticatedRequest,
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: AssignMemberVehiclesDto,
+  ): Promise<{ message: string }> {
+    await this.membersService.setMemberVehicles(organizationId, memberId, dto.vehicleIds);
+    return { message: 'Member vehicles updated' };
+  }
+
+  @Patch(':memberId/drivers')
+  @UseGuards(OrganizationMemberGuard, PermissionGuard)
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
+  @ApiOperation({ summary: 'Assign drivers to a member' })
+  @ApiResponse({ status: 200, description: 'Member drivers updated' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  async setMemberDrivers(
+    @Request() req: JwtAuthenticatedRequest,
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: AssignMemberDriversDto,
+  ): Promise<{ message: string }> {
+    await this.membersService.setMemberDrivers(organizationId, memberId, dto.driverIds);
+    return { message: 'Member drivers updated' };
   }
 }

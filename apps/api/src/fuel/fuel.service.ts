@@ -30,6 +30,19 @@ const fuelLogVehicleListSelect = {
   customer: { select: { id: true, name: true } },
 } as const;
 
+function buildVehicleScope(
+  allowedCustomerIds: string[] | null,
+  allowedVehicleIds: string[] | null,
+): any {
+  const clauses: any[] = [];
+  if (allowedCustomerIds !== null) clauses.push({ customerId: { in: allowedCustomerIds } });
+  if (allowedVehicleIds !== null && allowedVehicleIds.length > 0)
+    clauses.push({ id: { in: allowedVehicleIds } });
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { OR: clauses };
+}
+
 @Injectable()
 export class FuelService {
   constructor(
@@ -46,6 +59,7 @@ export class FuelService {
     organizationId: string,
     userId: string,
     query: ListFuelLogsQueryDto,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<FuelLogResponseDto[]> {
     // Get member and allowed customer IDs
     const member = await this.prisma.organizationMember.findFirst({
@@ -60,23 +74,28 @@ export class FuelService {
       organizationId,
     );
 
-    // Build vehicle filter based on customer scope
-    const allowedVehicleFilter = allowedCustomerIds !== null
-      ? { customerId: { in: allowedCustomerIds } }
-      : {};
+    // Build vehicle filter based on OR scope of customer and vehicle IDs
+    const vehicleScope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+    const vehicleFilter = Object.keys(vehicleScope).length > 0 ? vehicleScope : {};
+
     const allowedVehicles = await this.prisma.vehicle.findMany({
-      where: { organizationId, ...allowedVehicleFilter },
+      where: { organizationId, ...vehicleFilter },
       select: { id: true },
     });
-    const allowedVehicleIds = allowedVehicles.map((v) => v.id);
+    const allowedVehicleIdsList = allowedVehicles.map((v) => v.id);
+
+    // Special case: if both are empty arrays and no customer access, return empty
+    if (allowedVehicleIdsList.length === 0 && allowedCustomerIds === null && allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      return [];
+    }
 
     // Build filter conditions
     const where: any = {
       organizationId,
-      vehicleId: { in: allowedVehicleIds },
+      vehicleId: { in: allowedVehicleIdsList },
     };
 
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
+    if (query.vehicleId && allowedVehicleIds !== null && allowedVehicleIds.includes(query.vehicleId)) {
       where.vehicleId = query.vehicleId;
     }
 
@@ -119,6 +138,7 @@ export class FuelService {
     organizationId: string,
     userId: string,
     dto: CreateFuelLogDto,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<FuelLogResponseDto> {
     // Verify member exists
     const member = await this.prisma.organizationMember.findFirst({
@@ -137,16 +157,16 @@ export class FuelService {
       throw new NotFoundException(ApiCode.VEHICLE_NOT_FOUND);
     }
 
-    // Check customer scope access
+    // Check customer scope access with OR logic
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
       organizationId,
     );
-    if (
-      allowedCustomerIds !== null &&
-      vehicle.customerId &&
-      !allowedCustomerIds.includes(vehicle.customerId)
-    ) {
+    const hasCustomerAccess = allowedCustomerIds === null || (vehicle.customerId && allowedCustomerIds.includes(vehicle.customerId));
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(dto.vehicleId));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this vehicle');
     }
 
@@ -241,6 +261,7 @@ export class FuelService {
     id: string,
     organizationId: string,
     userId: string,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<FuelLogResponseDto> {
     const member = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
@@ -274,12 +295,12 @@ export class FuelService {
       throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
     }
 
-    // Check customer scope access
-    if (
-      allowedCustomerIds !== null &&
-      log.vehicle.customerId &&
-      !allowedCustomerIds.includes(log.vehicle.customerId)
-    ) {
+    // Check customer scope access with OR logic
+    const hasCustomerAccess = allowedCustomerIds === null || (log.vehicle.customerId && allowedCustomerIds.includes(log.vehicle.customerId));
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(log.vehicleId));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this fuel log');
     }
 
@@ -294,6 +315,7 @@ export class FuelService {
     organizationId: string,
     userId: string,
     dto: UpdateFuelLogDto,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<FuelLogResponseDto> {
     const member = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
@@ -322,16 +344,16 @@ export class FuelService {
       throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
     }
 
-    // Check customer scope access
+    // Check customer scope access with OR logic
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
       organizationId,
     );
-    if (
-      allowedCustomerIds !== null &&
-      currentLog.vehicle.customerId &&
-      !allowedCustomerIds.includes(currentLog.vehicle.customerId)
-    ) {
+    const hasCustomerAccess = allowedCustomerIds === null || (currentLog.vehicle.customerId && allowedCustomerIds.includes(currentLog.vehicle.customerId));
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(currentLog.vehicleId));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this fuel log');
     }
 
@@ -416,6 +438,7 @@ export class FuelService {
     id: string,
     organizationId: string,
     userId: string,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<void> {
     const member = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
@@ -437,16 +460,16 @@ export class FuelService {
       throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
     }
 
-    // Check customer scope access
+    // Check customer scope access with OR logic
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
       organizationId,
     );
-    if (
-      allowedCustomerIds !== null &&
-      log.vehicle.customerId &&
-      !allowedCustomerIds.includes(log.vehicle.customerId)
-    ) {
+    const hasCustomerAccess = allowedCustomerIds === null || (log.vehicle.customerId && allowedCustomerIds.includes(log.vehicle.customerId));
+    const hasVehicleAccess = allowedVehicleIds === null || (allowedVehicleIds.length > 0 && allowedVehicleIds.includes(log.vehicleId));
+    const hasAccessViaDimension = hasCustomerAccess || hasVehicleAccess;
+
+    if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this fuel log');
     }
 
@@ -460,6 +483,7 @@ export class FuelService {
     organizationId: string,
     userId: string,
     query: FuelStatsQueryDto,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<FuelStatsResponseDto> {
     // Get member and allowed customer IDs
     const member = await this.prisma.organizationMember.findFirst({
@@ -474,23 +498,23 @@ export class FuelService {
       organizationId,
     );
 
-    // Build vehicle filter
-    const allowedVehicleFilter = allowedCustomerIds !== null
-      ? { customerId: { in: allowedCustomerIds } }
-      : {};
+    // Build vehicle filter based on OR scope of customer and vehicle IDs
+    const vehicleScope = buildVehicleScope(allowedCustomerIds, allowedVehicleIds);
+    const vehicleFilter = Object.keys(vehicleScope).length > 0 ? vehicleScope : {};
+
     const allowedVehicles = await this.prisma.vehicle.findMany({
-      where: { organizationId, ...allowedVehicleFilter },
+      where: { organizationId, ...vehicleFilter },
       select: { id: true },
     });
-    const allowedVehicleIds = allowedVehicles.map((v) => v.id);
+    const allowedVehicleIdsList = allowedVehicles.map((v) => v.id);
 
     // Build where clause
     const where: any = {
       organizationId,
-      vehicleId: { in: allowedVehicleIds },
+      vehicleId: { in: allowedVehicleIdsList },
     };
 
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
+    if (query.vehicleId && allowedVehicleIdsList.includes(query.vehicleId)) {
       where.vehicleId = query.vehicleId;
     }
 

@@ -62,7 +62,7 @@ export class IncidentsController {
       dateFrom,
       dateTo,
       req.allowedCustomerIds ?? null,
-      filterCustomerId,
+      req.allowedVehicleIds ?? null,
     );
   }
 
@@ -74,7 +74,7 @@ export class IncidentsController {
     @Query() filters: IncidentFiltersDto,
     @Request() req: OrgScopedRequest,
   ) {
-    return this.service.list(organizationId, filters, req.allowedCustomerIds ?? null);
+    return this.service.list(organizationId, filters, req.allowedCustomerIds ?? null, req.allowedVehicleIds ?? null);
   }
 
   @Post()

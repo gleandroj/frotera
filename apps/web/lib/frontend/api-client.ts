@@ -400,6 +400,10 @@ export const organizationAPI = {
     externalApi.patch(`/api/organizations/${organizationId}/roles/${roleId}`, data),
   deleteRole: (organizationId: string, roleId: string) =>
     externalApi.delete(`/api/organizations/${organizationId}/roles/${roleId}`),
+  setMemberVehicles: (organizationId: string, memberId: string, vehicleIds: string[]) =>
+    externalApi.patch(`/api/organizations/${organizationId}/members/${memberId}/vehicles`, { vehicleIds }),
+  setMemberDrivers: (organizationId: string, memberId: string, driverIds: string[]) =>
+    externalApi.patch(`/api/organizations/${organizationId}/members/${memberId}/drivers`, { driverIds }),
 };
 
 export interface CustomerFleetSettingResolved {

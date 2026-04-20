@@ -134,6 +134,20 @@ export class MemberResponseDto {
   })
   customers: { id: string; name: string }[];
 
+  @ApiPropertyOptional({
+    description: 'Vehicles directly assigned to this member',
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, plate: { type: 'string' } } },
+  })
+  vehicles?: { id: string; name: string; plate: string }[];
+
+  @ApiPropertyOptional({
+    description: 'Drivers assigned to this member',
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+  })
+  drivers?: { id: string; name: string }[];
+
   @ApiProperty()
   user: {
     id: string;
@@ -169,4 +183,18 @@ export class CreateMemberResponseDto {
 export class DeleteMemberResponseDto {
   @ApiProperty()
   message: string;
+}
+
+export class AssignMemberVehiclesDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  vehicleIds: string[];
+}
+
+export class AssignMemberDriversDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  driverIds: string[];
 }

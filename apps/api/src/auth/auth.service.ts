@@ -148,7 +148,7 @@ export class AuthService {
       },
     });
 
-    // Create organization only if feature flag allows (default: invitation-only, no org on signup)
+    // Create organization only if feature flag allows (default: no org on signup)
     let organization = null;
     const createOrgEnabled = await this.settingsService.isSignupCreateOrganizationEnabled();
     if (createOrgEnabled) {

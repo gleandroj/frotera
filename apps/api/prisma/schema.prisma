@@ -31,7 +31,6 @@ model User {
 
   // Relations
   memberships OrganizationMember[]
-  invitations Invitation[]
 
   @@map("users")
 }
@@ -58,7 +57,6 @@ model Organization {
 
   // Relations
   memberships         OrganizationMember[]
-  invitations         Invitation[]
   notifications       Notification[]
   vehicles            Vehicle[]
   trackerDevices      TrackerDevice[]
@@ -90,8 +88,7 @@ model Customer {
   parent         Customer?      @relation("CustomerHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children       Customer[]     @relation("CustomerHierarchy")
   vehicles       Vehicle[]
-  memberAccess   OrganizationMemberCustomer[]
-  invitationAccess InvitationCustomer[]
+  memberAccess        OrganizationMemberCustomer[]
   drivers             Driver[]
   fleetSettings       CustomerFleetSetting[]
   geofenceZones       GeofenceZone[]
@@ -197,6 +194,7 @@ model Vehicle {
   checklistEntries  ChecklistEntry[]
   incidents         Incident[]
   telemetryAlerts   TelemetryAlert[]
+  memberAssignments OrganizationMemberVehicle[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -362,6 +360,8 @@ model OrganizationMember {
   checklistEntries  ChecklistEntry[]
   createdIncidents  Incident[] @relation("IncidentCreatedBy")
   acknowledgedAlerts TelemetryAlert[] @relation("AlertAcknowledger")
+  vehicles OrganizationMemberVehicle[]
+  drivers  OrganizationMemberDriver[]
 
   @@unique([userId, organizationId])
   @@map("organizationMembers")
@@ -379,44 +379,28 @@ model OrganizationMemberCustomer {
   @@map("organizationMemberCustomers")
 }
 
-model Invitation {
-  id                 String           @id @default(cuid())
-  email              String
-  token              String           @unique
-  status             InvitationStatus @default(PENDING)
-  organizationId     String
-  inviterId          String?
-  customerRestricted Boolean          @default(false)
+model OrganizationMemberVehicle {
+  id                   String @id @default(cuid())
+  organizationMemberId String
+  vehicleId            String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  expiresAt DateTime
+  organizationMember OrganizationMember @relation(fields: [organizationMemberId], references: [id], onDelete: Cascade)
+  vehicle            Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
-  // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  inviter      User?        @relation(fields: [inviterId], references: [id])
-  customers    InvitationCustomer[]
-
-  @@map("invitations")
+  @@unique([organizationMemberId, vehicleId])
+  @@map("organizationMemberVehicles")
 }
 
-model InvitationCustomer {
-  id           String @id @default(cuid())
-  invitationId String
-  customerId   String
+model OrganizationMemberDriver {
+  id                   String @id @default(cuid())
+  organizationMemberId String
+  driverId             String
 
-  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
-  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationMember OrganizationMember @relation(fields: [organizationMemberId], references: [id], onDelete: Cascade)
+  driver             Driver             @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
-  @@unique([invitationId, customerId])
-  @@map("invitationCustomers")
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  EXPIRED
-  REVOKED
+  @@unique([organizationMemberId, driverId])
+  @@map("organizationMemberDrivers")
 }
 
 enum IncidentType {
@@ -587,7 +571,7 @@ model IncidentAttachment {
   @@map("incident_attachments")
 }
 
-// Single-row table: feature flags editable in AdminJS. Default = invitation-only (both false).
+// Single-row table: feature flags editable in AdminJS. Default keeps public signup disabled.
 model AppSettings {
   id                            String   @id @default(cuid())
   signupEnabled                 Boolean  @default(false)
@@ -619,6 +603,7 @@ model Driver {
   customer           Customer                 @relation(fields: [customerId], references: [id], onDelete: Restrict)
   vehicleAssignments DriverVehicleAssignment[]
   fuelLogs           FuelLog[]
+  memberAssignments OrganizationMemberDriver[]
 
   @@unique([organizationId, cpf]) // CPF único por organização (null não viola unique)
   @@index([organizationId])

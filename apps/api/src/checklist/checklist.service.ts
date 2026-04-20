@@ -22,6 +22,8 @@ export type CreateEntryOptions = { clientIp?: string | null };
 /** Escopo de empresa do membro (OrganizationMemberGuard). */
 export type ChecklistOrgAccess = {
   allowedCustomerIds: string[] | null;
+  allowedVehicleIds: string[] | null;
+  memberId: string;
   isSuperAdmin: boolean;
 };
 
@@ -402,6 +404,21 @@ export class ChecklistService {
         ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
         ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
       };
+    }
+
+    // Apply vehicle ID scope if provided
+    if (access.allowedVehicleIds !== null) {
+      if (access.allowedVehicleIds.length > 0) {
+        // Entry with vehicle must be in allowedVehicleIds OR entry without vehicle and member matches
+        where.OR = [
+          { vehicleId: { in: access.allowedVehicleIds } },
+          { vehicleId: null, memberId: access.memberId },
+        ];
+      } else {
+        // No vehicles accessible, only own entries without vehicle
+        where.memberId = access.memberId;
+        where.vehicleId = null;
+      }
     }
     const entries = await this.prisma.checklistEntry.findMany({
       where,
@@ -815,6 +832,8 @@ export class ChecklistService {
 
     const publicAccess: ChecklistOrgAccess = {
       allowedCustomerIds: null,
+      allowedVehicleIds: null,
+      memberId: fallbackMember.id,
       isSuperAdmin: true,
     };
     return this.createEntry(
@@ -832,8 +851,15 @@ export class ChecklistService {
   }
 
   async getPublicTemplate(organizationId: string, templateId: string): Promise<ChecklistTemplateResponseDto> {
+    const fallbackMember = await this.prisma.organizationMember.findFirst({
+      where: { organizationId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
     return this.getTemplate(templateId, organizationId, {
       allowedCustomerIds: null,
+      allowedVehicleIds: null,
+      memberId: fallbackMember?.id ?? "",
       isSuperAdmin: true,
     });
   }
