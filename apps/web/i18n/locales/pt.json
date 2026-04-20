@@ -435,11 +435,10 @@
     "USER_ALREADY_EXISTS": "Usuário já existe",
     "AUTH_INVALID_CREDENTIALS": "Email ou senha inválidos",
     "AUTH_ACCOUNT_NOT_VERIFIED": "Conta não verificada. Email de verificação enviado. Verifique sua caixa de entrada ou spam para ativar sua conta.",
-    "AUTH_SIGNUP_DISABLED": "O cadastro público está desativado. Acesso apenas por convite.",
-    "INVITATION_ALREADY_ACCEPTED": "Convite já aceito",
+    "AUTH_SIGNUP_DISABLED": "O cadastro público está desativado.",
     "switchToSignup": "Cadastre-se",
     "switchToLogin": "Entrar",
-    "signupDisabled": "O cadastro público está desativado. Acesso apenas por convite.",
+    "signupDisabled": "O cadastro público está desativado.",
     "backToLogin": "Voltar ao Login",
     "invalidCredentials": "Email ou senha inválidos",
     "emailRequired": "Email é obrigatório",
@@ -612,7 +611,6 @@
     "loadingConfiguration": "Carregando configuração...",
     "verifyingEmail": "Verificando seu email...",
     "settingUpWorkspace": "Configurando seu workspace...",
-    "loadingInvitationDetails": "Carregando detalhes do convite...",
     "processing": "Processando..."
   },
   "homepage": {
@@ -836,34 +834,6 @@
     "goToHomePage": "Ir para Página Inicial",
     "testLoginPage": "Testar Página de Login"
   },
-  "invitation": {
-    "failedToLogOut": "Falha ao sair. Por favor, tente novamente.",
-    "invalidInvitation": "Convite inválido",
-    "invalidInvitationDescription": "O link do convite é inválido ou expirou.",
-    "invitationAlreadyAccepted": "Convite Já Aceito",
-    "errorLoadingInvitation": "Erro ao carregar convite",
-    "errorLoadingInvitationDescription": "Falha ao carregar detalhes do convite. Tente novamente.",
-    "failedToAcceptInvitation": "Falha ao aceitar convite",
-    "accountMismatch": "Conta Não Corresponde",
-    "accountMismatchDescription": "Este convite é para um endereço de email diferente",
-    "currentAccount": "Conta Atual",
-    "currentlyLoggedInAs": "Você está conectado como",
-    "invitationDetails": "Detalhes do Convite",
-    "thisInvitationIsFor": "Este convite é para",
-    "organization": "Organização",
-    "useDifferentAccount": "Usar uma conta diferente",
-    "createAccount": "Criar conta",
-    "needHelp": "Precisa de ajuda?",
-    "contactSupport": "Contatar suporte",
-    "acceptInvitation": "Aceitar Convite",
-    "joinOrganization": "Entrar em",
-    "email": "Email",
-    "role": "Função",
-    "invitedBy": "Convidado por",
-    "expires": "Expira",
-    "processing": "Processando...",
-    "logInToAccept": "Entrar para Aceitar"
-  },
   "organizations": {
     "createOrganization": "Criar Organização",
     "createYourOrganization": "Crie sua Organização",
@@ -1060,7 +1030,6 @@
     "verifyEmail": "Verificar Email",
     "settings": "Configurações",
     "createOrganization": "Criar Organização",
-    "acceptInvitation": "Aceitar Convite",
     "profile": "Configurações de Perfil",
     "organizations": "Configurações da Organização",
     "trackerDiscoveries": "Rastreadores sem cadastro",
@@ -1363,35 +1332,11 @@
     "memberNotFound": "Usuário não encontrado.",
     "backToTeam": "Voltar aos usuários",
     "members": "Usuários",
-    "invitations": "Convites",
     "showInactive": "Mostrar desabilitados",
     "inactiveBadge": "Desabilitado",
     "joined": "Entrou em",
     "noName": "Sem nome",
-    "inviteMember": "Convidar Membro",
     "addUser": "Adicionar Usuário",
-    "inviteDialog": {
-      "title": "Convidar Membro da Equipe",
-      "description": "Convide alguém para se juntar à {{organizationName}}",
-      "emailLabel": "Endereço de Email",
-      "emailPlaceholder": "colega@empresa.com",
-      "roleLabel": "Função",
-      "memberOption": "Membro",
-      "adminOption": "Administrador",
-      "fullAccess": "Acesso completo à organização",
-      "fullAccessRestrictedHint": "Você tem acesso apenas a algumas empresas; não pode conceder acesso à organização inteira.",
-      "customerAccess": "Acesso por empresa",
-      "customerAccessHint": "Se nenhuma empresa for selecionada, o usuário não terá acesso a dados de veículos/empresas.",
-      "sendButton": "Enviar Convite",
-      "sending": "Enviando...",
-      "validation": {
-        "emailRequired": "Email é obrigatório",
-        "emailInvalid": "Email inválido",
-        "emailTooLong": "Email muito longo (máximo 254 caracteres)",
-        "roleRequired": "Função é obrigatória",
-        "roleInvalid": "Função inválida"
-      }
-    },
     "createUserDialog": {
       "title": "Adicionar Usuário",
       "newUserPageTitle": "Novo Usuário",
@@ -1467,29 +1412,16 @@
       "deselectAllDrivers": "Limpar seleção"
     },
     "confirmDialogs": {
-      "revokeInvitation": {
-        "title": "Revogar Convite",
-        "description": "Tem certeza de que deseja revogar este convite? Esta ação não pode ser desfeita."
-      },
       "removeMember": {
         "title": "Remover Usuário",
         "description": "Tem certeza de que deseja remover este usuário? Ele perderá acesso à organização."
       },
       "cancel": "Cancelar",
-      "revoke": "Revogar",
       "remove": "Remover"
-    },
-    "invitationDetails": {
-      "invitedBy": "Convidado por",
-      "sent": "Enviado em",
-      "expires": "Expira em"
     },
     "emptyStates": {
       "noMembers": "Nenhum usuário ainda",
-      "inviteFirstMember": "Convidar Primeiro Membro",
-      "addFirstUser": "Adicionar Primeiro Usuário",
-      "noInvitations": "Nenhum convite pendente",
-      "sendFirstInvitation": "Enviar Primeiro Convite"
+      "addFirstUser": "Adicionar Primeiro Usuário"
     },
     "toastMessages": {
       "error": "Erro",
@@ -1499,12 +1431,6 @@
       "memberUpdatedDescription": "As alterações do membro foram salvas com sucesso",
       "memberRemoved": "Membro removido",
       "memberRemovedDescription": "O membro foi removido da equipe",
-      "invitationSent": "Convite enviado",
-      "invitationSentDescription": "Um email de convite foi enviado",
-      "invitationResent": "Convite reenviado",
-      "invitationResentDescription": "O email de convite foi reenviado",
-      "invitationRevoked": "Convite revogado",
-      "invitationRevokedDescription": "O convite foi revogado com sucesso",
       "userCreated": "Usuário criado",
       "userCreatedDescription": "O usuário foi criado e já pode fazer login.",
       "memberEnabled": "Usuário reabilitado",
@@ -1512,23 +1438,13 @@
     },
     "errorMessages": {
       "failedToLoadMembers": "Falha ao carregar usuários",
-      "failedToLoadInvitations": "Falha ao carregar convites",
       "failedToUpdateMemberRole": "Falha ao atualizar função do membro",
       "failedToUpdateMember": "Falha ao atualizar membro",
       "failedToRemoveMember": "Falha ao remover membro",
-      "failedToSendInvitation": "Falha ao enviar convite",
-      "failedToResendInvitation": "Falha ao reenviar convite",
-      "failedToRevokeInvitation": "Falha ao revogar convite",
       "failedToEnableMember": "Falha ao reabilitar usuário",
       "failedToCreateUser": "Falha ao criar usuário",
-      "invitationAlreadySent": "Convite já enviado",
-      "invitationAlreadySentDescription": "Um convite já foi enviado para este email",
       "userAlreadyExists": "Usuário já existe",
       "userAlreadyExistsDescription": "Este usuário já é membro da organização",
-      "invitationExpired": "Convite expirado",
-      "invitationExpiredDescription": "Este convite expirou e precisa ser enviado novamente",
-      "invitationAlreadyAccepted": "Convite já aceito",
-      "invitationAlreadyAcceptedDescription": "Este convite já foi aceito",
       "cannotGrantFullAccess": "Você não pode conceder acesso à organização inteira",
       "cannotGrantFullAccessDescription": "Seu acesso é limitado a algumas empresas; só é possível atribuir acesso dentro do seu escopo.",
       "cannotChangeOwnRole": "Você não pode alterar sua própria função",
