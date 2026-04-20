@@ -25,6 +25,7 @@ import {
   ClipboardList,
   FileText,
   Fuel,
+  HelpCircle,
   Home,
   MapPin,
   Radio,
@@ -157,6 +158,12 @@ export function AppSidebar() {
         current: pathname.startsWith("/dashboard/vehicles"),
       });
     }
+    items.push({
+      name: t("navigation.items.help"),
+      href: "/dashboard/help",
+      icon: HelpCircle,
+      current: pathname.startsWith("/dashboard/help"),
+    });
     if (canViewChecklist) {
       items.push({
         name: t("navigation.items.checklist"),

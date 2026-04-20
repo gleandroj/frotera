@@ -170,9 +170,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
               variant="outline"
               className="flex items-center gap-2 max-w-48"
             >
-              <Building2 className="w-4 h-4" />
-              <span className="truncate">{currentOrganization?.name || ''}</span>
-              <ChevronDown className="w-4 h-4 opacity-50" />
+              <Building2 className="w-4 h-4 shrink-0" />
+              <span className="truncate hidden sm:inline">{currentOrganization?.name || ''}</span>
+              <ChevronDown className="w-4 h-4 opacity-50 hidden sm:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
@@ -239,8 +239,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             className="flex items-center gap-2 max-w-48 pointer-events-none cursor-default"
             tabIndex={-1}
           >
-            <Building2 className="w-4 h-4" />
-            <span className="truncate">{currentOrganization.name}</span>
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span className="truncate hidden sm:inline">{currentOrganization.name}</span>
           </Button>
         )
       )}
@@ -254,7 +254,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             tabIndex={-1}
           >
             <Building className="w-4 h-4 shrink-0" />
-            <span className="truncate">{customerLabel}</span>
+            <span className="truncate hidden sm:inline">{customerLabel}</span>
           </Button>
         ) : (
           <DropdownMenu open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
@@ -265,8 +265,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 disabled={loadingCustomers}
               >
                 <Building className="w-4 h-4 shrink-0" />
-                <span className="truncate">{customerLabel}</span>
-                <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
+                <span className="truncate hidden sm:inline">{customerLabel}</span>
+                <ChevronDown className="w-4 h-4 opacity-50 shrink-0 hidden sm:block" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
@@ -325,10 +325,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
       <NotificationBell />
 
       {/* Language Switcher */}
-      <LanguageSwitcherLink />
+      <div className="hidden sm:flex">
+        <LanguageSwitcherLink />
+      </div>
 
       {/* Theme Switcher */}
-      <ThemeSwitcher />
+      <div className="hidden sm:flex">
+        <ThemeSwitcher />
+      </div>
 
       {/* User Menu */}
       <DropdownMenu>

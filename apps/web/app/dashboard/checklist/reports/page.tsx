@@ -197,7 +197,7 @@ export default function ChecklistReportsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="flex min-w-[10rem] flex-col gap-1">
+            <div className="flex w-full sm:w-auto sm:min-w-[10rem] flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
                 {t("checklist.reports.preset")}
               </span>
@@ -217,7 +217,7 @@ export default function ChecklistReportsPage() {
             </div>
             {preset === "custom" && (
               <>
-                <div className="flex min-w-[10.5rem] flex-col gap-1">
+                <div className="flex w-full sm:w-auto sm:min-w-[10.5rem] flex-col gap-1">
                   <span className="text-xs font-medium text-muted-foreground">{t("common.from")}</span>
                   <DatePicker
                     value={customDateFrom || undefined}
@@ -226,7 +226,7 @@ export default function ChecklistReportsPage() {
                     allowClear
                   />
                 </div>
-                <div className="flex min-w-[10.5rem] flex-col gap-1">
+                <div className="flex w-full sm:w-auto sm:min-w-[10.5rem] flex-col gap-1">
                   <span className="text-xs font-medium text-muted-foreground">{t("common.to")}</span>
                   <DatePicker
                     value={customDateTo || undefined}
@@ -237,7 +237,7 @@ export default function ChecklistReportsPage() {
                 </div>
               </>
             )}
-            <div className="flex min-w-[12rem] flex-col gap-1">
+            <div className="flex w-full sm:w-auto sm:min-w-[12rem] flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("checklist.template")}</span>
               <Select value={templateFilter} onValueChange={setTemplateFilter}>
                 <SelectTrigger>
@@ -253,7 +253,7 @@ export default function ChecklistReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex min-w-[12rem] flex-col gap-1">
+            <div className="flex w-full sm:w-auto sm:min-w-[12rem] flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("checklist.vehicle")}</span>
               <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
                 <SelectTrigger>

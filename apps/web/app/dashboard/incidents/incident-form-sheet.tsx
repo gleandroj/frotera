@@ -43,6 +43,7 @@ import {
   type Incident,
   type Vehicle,
 } from "@/lib/frontend/api-client";
+import { DatePicker } from "@/components/ui/date-picker";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { ChevronsUpDown } from "lucide-react";
@@ -419,11 +420,10 @@ export function IncidentFormSheet({
                           *
                         </span>
                       </Label>
-                      <Input
+                      <DatePicker
                         id="incident-date"
-                        type="date"
                         value={date}
-                        onChange={(e) => setDate(e.target.value)}
+                        onChange={(v) => setDate(v)}
                       />
                     </div>
                     <div className="space-y-2">

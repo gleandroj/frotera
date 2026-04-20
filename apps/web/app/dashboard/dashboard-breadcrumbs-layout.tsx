@@ -12,6 +12,9 @@ function getBreadcrumbsForPathname(pathname: string | null): BreadcrumbItem[] {
   if (pathname === "/dashboard/vehicles") {
     return [{ label: "navigation.items.vehicles" }];
   }
+  if (pathname === "/dashboard/help") {
+    return [{ label: "navigation.items.help" }];
+  }
   const vehicleDetailMatch = pathname.match(/^\/dashboard\/vehicles\/([^/]+)$/);
   if (vehicleDetailMatch) {
     return [

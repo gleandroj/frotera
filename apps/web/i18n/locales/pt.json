@@ -973,7 +973,8 @@
       "telemetry": "Telemetria",
       "companyFleetSettings": "Empresa e telemetria",
       "trackerDiscoveries": "Rastreadores Conectados",
-      "tracking": "Rastreamento"
+      "tracking": "Rastreamento",
+      "help": "Ajuda"
     },
     "footer": {
       "copyright": "© {{year}} Frotera",

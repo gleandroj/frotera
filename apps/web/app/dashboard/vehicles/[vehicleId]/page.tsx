@@ -264,7 +264,7 @@ export default function VehicleDetailPage() {
           </TabsList>
 
           <TabsContent value="info" className="mt-6">
-            <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm space-y-6">
+            <div className="rounded-lg border bg-card p-4 sm:p-6 text-card-foreground shadow-sm space-y-6">
               <div>
                 <h2 className="text-lg font-semibold mb-1">
                   {t("vehicles.sectionGeneral")}

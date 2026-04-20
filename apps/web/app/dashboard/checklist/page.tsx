@@ -556,7 +556,7 @@ export default function ChecklistPage() {
               value={entryVehicleFilter}
               onValueChange={setEntryVehicleFilter}
             >
-              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByVehicle")}>
+              <SelectTrigger className="w-full sm:w-56 sm:min-w-[12rem]" aria-label={t("checklist.filterByVehicle")}>
                 <SelectValue placeholder={t("checklist.filterVehicleAll")} />
               </SelectTrigger>
               <SelectContent>
@@ -572,7 +572,7 @@ export default function ChecklistPage() {
               value={entryTemplateFilter}
               onValueChange={setEntryTemplateFilter}
             >
-              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByTemplate")}>
+              <SelectTrigger className="w-full sm:w-56 sm:min-w-[12rem]" aria-label={t("checklist.filterByTemplate")}>
                 <SelectValue placeholder={t("checklist.filterTemplateAll")} />
               </SelectTrigger>
               <SelectContent>
@@ -590,7 +590,7 @@ export default function ChecklistPage() {
                 value={entryDriverFilter}
                 onValueChange={setEntryDriverFilter}
               >
-                <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByDriver")}>
+                <SelectTrigger className="w-full sm:w-56 sm:min-w-[12rem]" aria-label={t("checklist.filterByDriver")}>
                   <SelectValue placeholder={t("checklist.filterDriverAll")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -607,7 +607,7 @@ export default function ChecklistPage() {
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as EntryStatus | typeof STATUS_ALL)}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder={t("checklist.filterByStatus")} />
               </SelectTrigger>
               <SelectContent>
@@ -617,7 +617,7 @@ export default function ChecklistPage() {
                 <SelectItem value="INCOMPLETE">{t("checklist.entryStatus.INCOMPLETE")}</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex min-w-[10.5rem] flex-col gap-1">
+            <div className="flex w-full sm:w-auto sm:min-w-[10.5rem] flex-col gap-1">
               <span className="text-xs font-medium leading-none text-muted-foreground">
                 {t("common.from")}
               </span>
@@ -629,7 +629,7 @@ export default function ChecklistPage() {
                 allowClear
               />
             </div>
-            <div className="flex min-w-[10.5rem] flex-col gap-1">
+            <div className="flex w-full sm:w-auto sm:min-w-[10.5rem] flex-col gap-1">
               <span className="text-xs font-medium leading-none text-muted-foreground">
                 {t("common.to")}
               </span>
