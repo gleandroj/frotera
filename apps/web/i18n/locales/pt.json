@@ -254,7 +254,17 @@
     "cellNumber": "N. Cel.",
     "tabs": {
       "info": "Informações",
-      "tracking": "Rastreamento em tempo real"
+      "tracking": "Rastreamento em tempo real",
+      "checklists": "Checklists",
+      "fuel": "Abastecimentos",
+      "documents": "Documentos",
+      "drivers": "Motoristas",
+      "incidents": "Ocorrências",
+      "emptyChecklists": "Nenhum checklist para este veículo.",
+      "emptyFuel": "Nenhum abastecimento para este veículo.",
+      "emptyDocuments": "Nenhum documento para este veículo.",
+      "emptyDrivers": "Nenhum motorista vinculado a este veículo.",
+      "emptyIncidents": "Nenhuma ocorrência para este veículo."
     },
     "toastCreated": "Veículo criado com sucesso.",
     "toastUpdated": "Veículo atualizado com sucesso.",
