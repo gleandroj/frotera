@@ -36,6 +36,15 @@ export enum RoleScopeEnum {
   ASSIGNED = 'ASSIGNED',
 }
 
+export enum SystemRoleKey {
+  ORGANIZATION_OWNER = 'ORGANIZATION_OWNER',
+  COMPANY_OWNER      = 'COMPANY_OWNER',
+  COMPANY_ADMIN      = 'COMPANY_ADMIN',
+  OPERATOR           = 'OPERATOR',
+  VIEWER             = 'VIEWER',
+  DRIVER             = 'DRIVER',
+}
+
 export class PermissionDto {
   @ApiProperty({ enum: RoleModuleEnum })
   @IsEnum(RoleModuleEnum)

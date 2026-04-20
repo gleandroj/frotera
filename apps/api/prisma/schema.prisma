@@ -484,6 +484,7 @@ enum RoleScope {
 model Role {
   id             String   @id @default(cuid())
   organizationId String?
+  key            String?  @unique
   name           String
   description    String?
   isSystem       Boolean  @default(false)

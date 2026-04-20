@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { CustomersService } from "@/customers/customers.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { SystemRoleKey } from "@/roles/roles.dto";
 
 @Injectable()
 export class OrganizationMemberGuard implements CanActivate {
@@ -41,6 +42,7 @@ export class OrganizationMemberGuard implements CanActivate {
     }
 
     request.organizationMember = membership;
+    request.isOrganizationOwner = membership.role.key === SystemRoleKey.ORGANIZATION_OWNER;
 
     if (request.user?.isSuperAdmin) {
       request.allowedCustomerIds = null;

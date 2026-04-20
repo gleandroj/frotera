@@ -18,7 +18,7 @@ import {
   UpdateMemberDto,
   UpdateMemberResponseDto,
 } from "./members.dto";
-import { RoleResponseDto } from "../roles/roles.dto";
+import { RoleResponseDto, SystemRoleKey } from "../roles/roles.dto";
 
 function formatMemberRole(role: any): RoleResponseDto {
   return {
@@ -195,7 +195,7 @@ export class MembersService {
     }
 
     // Only members with USERS:EDIT can assign COMPANY_OWNER role
-    const isAssigningOwnerRole = targetRole.name === 'Dono da Empresa';
+    const isAssigningOwnerRole = targetRole.key === SystemRoleKey.COMPANY_OWNER;
     if (isAssigningOwnerRole) {
       const canEdit = usersPerm?.actions?.includes('EDIT' as any) ?? false;
       if (!canEdit) {
@@ -203,8 +203,22 @@ export class MembersService {
       }
     }
 
+    // Only superadmin can assign ORGANIZATION_OWNER role
+    if (targetRole.key === SystemRoleKey.ORGANIZATION_OWNER) {
+      if (userRecord?.isSuperAdmin !== true) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
+
     const customerRestricted = data.customerRestricted ?? (data.customerIds?.length ? true : false);
     const customerIdsToValidate = data.customerIds ?? [];
+
+    // COMPANY_OWNER must always be assigned to at least one specific company
+    if (targetRole.key === SystemRoleKey.COMPANY_OWNER) {
+      if (!customerRestricted || customerIdsToValidate.length === 0) {
+        throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
+      }
+    }
 
     const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
       { id: userMembership.id, customerRestricted: userMembership.customerRestricted },
@@ -391,6 +405,12 @@ export class MembersService {
       if (!targetRole) {
         throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
       }
+      // Only superadmin can assign ORGANIZATION_OWNER role
+      if (targetRole.key === SystemRoleKey.ORGANIZATION_OWNER) {
+        if (userRecord?.isSuperAdmin !== true) {
+          throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+        }
+      }
     }
 
     const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
@@ -518,6 +538,11 @@ export class MembersService {
     organizationId: string,
     memberId: string
   ): Promise<DeleteMemberResponseDto> {
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
     const userMembership = await this.prisma.organizationMember.findFirst({
       where: { userId, organizationId },
       include: { role: { include: { permissions: true } } },
@@ -527,10 +552,12 @@ export class MembersService {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
-    const usersPerm = userMembership.role.permissions.find((p) => p.module === 'USERS');
-    const canDelete = usersPerm?.actions?.includes('DELETE' as any) ?? false;
-    if (!canDelete) {
-      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    if (userRecord?.isSuperAdmin !== true) {
+      const usersPerm = userMembership.role.permissions.find((p) => p.module === 'USERS');
+      const canDelete = usersPerm?.actions?.includes('DELETE' as any) ?? false;
+      if (!canDelete) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
     }
 
     const memberToRemove = await this.prisma.organizationMember.findFirst({

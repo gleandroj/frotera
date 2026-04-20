@@ -17,4 +17,5 @@ export type OrgScopedRequest = ExpressRequest & {
   user: JwtRequestUser;
   organizationMember: OrganizationMemberContext;
   allowedCustomerIds: string[] | null;
+  isOrganizationOwner: boolean;
 };

@@ -359,6 +359,7 @@ export class CustomersService {
     organizationId: string,
     allowedCustomerIds: string[] | null,
     isSuperAdmin?: boolean,
+    isOrgOwner?: boolean,
   ): Promise<void> {
     const customer = await this.prisma.customer.findFirst({
       where: { id: customerId, organizationId },
@@ -375,7 +376,7 @@ export class CustomersService {
     if (customer.inactive) {
       return;
     }
-    if (customer.parentId === null && isSuperAdmin !== true) {
+    if (customer.parentId === null && isSuperAdmin !== true && isOrgOwner !== true) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
     if (customer._count.vehicles > 0 || customer._count.drivers > 0) {

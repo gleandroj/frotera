@@ -14,7 +14,7 @@ interface SeedOptions {
 // RBAC: System Roles Seed
 // ============================================================
 
-type RoleKey = 'COMPANY_OWNER' | 'COMPANY_ADMIN' | 'OPERATOR' | 'VIEWER' | 'DRIVER';
+type RoleKey = 'ORGANIZATION_OWNER' | 'COMPANY_OWNER' | 'COMPANY_ADMIN' | 'OPERATOR' | 'VIEWER' | 'DRIVER';
 
 interface RoleDefinition {
   name: string;
@@ -27,7 +27,29 @@ interface RoleDefinition {
   }>;
 }
 
+// Stable keys for system roles — used in code instead of role names
+// (names can change; keys are immutable identifiers)
+
 const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
+  ORGANIZATION_OWNER: {
+    name: 'Dono da Organização',
+    description: 'Gerencia empresas e usuários da organização. Pode criar empresas raiz. Não cria organizações.',
+    color: '#0EA5E9',
+    permissions: [
+      { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'TRACKING',  actions: ['VIEW'],                          scope: 'ALL' },
+      { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'USERS',     actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'REPORTS',   actions: ['VIEW'],                          scope: 'ALL' },
+      { module: 'DRIVERS',   actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'DOCUMENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'CHECKLIST', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'],          scope: 'ALL' },
+      { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+    ],
+  },
   COMPANY_OWNER: {
     name: 'Dono da Empresa',
     description: 'Acesso total à organização. Gerencia todos os módulos.',
@@ -114,19 +136,29 @@ async function seedSystemRoles(): Promise<Record<RoleKey, string>> {
 
   const roleIds: Partial<Record<RoleKey, string>> = {};
 
-  for (const [key, def] of Object.entries(SYSTEM_ROLES) as [RoleKey, RoleDefinition][]) {
+  for (const [roleKey, def] of Object.entries(SYSTEM_ROLES) as [RoleKey, RoleDefinition][]) {
     const existing = await prisma.role.findFirst({
-      where: { name: def.name, isSystem: true, organizationId: null },
+      where: {
+        isSystem: true,
+        organizationId: null,
+        OR: [{ key: roleKey }, { name: def.name }],
+      },
     });
 
     if (existing) {
-      console.log(`   ✓ Role already exists: ${def.name}`);
-      roleIds[key] = existing.id;
+      if (!existing.key) {
+        await prisma.role.update({ where: { id: existing.id }, data: { key: roleKey } });
+        console.log(`   ✓ Role key set: ${def.name} → ${roleKey}`);
+      } else {
+        console.log(`   ✓ Role already exists: ${def.name}`);
+      }
+      roleIds[roleKey] = existing.id;
       continue;
     }
 
     const role = await prisma.role.create({
       data: {
+        key: roleKey,
         name: def.name,
         description: def.description,
         color: def.color,
@@ -143,7 +175,7 @@ async function seedSystemRoles(): Promise<Record<RoleKey, string>> {
     });
 
     console.log(`   ✅ Role created: ${def.name} (${role.id})`);
-    roleIds[key] = role.id;
+    roleIds[roleKey] = role.id;
   }
 
   return roleIds as Record<RoleKey, string>;
