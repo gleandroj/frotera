@@ -503,10 +503,6 @@ export function MemberEditSheet({
                     )}
                   />
 
-                  {!expanded && (
-                    <RoleHelpPanel role={selectedRole} t={t} />
-                  )}
-
                   {user?.isSuperAdmin === true && (
                     <Card>
                       <CardHeader className="pb-3">
