@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { AxiosError } from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type AuthStep = "login" | "2fa";
@@ -30,26 +30,37 @@ export type AuthFormProps = {
 export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { login } = useAuth();
-  const resolvePostLoginRedirect = (mustChangePassword?: boolean) => {
-    if (mustChangePassword) {
-      router.replace("/change-password");
-      return;
-    }
+  const { login, isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
+  const resolvePostLoginRedirect = useCallback(
+    (mustChangePassword?: boolean) => {
+      if (mustChangePassword) {
+        router.replace("/change-password");
+        return;
+      }
 
-    if (redirect) {
-      router.replace(redirect);
-      return;
-    }
+      if (redirect) {
+        router.replace(redirect);
+        return;
+      }
 
-    router.replace("/dashboard");
-  };
+      router.replace("/dashboard");
+    },
+    [router, redirect],
+  );
 
   useEffect(() => {
     if (signupDisabledParam === "disabled") {
       toast.info(t("auth.signupDisabled"));
     }
   }, [signupDisabledParam, t]);
+
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) {
+      return;
+    }
+
+    resolvePostLoginRedirect(user?.mustChangePassword);
+  }, [isAuthLoading, isAuthenticated, user?.mustChangePassword, resolvePostLoginRedirect]);
 
   // Form state
   const [step, setStep] = useState<AuthStep>("login");
