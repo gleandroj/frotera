@@ -89,13 +89,15 @@ export function EditOrganizationForm({
   }, [organizationId, form, t]);
 
   const onSubmit = async (data: OrganizationFormValues) => {
-    if (!form.formState.isDirty) {
+    const nextName = data.name.trim();
+    const currentName = (organizationData?.name ?? "").trim();
+    if (nextName === currentName) {
       toast.info(t("common.nothingToSave"));
       return;
     }
     try {
       const response = await organizationAPI.update(organizationId, {
-        name: data.name,
+        name: nextName,
         description: undefined,
       });
       const result = response.data;

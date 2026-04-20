@@ -3,6 +3,8 @@ import { FuelController } from './fuel.controller';
 import { FuelService } from './fuel.service';
 import { FuelGeoService } from './fuel-geo.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
 import {
   CreateFuelLogDto,
   UpdateFuelLogDto,
@@ -100,6 +102,10 @@ describe('FuelController', () => {
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(OrganizationMemberGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(PermissionGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
     controller = module.get<FuelController>(FuelController);
@@ -132,7 +138,7 @@ describe('FuelController', () => {
 
       const result = await controller.getStats(mockRequest as any, orgId, query);
 
-      expect(mockFuelService.getStats).toHaveBeenCalledWith(orgId, userId, query);
+      expect(mockFuelService.getStats).toHaveBeenCalledWith(orgId, userId, query, null);
       expect(result).toEqual(mockStats);
     });
 
@@ -148,7 +154,7 @@ describe('FuelController', () => {
 
       await controller.getStats(mockRequest as any, orgId, query);
 
-      expect(mockFuelService.getStats).toHaveBeenCalledWith(orgId, userId, query);
+      expect(mockFuelService.getStats).toHaveBeenCalledWith(orgId, userId, query, null);
     });
   });
 
@@ -160,7 +166,7 @@ describe('FuelController', () => {
 
       const result = await controller.list(mockRequest as any, orgId, query);
 
-      expect(mockFuelService.list).toHaveBeenCalledWith(orgId, userId, query);
+      expect(mockFuelService.list).toHaveBeenCalledWith(orgId, userId, query, null);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(logId);
     });
@@ -178,7 +184,7 @@ describe('FuelController', () => {
 
       await controller.list(mockRequest as any, orgId, query);
 
-      expect(mockFuelService.list).toHaveBeenCalledWith(orgId, userId, query);
+      expect(mockFuelService.list).toHaveBeenCalledWith(orgId, userId, query, null);
     });
 
     it('should return empty array when no logs found', async () => {
@@ -207,7 +213,7 @@ describe('FuelController', () => {
 
       const result = await controller.create(mockRequest as any, orgId, dto);
 
-      expect(mockFuelService.create).toHaveBeenCalledWith(orgId, userId, dto);
+      expect(mockFuelService.create).toHaveBeenCalledWith(orgId, userId, dto, null);
       expect(result.id).toBe(logId);
     });
 
@@ -230,7 +236,7 @@ describe('FuelController', () => {
 
       await controller.create(mockRequest as any, orgId, dto);
 
-      expect(mockFuelService.create).toHaveBeenCalledWith(orgId, userId, dto);
+      expect(mockFuelService.create).toHaveBeenCalledWith(orgId, userId, dto, null);
     });
   });
 
@@ -240,7 +246,7 @@ describe('FuelController', () => {
 
       const result = await controller.getOne(mockRequest as any, orgId, logId);
 
-      expect(mockFuelService.getById).toHaveBeenCalledWith(logId, orgId, userId);
+      expect(mockFuelService.getById).toHaveBeenCalledWith(logId, orgId, userId, null);
       expect(result.id).toBe(logId);
     });
   });
@@ -261,7 +267,7 @@ describe('FuelController', () => {
         dto,
       );
 
-      expect(mockFuelService.update).toHaveBeenCalledWith(logId, orgId, userId, dto);
+      expect(mockFuelService.update).toHaveBeenCalledWith(logId, orgId, userId, dto, null);
       expect(result.liters).toBe(60);
     });
 
@@ -275,7 +281,7 @@ describe('FuelController', () => {
 
       await controller.update(mockRequest as any, orgId, logId, dto);
 
-      expect(mockFuelService.update).toHaveBeenCalledWith(logId, orgId, userId, dto);
+      expect(mockFuelService.update).toHaveBeenCalledWith(logId, orgId, userId, dto, null);
     });
   });
 
@@ -285,7 +291,7 @@ describe('FuelController', () => {
 
       const result = await controller.delete(mockRequest as any, orgId, logId);
 
-      expect(mockFuelService.delete).toHaveBeenCalledWith(logId, orgId, userId);
+      expect(mockFuelService.delete).toHaveBeenCalledWith(logId, orgId, userId, null);
       expect(result.message).toBe('Fuel log deleted successfully');
     });
 

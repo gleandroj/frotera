@@ -406,17 +406,15 @@ export class ChecklistService {
       };
     }
 
-    // Apply vehicle ID scope if provided
+    // ASSIGNED scope (driver/viewer): só vê as próprias respostas, dentro do escopo de veículo.
     if (access.allowedVehicleIds !== null) {
+      where.memberId = access.memberId;
       if (access.allowedVehicleIds.length > 0) {
-        // Entry with vehicle must be in allowedVehicleIds OR entry without vehicle and member matches
         where.OR = [
+          { vehicleId: null },
           { vehicleId: { in: access.allowedVehicleIds } },
-          { vehicleId: null, memberId: access.memberId },
         ];
       } else {
-        // No vehicles accessible, only own entries without vehicle
-        where.memberId = access.memberId;
         where.vehicleId = null;
       }
     }
@@ -505,6 +503,18 @@ export class ChecklistService {
     }
     if (query.templateId) where.templateId = query.templateId;
     if (query.vehicleId) where.vehicleId = query.vehicleId;
+
+    if (access.allowedVehicleIds !== null) {
+      where.memberId = access.memberId;
+      if (access.allowedVehicleIds.length > 0) {
+        where.OR = [
+          { vehicleId: null },
+          { vehicleId: { in: access.allowedVehicleIds } },
+        ];
+      } else {
+        where.vehicleId = null;
+      }
+    }
 
     const countByStatus = await this.prisma.checklistEntry.groupBy({
       by: ["status"],
@@ -759,6 +769,9 @@ export class ChecklistService {
       entry.template.customerId,
       access,
     );
+    if (access.allowedVehicleIds !== null && entry.memberId !== access.memberId) {
+      throw new NotFoundException(ApiCode.CHECKLIST_ENTRY_NOT_FOUND);
+    }
 
     let driverName: string | null = null;
     if (entry.driverId) {
@@ -790,6 +803,9 @@ export class ChecklistService {
       existing.template.customerId,
       access,
     );
+    if (access.allowedVehicleIds !== null && existing.memberId !== access.memberId) {
+      throw new NotFoundException(ApiCode.CHECKLIST_ENTRY_NOT_FOUND);
+    }
 
     const entry = await this.prisma.checklistEntry.update({
       where: { id: entryId },

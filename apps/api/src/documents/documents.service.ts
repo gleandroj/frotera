@@ -165,12 +165,18 @@ export class DocumentsService {
     organizationId: string,
     query: ListDocumentsQueryDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<DocumentsListResponseDto> {
     const scoped = await this.resolveScopedCustomerIds(
       organizationId,
       allowedCustomerIds,
       query.customerId,
     );
+
+    // ASSIGNED scope: docs must belong to vehicles in allowedVehicleIds.
+    if (allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      return { documents: [] };
+    }
 
     const startToday = this.startOfLocalDay();
     const expiringUpper = this.addLocalDays(startToday, 30);
@@ -193,6 +199,7 @@ export class DocumentsService {
       active: true,
       vehicle: { is: this.vehicleInScopeWhere(organizationId, scoped) },
       ...(query.vehicleId && { vehicleId: query.vehicleId }),
+      ...(allowedVehicleIds !== null && { vehicleId: { in: allowedVehicleIds } }),
       ...(query.type && { type: query.type }),
       ...(query.expiryBefore && {
         expiryDate: { lte: new Date(query.expiryBefore) },
@@ -240,18 +247,23 @@ export class DocumentsService {
     id: string,
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<DocumentResponseDto> {
     const scoped = await this.resolveScopedCustomerIds(
       organizationId,
       allowedCustomerIds,
       null,
     );
+    if (allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
+    }
     const doc = await this.prisma.vehicleDocument.findFirst({
       where: {
         id,
         organizationId,
         active: true,
         vehicle: { is: this.vehicleInScopeWhere(organizationId, scoped) },
+        ...(allowedVehicleIds !== null && { vehicleId: { in: allowedVehicleIds } }),
       },
       include: DOCUMENT_VEHICLE_INCLUDE,
     });
@@ -264,18 +276,23 @@ export class DocumentsService {
     organizationId: string,
     dto: UpdateDocumentDto,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<DocumentResponseDto> {
     const scoped = await this.resolveScopedCustomerIds(
       organizationId,
       allowedCustomerIds,
       null,
     );
+    if (allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
+    }
     const existing = await this.prisma.vehicleDocument.findFirst({
       where: {
         id,
         organizationId,
         active: true,
         vehicle: { is: this.vehicleInScopeWhere(organizationId, scoped) },
+        ...(allowedVehicleIds !== null && { vehicleId: { in: allowedVehicleIds } }),
       },
     });
     if (!existing) throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
@@ -302,18 +319,23 @@ export class DocumentsService {
     id: string,
     organizationId: string,
     allowedCustomerIds: string[] | null,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<void> {
     const scoped = await this.resolveScopedCustomerIds(
       organizationId,
       allowedCustomerIds,
       null,
     );
+    if (allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
+    }
     const existing = await this.prisma.vehicleDocument.findFirst({
       where: {
         id,
         organizationId,
         active: true,
         vehicle: { is: this.vehicleInScopeWhere(organizationId, scoped) },
+        ...(allowedVehicleIds !== null && { vehicleId: { in: allowedVehicleIds } }),
       },
     });
     if (!existing) throw new NotFoundException(ApiCode.DOCUMENT_NOT_FOUND);
@@ -329,12 +351,17 @@ export class DocumentsService {
     days: number,
     allowedCustomerIds: string[] | null,
     filterCustomerId?: string,
+    allowedVehicleIds: string[] | null = null,
   ): Promise<DocumentsListResponseDto> {
     const scoped = await this.resolveScopedCustomerIds(
       organizationId,
       allowedCustomerIds,
       filterCustomerId,
     );
+
+    if (allowedVehicleIds !== null && allowedVehicleIds.length === 0) {
+      return { documents: [] };
+    }
 
     const now = this.startOfLocalDay();
     const future = this.addLocalDays(now, days);
@@ -346,6 +373,7 @@ export class DocumentsService {
         organizationId,
         active: true,
         vehicle: { is: this.vehicleInScopeWhere(organizationId, scoped) },
+        ...(allowedVehicleIds !== null && { vehicleId: { in: allowedVehicleIds } }),
         expiryDate: {
           not: null,
           lte: future, // vence até hoje+days

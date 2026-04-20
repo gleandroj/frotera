@@ -20,10 +20,12 @@ interface FuelColumnsProps {
   onDelete: (log: FuelLog) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
   intlLocale: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
-  const { t, intlLocale } = props;
+  const { t, intlLocale, canEdit = true, canDelete = true } = props;
 
   const fuelTypeLabels: Record<FuelType, string> = {
     GASOLINE: t("fuel.fuelTypes.GASOLINE"),
@@ -177,29 +179,36 @@ export function getFuelColumns(props: FuelColumnsProps): ColumnDef<FuelLog>[] {
     {
       id: "actions",
       enableHiding: false,
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">{t("fuel.openActionsMenu")}</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => props.onEdit(row.original)}>
-              {t("common.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => props.onDelete(row.original)}
-              className="text-red-600"
-            >
-              {t("common.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => {
+        if (!canEdit && !canDelete) return null;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">{t("fuel.openActionsMenu")}</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {canEdit && (
+                <DropdownMenuItem onClick={() => props.onEdit(row.original)}>
+                  {t("common.edit")}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  onClick={() => props.onDelete(row.original)}
+                  className="text-red-600"
+                >
+                  {t("common.delete")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 }

@@ -83,6 +83,13 @@ export default function DashboardPage() {
   const intlLocale = useIntlLocale();
   const { user, organizations, currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
+  const canViewDashboard = can(Module.DASHBOARD, Action.VIEW);
+
+  useEffect(() => {
+    if (currentOrganization && !canViewDashboard) {
+      router.replace("/dashboard/tracking");
+    }
+  }, [currentOrganization, canViewDashboard, router]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [checklistSummary, setChecklistSummary] = useState<ChecklistSummaryResponse | null>(null);

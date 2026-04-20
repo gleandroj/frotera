@@ -27,6 +27,7 @@ import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { TeamMembersTableSkeleton, SkeletonPageLayout } from "@/components/ui";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MemberEditSheet } from "./member-edit-sheet";
 import { MemberCreateSheet } from "./member-create-sheet";
 import { getTeamColumns, type TeamMember } from "./columns";
@@ -34,8 +35,17 @@ import { toast } from "sonner";
 
 export default function TeamPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { currentOrganization, user, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
+  const canViewTeam = can(Module.USERS, Action.VIEW);
+
+  useEffect(() => {
+    if (currentOrganization && !canViewTeam) {
+      router.replace("/dashboard/tracking");
+    }
+  }, [currentOrganization, canViewTeam, router]);
+
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);

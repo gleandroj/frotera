@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
-import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
+import { usePermissions, Module, Action, Scope } from "@/lib/hooks/use-permissions";
 import { ChecklistTemplateFormDialog } from "./checklist-template-form-dialog";
 import {
   checklistAPI,
@@ -83,7 +83,11 @@ export default function ChecklistPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentOrganization, selectedCustomerId } = useAuth();
-  const { can } = usePermissions();
+  const { can, getScope } = usePermissions();
+  const canManageTemplates = can(Module.CHECKLIST, Action.EDIT);
+  const canDeleteTemplates = can(Module.CHECKLIST, Action.DELETE);
+  const canFillChecklist = can(Module.CHECKLIST, Action.CREATE);
+  const isChecklistAssignedScope = getScope(Module.CHECKLIST) === Scope.ASSIGNED;
 
   const [activeTab, setActiveTab] = useState<TabType>("templates");
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
@@ -336,19 +340,21 @@ export default function ChecklistPage() {
         const template = row.original;
         return (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!template.active}
-              title={!template.active ? t("checklist.templateInactiveHint") : undefined}
-              onClick={() => {
-                if (!template.active) return;
-                setFillTemplateId(template.id);
-                setFillOpen(true);
-              }}
-            >
-              {t("checklist.fillChecklist")}
-            </Button>
+            {canFillChecklist && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!template.active}
+                title={!template.active ? t("checklist.templateInactiveHint") : undefined}
+                onClick={() => {
+                  if (!template.active) return;
+                  setFillTemplateId(template.id);
+                  setFillOpen(true);
+                }}
+              >
+                {t("checklist.fillChecklist")}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -359,11 +365,13 @@ export default function ChecklistPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
-                >
-                  {t("common.edit")}
-                </DropdownMenuItem>
+                {canManageTemplates && (
+                  <DropdownMenuItem
+                    onClick={() => { setEditTemplate(template); setTemplateFormOpen(true); }}
+                  >
+                    {t("common.edit")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   disabled={!template.active}
                   onClick={() => {
@@ -375,7 +383,7 @@ export default function ChecklistPage() {
                 >
                   {t("checklist.copyLink")}
                 </DropdownMenuItem>
-                {can(Module.CHECKLIST, Action.DELETE) && (
+                {canDeleteTemplates && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -503,7 +511,7 @@ export default function ChecklistPage() {
               {t("checklist.reportsLink")}
             </Button>
           )}
-          {activeTab === "templates" && can(Module.CHECKLIST, Action.CREATE) && (
+          {activeTab === "templates" && canManageTemplates && (
             <Button onClick={() => { setEditTemplate(null); setTemplateFormOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               {t("checklist.newTemplate")}
@@ -576,22 +584,24 @@ export default function ChecklistPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={entryDriverFilter}
-              onValueChange={setEntryDriverFilter}
-            >
-              <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByDriver")}>
-                <SelectValue placeholder={t("checklist.filterDriverAll")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ENTRY_FILTER_ALL}>{t("checklist.filterDriverAll")}</SelectItem>
-                {sortedEntryFilterDrivers.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isChecklistAssignedScope && (
+              <Select
+                value={entryDriverFilter}
+                onValueChange={setEntryDriverFilter}
+              >
+                <SelectTrigger className="w-56 min-w-[12rem]" aria-label={t("checklist.filterByDriver")}>
+                  <SelectValue placeholder={t("checklist.filterDriverAll")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ENTRY_FILTER_ALL}>{t("checklist.filterDriverAll")}</SelectItem>
+                  {sortedEntryFilterDrivers.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as EntryStatus | typeof STATUS_ALL)}

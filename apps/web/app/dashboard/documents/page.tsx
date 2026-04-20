@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useTranslation } from '@/i18n/useTranslation';
+import { usePermissions, Module, Action } from '@/lib/hooks/use-permissions';
 import {
   documentsAPI,
   vehiclesAPI,
@@ -95,6 +96,10 @@ function expiryLocalYmd(iso: string | null | undefined): string | null {
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canCreateDocument = can(Module.DOCUMENTS, Action.CREATE);
+  const canEditDocument = can(Module.DOCUMENTS, Action.EDIT);
+  const canDeleteDocument = can(Module.DOCUMENTS, Action.DELETE);
   const [documents, setDocuments] = useState<VehicleDocument[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -257,10 +262,12 @@ export default function DocumentsPage() {
           <h1 className="text-3xl font-bold">{t('documents.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('documents.listDescription')}</p>
         </div>
-        <Button onClick={() => setFormOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t('documents.createDocument')}
-        </Button>
+        {canCreateDocument && (
+          <Button onClick={() => setFormOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('documents.createDocument')}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
@@ -405,23 +412,29 @@ export default function DocumentsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleEditClick(doc)}>
-                          {t('common.edit')}
-                        </DropdownMenuItem>
+                        {canEditDocument && (
+                          <DropdownMenuItem onClick={() => handleEditClick(doc)}>
+                            {t('common.edit')}
+                          </DropdownMenuItem>
+                        )}
                         {doc.fileUrl && (
                           <DropdownMenuItem onClick={() => handleViewFile(doc.fileUrl!)}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             {t('documents.viewFile')}
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => handleDeleteClick(doc)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {t('common.delete')}
-                        </DropdownMenuItem>
+                        {canDeleteDocument && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeleteClick(doc)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

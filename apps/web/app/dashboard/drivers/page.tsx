@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { driversAPI, type Driver } from "@/lib/frontend/api-client";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,10 @@ import {
 export default function DriversPage() {
   const { t } = useTranslation();
   const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canCreateDriver = can(Module.DRIVERS, Action.CREATE);
+  const canEditDriver = can(Module.DRIVERS, Action.EDIT);
+  const canDeleteDriver = can(Module.DRIVERS, Action.DELETE);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +53,13 @@ export default function DriversPage() {
   }, [currentOrganization?.id, fetchDrivers]);
 
   const columns = useMemo(
-    () => getDriverColumns(t, { onEdit: setEditDriver, onDelete: setDeleteDriver }),
-    [t],
+    () => getDriverColumns(t, {
+      onEdit: setEditDriver,
+      onDelete: setDeleteDriver,
+      canEdit: canEditDriver,
+      canDelete: canDeleteDriver,
+    }),
+    [t, canEditDriver, canDeleteDriver],
   );
 
   if (!currentOrganization) {
@@ -72,10 +82,12 @@ export default function DriversPage() {
           </h1>
           <p className="text-muted-foreground">{t("drivers.listDescription")}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("drivers.createDriver")}
-        </Button>
+        {canCreateDriver && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("drivers.createDriver")}
+          </Button>
+        )}
       </div>
 
       {loading && (

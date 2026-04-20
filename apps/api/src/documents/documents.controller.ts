@@ -54,6 +54,7 @@ export class DocumentsController {
       organizationId,
       query,
       req.allowedCustomerIds ?? null,
+      req.allowedVehicleIds ?? null,
     );
   }
 
@@ -70,6 +71,7 @@ export class DocumentsController {
       days,
       req.allowedCustomerIds ?? null,
       query.customerId,
+      req.allowedVehicleIds ?? null,
     );
   }
 
@@ -135,6 +137,7 @@ export class DocumentsController {
       id,
       organizationId,
       req.allowedCustomerIds ?? null,
+      req.allowedVehicleIds ?? null,
     );
   }
 
@@ -151,6 +154,7 @@ export class DocumentsController {
       organizationId,
       dto,
       req.allowedCustomerIds ?? null,
+      req.allowedVehicleIds ?? null,
     );
   }
 
@@ -166,6 +170,7 @@ export class DocumentsController {
       id,
       organizationId,
       req.allowedCustomerIds ?? null,
+      req.allowedVehicleIds ?? null,
     );
   }
 }

@@ -3,6 +3,7 @@ import { FuelReportsController } from './fuel-reports.controller';
 import { FuelReportsService } from './fuel-reports.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
 import {
   ConsumptionReportQueryDto,
   CostsReportQueryDto,
@@ -147,6 +148,8 @@ describe('FuelReportsController', () => {
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .overrideGuard(OrganizationMemberGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(PermissionGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MembersController } from './members.controller';
 import { MembersService } from './members.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '../organizations/guards/organization-member.guard';
+import { PermissionGuard } from '../auth/guards/permission.guard';
 import { CreateMemberDto, UpdateMemberDto } from './members.dto';
 
 describe('MembersController', () => {
@@ -63,6 +65,10 @@ describe('MembersController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(OrganizationMemberGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(PermissionGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

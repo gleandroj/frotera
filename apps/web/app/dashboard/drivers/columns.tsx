@@ -15,13 +15,15 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 export interface DriverColumnsOptions {
   onEdit: (driver: Driver) => void;
   onDelete: (driver: Driver) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function getDriverColumns(
   t: TFunction,
   options: DriverColumnsOptions,
 ): ColumnDef<Driver>[] {
-  const { onEdit, onDelete } = options;
+  const { onEdit, onDelete, canEdit = true, canDelete = true } = options;
 
   return [
     {
@@ -105,17 +107,21 @@ export function getDriverColumns(
                     {t("common.view")}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(driver)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  {t("common.edit")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(driver)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
+                {canEdit && (
+                  <DropdownMenuItem onClick={() => onEdit(driver)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {t("common.edit")}
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(driver)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("common.delete")}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

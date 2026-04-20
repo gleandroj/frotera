@@ -60,11 +60,30 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
-  const { can, canGlobal } = usePermissions();
+  const { can, canGlobal, canAnyModule } = usePermissions();
   const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
   const canViewTracking = can(Module.TRACKING, Action.VIEW);
   const canEditCompanySettings = can(Module.COMPANIES, Action.EDIT);
+  const canViewDashboard = can(Module.DASHBOARD, Action.VIEW);
+  const canViewVehicles = can(Module.VEHICLES, Action.VIEW);
+  const canViewChecklist = can(Module.CHECKLIST, Action.VIEW);
+  const canViewIncidents = can(Module.INCIDENTS, Action.VIEW);
+  const canViewDrivers = can(Module.DRIVERS, Action.VIEW);
+  const canViewDocuments = can(Module.DOCUMENTS, Action.VIEW);
+  const canViewFuel = can(Module.FUEL, Action.VIEW);
+  const canViewCustomers = can(Module.COMPANIES, Action.VIEW);
+  const canViewTeam = can(Module.USERS, Action.VIEW);
+  const canViewAnyFuelReport = canAnyModule(
+    [
+      Module.REPORTS_FUEL_CONSUMPTION,
+      Module.REPORTS_FUEL_COSTS,
+      Module.REPORTS_FUEL_BENCHMARK,
+      Module.REPORTS_FUEL_EFFICIENCY,
+      Module.REPORTS_FUEL_SUMMARY,
+    ],
+    Action.VIEW,
+  );
 
   const isMember = currentOrganization
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
@@ -120,58 +139,72 @@ export function AppSidebar() {
         current: pathname.startsWith("/dashboard/tracking"),
       });
     }
-    items.push(
-      {
+    if (canViewDashboard) {
+      items.push({
         name: t("navigation.items.dashboard"),
         href: "/dashboard/panel",
         icon: Home,
         current: pathname === "/dashboard/panel",
-      },
-      {
+      });
+    }
+    if (canViewVehicles) {
+      items.push({
         name: t("navigation.items.vehicles"),
         href: "/dashboard/vehicles",
         icon: Car,
         current: pathname.startsWith("/dashboard/vehicles"),
-      },
-      {
+      });
+    }
+    if (canViewChecklist) {
+      items.push({
         name: t("navigation.items.checklist"),
         href: "/dashboard/checklist",
         icon: ClipboardList,
         current: pathname.startsWith("/dashboard/checklist"),
-      },
-      {
+      });
+    }
+    if (canViewIncidents) {
+      items.push({
         name: t("navigation.items.incidents"),
         href: "/dashboard/incidents",
         icon: AlertCircle,
         current: pathname.startsWith("/dashboard/incidents"),
-      },
-      {
+      });
+    }
+    if (canViewDrivers) {
+      items.push({
         name: t("navigation.items.drivers"),
         href: "/dashboard/drivers",
         icon: UserRound,
         current: pathname.startsWith("/dashboard/drivers"),
-      },
-      {
+      });
+    }
+    if (canViewDocuments) {
+      items.push({
         name: t("navigation.items.documents"),
         href: "/dashboard/documents",
         icon: FileText,
         current: pathname.startsWith("/dashboard/documents"),
-      },
-      {
+      });
+    }
+    if (canViewFuel) {
+      items.push({
         name: t("navigation.items.fuel"),
         href: "/dashboard/fuel",
         icon: Fuel,
         current:
           pathname.startsWith("/dashboard/fuel") &&
           !pathname.startsWith("/dashboard/fuel/reports"),
-      },
-      {
+      });
+    }
+    if (canViewAnyFuelReport) {
+      items.push({
         name: t("navigation.items.fuelReports"),
         href: "/dashboard/fuel/reports",
         icon: BarChart3,
         current: pathname.startsWith("/dashboard/fuel/reports"),
-      },
-    );
+      });
+    }
     if (canViewTelemetry) {
       items.push({
         name: t("navigation.items.telemetry"),
@@ -181,31 +214,42 @@ export function AppSidebar() {
         badge: unreadTelemetry > 0 ? unreadTelemetry : undefined,
       });
     }
-    items.push({
-      name: t("navigation.items.customers"),
-      href: "/dashboard/customers",
-      icon: Building,
-      current: pathname.startsWith("/dashboard/customers"),
-    });
+    if (canViewCustomers) {
+      items.push({
+        name: t("navigation.items.customers"),
+        href: "/dashboard/customers",
+        icon: Building,
+        current: pathname.startsWith("/dashboard/customers"),
+      });
+    }
     return items;
-  }, [t, pathname, canViewTelemetry, unreadTelemetry]);
+  }, [
+    t, pathname, canViewTracking, canViewDashboard, canViewVehicles,
+    canViewChecklist, canViewIncidents, canViewDrivers, canViewDocuments,
+    canViewFuel, canViewAnyFuelReport, canViewTelemetry, canViewCustomers,
+    unreadTelemetry,
+  ]);
 
   const mainNavigation: NavigationSection[] = [
     {
       title: t("navigation.sections.overview"),
       items: overviewItems,
     },
-    {
-      title: t('navigation.sections.teamManagement'),
-      items: [
-        {
-          name: t('navigation.items.teamMembers'),
-          href: "/team",
-          icon: Users,
-          current: pathname.startsWith("/team"),
-        },
-      ],
-    },
+    ...(canViewTeam
+      ? [
+          {
+            title: t('navigation.sections.teamManagement'),
+            items: [
+              {
+                name: t('navigation.items.teamMembers'),
+                href: "/team",
+                icon: Users,
+                current: pathname.startsWith("/team"),
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: t('navigation.sections.settings'),
       items: settingsItems,

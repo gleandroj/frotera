@@ -4,6 +4,7 @@ import { ChecklistController } from './checklist.controller';
 import { ChecklistService } from './checklist.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
 import {
   ChecklistEntryFilterDto,
   ChecklistEntryResponseDto,
@@ -28,11 +29,18 @@ describe('ChecklistController', () => {
   const entryId = 'entry-1';
   const vehicleId = 'vehicle-1';
 
-  const mockAccess = { allowedCustomerIds: null as string[] | null, isSuperAdmin: false };
+  const mockAccess = {
+    allowedCustomerIds: null as string[] | null,
+    allowedVehicleIds: null as string[] | null,
+    memberId,
+    isSuperAdmin: false,
+  };
 
   const mockRequest = {
     user: { userId, isSuperAdmin: false },
     allowedCustomerIds: null as string[] | null,
+    allowedVehicleIds: null as string[] | null,
+    organizationMember: { id: memberId },
     ip: "203.0.113.1",
   };
 
@@ -120,6 +128,8 @@ describe('ChecklistController', () => {
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .overrideGuard(OrganizationMemberGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(PermissionGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
@@ -419,6 +429,8 @@ describe('ChecklistController', () => {
         .overrideGuard(JwtAuthGuard)
         .useValue({ canActivate: jest.fn(() => false) })
         .overrideGuard(OrganizationMemberGuard)
+        .useValue({ canActivate: jest.fn(() => true) })
+        .overrideGuard(PermissionGuard)
         .useValue({ canActivate: jest.fn(() => true) })
         .compile();
 

@@ -26,8 +26,12 @@ import {
   ApiTags,
   ApiNoContentResponse,
 } from '@nestjs/swagger';
-import type { JwtAuthenticatedRequest } from '@/auth/types/authenticated-request.types';
+import type { JwtAuthenticatedRequest, OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
+import { Permission } from '@/auth/decorators/permission.decorator';
+import { RoleActionEnum, RoleModuleEnum } from '@/roles/roles.dto';
 import { FuelService } from './fuel.service';
 import { FuelGeoService } from './fuel-geo.service';
 import { FUEL_RECEIPT_UPLOAD_MAX_BYTES } from './fuel-receipt-upload';
@@ -42,7 +46,7 @@ import {
 
 @ApiTags('fuel')
 @Controller('organizations/:organizationId/fuel')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class FuelController {
   constructor(
@@ -54,6 +58,7 @@ export class FuelController {
    * GET /api/organizations/:orgId/fuel/market-prices — MUST come before /stats and /:id
    */
   @Get('market-prices')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({ schema: { example: { avgPrice: 6.69, refDate: '2026-04-16' } } })
   async getMarketPrices(
     @Param('organizationId') organizationId: string,
@@ -67,20 +72,22 @@ export class FuelController {
    * GET /api/organizations/:orgId/fuel/stats — MUST come before /:id
    */
   @Get('stats')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: FuelStatsResponseDto })
   async getStats(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: FuelStatsQueryDto,
   ): Promise<FuelStatsResponseDto> {
     const userId = req.user.userId;
-    return this.fuelService.getStats(organizationId, userId, query);
+    return this.fuelService.getStats(organizationId, userId, query, req.allowedVehicleIds ?? null);
   }
 
   /**
    * GET /api/organizations/:orgId/fuel/geo/states — estados (tabela `ibge_ufs`, seed IBGE)
    */
   @Get('geo/states')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({
     schema: {
       example: [{ sigla: 'RS', nome: 'Rio Grande do Sul' }],
@@ -98,6 +105,7 @@ export class FuelController {
    * GET /api/organizations/:orgId/fuel/geo/municipios?uf=RS — municípios (`ibge_municipios`, seed IBGE)
    */
   @Get('geo/municipios')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({
     schema: {
       example: [{ id: 4314902, nome: 'Porto Alegre' }],
@@ -116,6 +124,7 @@ export class FuelController {
    * POST /api/organizations/:orgId/fuel/upload-receipt — comprovante → S3
    */
   @Post('upload-receipt')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -165,72 +174,77 @@ export class FuelController {
    * GET /api/organizations/:orgId/fuel
    */
   @Get()
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: [FuelLogResponseDto] })
   async list(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Query() query: ListFuelLogsQueryDto,
   ): Promise<FuelLogResponseDto[]> {
     const userId = req.user.userId;
-    return this.fuelService.list(organizationId, userId, query);
+    return this.fuelService.list(organizationId, userId, query, req.allowedVehicleIds ?? null);
   }
 
   /**
    * POST /api/organizations/:orgId/fuel
    */
   @Post()
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.CREATE)
   @ApiCreatedResponse({ type: FuelLogResponseDto })
   async create(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Body() body: CreateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
     const userId = req.user.userId;
-    return this.fuelService.create(organizationId, userId, body);
+    return this.fuelService.create(organizationId, userId, body, req.allowedVehicleIds ?? null);
   }
 
   /**
    * GET /api/organizations/:orgId/fuel/:id
    */
   @Get(':id')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: FuelLogResponseDto })
   async getOne(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<FuelLogResponseDto> {
     const userId = req.user.userId;
-    return this.fuelService.getById(id, organizationId, userId);
+    return this.fuelService.getById(id, organizationId, userId, req.allowedVehicleIds ?? null);
   }
 
   /**
    * PATCH /api/organizations/:orgId/fuel/:id
    */
   @Patch(':id')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.EDIT)
   @ApiOkResponse({ type: FuelLogResponseDto })
   async update(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() body: UpdateFuelLogDto,
   ): Promise<FuelLogResponseDto> {
     const userId = req.user.userId;
-    return this.fuelService.update(id, organizationId, userId, body);
+    return this.fuelService.update(id, organizationId, userId, body, req.allowedVehicleIds ?? null);
   }
 
   /**
    * DELETE /api/organizations/:orgId/fuel/:id
    */
   @Delete(':id')
+  @Permission(RoleModuleEnum.FUEL, RoleActionEnum.DELETE)
   @HttpCode(200)
   @ApiOkResponse({ schema: { example: { message: 'Fuel log deleted successfully' } } })
   async delete(
-    @Request() req: JwtAuthenticatedRequest,
+    @Request() req: OrgScopedRequest,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ): Promise<{ message: string }> {
     const userId = req.user.userId;
-    await this.fuelService.delete(id, organizationId, userId);
+    await this.fuelService.delete(id, organizationId, userId, req.allowedVehicleIds ?? null);
     return { message: 'Fuel log deleted successfully' };
   }
 }

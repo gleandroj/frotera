@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
+import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import {
   fuelAPI,
   type FuelListParams,
@@ -25,6 +26,10 @@ export default function FuelPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
   const { currentOrganization, selectedCustomerId } = useAuth();
+  const { can } = usePermissions();
+  const canCreateFuel = can(Module.FUEL, Action.CREATE);
+  const canEditFuel = can(Module.FUEL, Action.EDIT);
+  const canDeleteFuel = can(Module.FUEL, Action.DELETE);
 
   const [logs, setLogs] = useState<FuelLog[]>([]);
   const [stats, setStats] = useState<FuelStats | null>(null);
@@ -97,8 +102,10 @@ export default function FuelPage() {
         onDelete: setDeleteLog,
         t,
         intlLocale,
+        canEdit: canEditFuel,
+        canDelete: canDeleteFuel,
       }),
-    [t, intlLocale],
+    [t, intlLocale, canEditFuel, canDeleteFuel],
   );
 
   if (!currentOrganization?.id) {
@@ -119,10 +126,12 @@ export default function FuelPage() {
           <h1 className="text-3xl font-bold tracking-tight">{t("fuel.title")}</h1>
           <p className="text-muted-foreground">{t("fuel.listDescription")}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t("fuel.newLog")}
-        </Button>
+        {canCreateFuel && (
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t("fuel.newLog")}
+          </Button>
+        )}
       </div>
 
       <FuelStatsCards stats={stats} />

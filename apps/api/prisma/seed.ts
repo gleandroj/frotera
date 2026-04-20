@@ -30,18 +30,29 @@ interface RoleDefinition {
 // Stable keys for system roles — used in code instead of role names
 // (names can change; keys are immutable identifiers)
 
+const FUEL_REPORT_MODULES = [
+  'REPORTS_FUEL_CONSUMPTION',
+  'REPORTS_FUEL_COSTS',
+  'REPORTS_FUEL_BENCHMARK',
+  'REPORTS_FUEL_EFFICIENCY',
+  'REPORTS_FUEL_SUMMARY',
+] as const;
+
+const fuelReportPermissions = (scope: 'ALL' | 'ASSIGNED' = 'ALL') =>
+  FUEL_REPORT_MODULES.map((module) => ({ module, actions: ['VIEW'], scope }));
+
 const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
   ORGANIZATION_OWNER: {
     name: 'Dono da Organização',
     description: 'Gerencia empresas e usuários da organização. Pode criar empresas raiz. Não cria organizações.',
     color: '#0EA5E9',
     permissions: [
+      { module: 'DASHBOARD', actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],                scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
-      { module: 'REPORTS',   actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'DRIVERS',   actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'DOCUMENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
@@ -49,6 +60,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'],          scope: 'ALL' },
       { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      ...fuelReportPermissions('ALL'),
     ],
   },
   COMPANY_OWNER: {
@@ -56,12 +68,12 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Acesso total à organização. Gerencia todos os módulos.',
     color: '#7C3AED',
     permissions: [
+      { module: 'DASHBOARD', actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],                scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE','EDIT'],          scope: 'ALL' },
-      { module: 'REPORTS',   actions: ['VIEW'],                          scope: 'ALL' },
       { module: 'DRIVERS',   actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'DOCUMENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
@@ -69,6 +81,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'],          scope: 'ALL' },
       { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
+      ...fuelReportPermissions('ALL'),
     ],
   },
   COMPANY_ADMIN: {
@@ -76,12 +89,12 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Administrador da organização. Sem gestão de roles e sem deletar usuários.',
     color: '#2563EB',
     permissions: [
+      { module: 'DASHBOARD', actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],       scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE'],        scope: 'ALL' },
-      { module: 'REPORTS',   actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'DRIVERS',   actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'DOCUMENTS', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'FUEL',      actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
@@ -89,6 +102,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'INCIDENTS', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'TELEMETRY', actions: ['VIEW','EDIT','DELETE'], scope: 'ALL' },
       { module: 'FINANCIAL', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
+      ...fuelReportPermissions('ALL'),
     ],
   },
   OPERATOR: {
@@ -96,10 +110,12 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Acesso operacional. Vê frotas e rastreamento, preenche checklists e abastecimentos.',
     color: '#059669',
     permissions: [
+      { module: 'DASHBOARD', actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'VEHICLES',  actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'DRIVERS',   actions: ['VIEW'],                 scope: 'ALL' },
+      { module: 'DOCUMENTS', actions: ['VIEW'],                 scope: 'ALL' },
       { module: 'CHECKLIST', actions: ['VIEW','CREATE','EDIT'], scope: 'ALL' },
       { module: 'FUEL',      actions: ['VIEW','CREATE'],        scope: 'ALL' },
       { module: 'INCIDENTS', actions: ['VIEW','CREATE'],        scope: 'ALL' },
@@ -114,8 +130,8 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
       { module: 'VEHICLES',  actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'TRACKING',  actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'COMPANIES', actions: ['VIEW'], scope: 'ASSIGNED' },
-      { module: 'REPORTS',   actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'DRIVERS',   actions: ['VIEW'], scope: 'ASSIGNED' },
+      { module: 'DOCUMENTS', actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'FUEL',      actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'CHECKLIST', actions: ['VIEW'], scope: 'ASSIGNED' },
       { module: 'INCIDENTS', actions: ['VIEW'], scope: 'ASSIGNED' },
@@ -127,12 +143,44 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     description: 'Motorista. Preenche checklists e abastecimentos próprios.',
     color: '#D97706',
     permissions: [
-      { module: 'CHECKLIST', actions: ['CREATE'],        scope: 'ASSIGNED' },
-      { module: 'FUEL',      actions: ['CREATE'],        scope: 'ASSIGNED' },
-      { module: 'INCIDENTS', actions: ['VIEW','CREATE'], scope: 'ASSIGNED' },
+      { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ASSIGNED' },
+      { module: 'DOCUMENTS', actions: ['VIEW'],                 scope: 'ASSIGNED' },
+      { module: 'CHECKLIST', actions: ['VIEW','CREATE'],        scope: 'ASSIGNED' },
+      { module: 'FUEL',      actions: ['VIEW','CREATE'],        scope: 'ASSIGNED' },
+      { module: 'INCIDENTS', actions: ['VIEW','CREATE'],        scope: 'ASSIGNED' },
     ],
   },
 };
+
+async function syncRolePermissions(roleId: string, def: RoleDefinition) {
+  // Upsert canonical permissions for system role: keeps drift-free with SYSTEM_ROLES.
+  const desiredModules = new Set(def.permissions.map((p) => p.module));
+
+  await prisma.rolePermission.deleteMany({
+    where: {
+      roleId,
+      module: { notIn: def.permissions.map((p) => p.module as any) },
+    },
+  });
+
+  for (const perm of def.permissions) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_module: { roleId, module: perm.module as any } },
+      update: {
+        actions: perm.actions as any,
+        scope: perm.scope as any,
+      },
+      create: {
+        roleId,
+        module: perm.module as any,
+        actions: perm.actions as any,
+        scope: perm.scope as any,
+      },
+    });
+  }
+
+  return desiredModules.size;
+}
 
 async function seedSystemRoles(): Promise<Record<RoleKey, string>> {
   console.log("🔐 Seeding System Roles...");
@@ -149,12 +197,15 @@ async function seedSystemRoles(): Promise<Record<RoleKey, string>> {
     });
 
     if (existing) {
-      if (!existing.key) {
-        await prisma.role.update({ where: { id: existing.id }, data: { key: roleKey } });
-        console.log(`   ✓ Role key set: ${def.name} → ${roleKey}`);
-      } else {
-        console.log(`   ✓ Role already exists: ${def.name}`);
+      const updates: Prisma.RoleUpdateInput = {};
+      if (!existing.key) updates.key = roleKey;
+      if (existing.description !== def.description) updates.description = def.description;
+      if (existing.color !== def.color) updates.color = def.color;
+      if (Object.keys(updates).length > 0) {
+        await prisma.role.update({ where: { id: existing.id }, data: updates });
       }
+      const count = await syncRolePermissions(existing.id, def);
+      console.log(`   ✓ Role synced: ${def.name} (${count} permissions)`);
       roleIds[roleKey] = existing.id;
       continue;
     }

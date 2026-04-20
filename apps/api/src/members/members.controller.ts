@@ -20,12 +20,13 @@ import { MembersService } from './members.service';
 
 @ApiTags('members')
 @Controller('organizations/:organizationId/members')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
   @Get()
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.VIEW)
   @ApiOperation({ summary: 'Get all members of an organization' })
   @ApiResponse({ status: 200, type: MembersListResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -49,6 +50,7 @@ export class MembersController {
   }
 
   @Post()
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.CREATE)
   @ApiOperation({ summary: 'Create a new member (user) in the organization' })
   @ApiResponse({ status: 201, type: CreateMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -62,6 +64,7 @@ export class MembersController {
   }
 
   @Patch(':memberId')
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Update member role and customer access' })
   @ApiResponse({ status: 200, type: UpdateMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -82,6 +85,7 @@ export class MembersController {
   }
 
   @Delete(':memberId')
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.DELETE)
   @ApiOperation({ summary: 'Remove member from organization' })
   @ApiResponse({ status: 200, type: DeleteMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -96,6 +100,7 @@ export class MembersController {
   }
 
   @Patch(':memberId/enable')
+  @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Enable member in organization' })
   @ApiResponse({ status: 200, type: DeleteMemberResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -109,7 +114,6 @@ export class MembersController {
   }
 
   @Patch(':memberId/vehicles')
-  @UseGuards(OrganizationMemberGuard, PermissionGuard)
   @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Assign vehicles to a member' })
   @ApiResponse({ status: 200, description: 'Member vehicles updated' })
@@ -127,7 +131,6 @@ export class MembersController {
   }
 
   @Patch(':memberId/drivers')
-  @UseGuards(OrganizationMemberGuard, PermissionGuard)
   @Permission(RoleModuleEnum.USERS, RoleActionEnum.EDIT)
   @ApiOperation({ summary: 'Assign drivers to a member' })
   @ApiResponse({ status: 200, description: 'Member drivers updated' })

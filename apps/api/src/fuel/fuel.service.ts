@@ -95,6 +95,11 @@ export class FuelService {
       vehicleId: { in: allowedVehicleIdsList },
     };
 
+    // ASSIGNED scope (motorista/visualizador escopado): só vê os próprios logs.
+    if (allowedVehicleIds !== null) {
+      where.createdById = member.id;
+    }
+
     if (query.vehicleId && allowedVehicleIds !== null && allowedVehicleIds.includes(query.vehicleId)) {
       where.vehicleId = query.vehicleId;
     }
@@ -304,6 +309,11 @@ export class FuelService {
       throw new ForbiddenException('No access to this fuel log');
     }
 
+    // ASSIGNED scope: só pode ver os próprios logs.
+    if (allowedVehicleIds !== null && log.createdById !== member.id) {
+      throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
+    }
+
     return this.mapSingleToResponse(log);
   }
 
@@ -355,6 +365,11 @@ export class FuelService {
 
     if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this fuel log');
+    }
+
+    // ASSIGNED scope: só pode editar os próprios logs.
+    if (allowedVehicleIds !== null && currentLog.createdById !== member.id) {
+      throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
     }
 
     // Use current values as defaults
@@ -471,6 +486,11 @@ export class FuelService {
 
     if (!hasAccessViaDimension) {
       throw new ForbiddenException('No access to this fuel log');
+    }
+
+    // ASSIGNED scope: só pode deletar os próprios logs.
+    if (allowedVehicleIds !== null && log.createdById !== member.id) {
+      throw new NotFoundException(ApiCode.FUEL_LOG_NOT_FOUND);
     }
 
     await this.prisma.fuelLog.delete({ where: { id } });

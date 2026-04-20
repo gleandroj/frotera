@@ -14,6 +14,9 @@ import {
 import type { OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { OrganizationMemberGuard } from '@/organizations/guards/organization-member.guard';
+import { PermissionGuard } from '@/auth/guards/permission.guard';
+import { Permission } from '@/auth/decorators/permission.decorator';
+import { RoleActionEnum, RoleModuleEnum } from '@/roles/roles.dto';
 import { FuelReportsService } from './fuel-reports.service';
 import {
   ConsumptionReportQueryDto,
@@ -30,12 +33,13 @@ import {
 
 @ApiTags('fuel-reports')
 @Controller('organizations/:organizationId/fuel/reports')
-@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class FuelReportsController {
   constructor(private readonly fuelReportsService: FuelReportsService) {}
 
   @Get('consumption')
+  @Permission(RoleModuleEnum.REPORTS_FUEL_CONSUMPTION, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: [VehicleConsumptionDto] })
   async getConsumption(
     @Request() req: OrgScopedRequest,
@@ -51,6 +55,7 @@ export class FuelReportsController {
   }
 
   @Get('costs')
+  @Permission(RoleModuleEnum.REPORTS_FUEL_COSTS, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: [CostsPeriodDto] })
   async getCosts(
     @Request() req: OrgScopedRequest,
@@ -66,6 +71,7 @@ export class FuelReportsController {
   }
 
   @Get('benchmark')
+  @Permission(RoleModuleEnum.REPORTS_FUEL_BENCHMARK, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: BenchmarkSummaryDto })
   async getBenchmark(
     @Request() req: OrgScopedRequest,
@@ -81,6 +87,7 @@ export class FuelReportsController {
   }
 
   @Get('efficiency')
+  @Permission(RoleModuleEnum.REPORTS_FUEL_EFFICIENCY, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: [VehicleEfficiencyDto] })
   async getEfficiency(
     @Request() req: OrgScopedRequest,
@@ -96,6 +103,7 @@ export class FuelReportsController {
   }
 
   @Get('summary')
+  @Permission(RoleModuleEnum.REPORTS_FUEL_SUMMARY, RoleActionEnum.VIEW)
   @ApiOkResponse({ type: PeriodSummaryDto })
   async getSummary(
     @Request() req: OrgScopedRequest,

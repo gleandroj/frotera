@@ -16,6 +16,12 @@ export enum Module {
   INCIDENTS = 'INCIDENTS',
   TELEMETRY = 'TELEMETRY',
   FINANCIAL = 'FINANCIAL',
+  DASHBOARD = 'DASHBOARD',
+  REPORTS_FUEL_CONSUMPTION = 'REPORTS_FUEL_CONSUMPTION',
+  REPORTS_FUEL_COSTS       = 'REPORTS_FUEL_COSTS',
+  REPORTS_FUEL_BENCHMARK   = 'REPORTS_FUEL_BENCHMARK',
+  REPORTS_FUEL_EFFICIENCY  = 'REPORTS_FUEL_EFFICIENCY',
+  REPORTS_FUEL_SUMMARY     = 'REPORTS_FUEL_SUMMARY',
 }
 
 export enum Action {
@@ -23,6 +29,11 @@ export enum Action {
   CREATE = 'CREATE',
   EDIT   = 'EDIT',
   DELETE = 'DELETE',
+}
+
+export enum Scope {
+  ALL      = 'ALL',
+  ASSIGNED = 'ASSIGNED',
 }
 
 export function usePermissions() {
@@ -41,6 +52,19 @@ export function usePermissions() {
 
   function canAny(module: Module, actions: Action[]): boolean {
     return actions.some((action) => can(module, action));
+  }
+
+  function canAnyModule(modules: Module[], action: Action): boolean {
+    return modules.some((module) => can(module, action));
+  }
+
+  function getScope(module: Module): Scope | null {
+    if (!currentOrganization) return null;
+    if (user?.isSuperAdmin) return Scope.ALL;
+    const role = currentOrganization.role;
+    if (!role || !role.permissions) return null;
+    const perm = role.permissions.find((p) => p.module === module);
+    return (perm?.scope as Scope) ?? null;
   }
 
   function canGlobal(module: Module, action: Action): boolean {
@@ -69,7 +93,9 @@ export function usePermissions() {
   return {
     can,
     canAny,
+    canAnyModule,
     canGlobal,
+    getScope,
     getRoleName,
     getRoleColor,
     canManageUsers,

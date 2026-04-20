@@ -8,6 +8,9 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTa
 import type { OrgScopedRequest } from "@/auth/types/authenticated-request.types";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganizationMemberGuard } from "../organizations/guards/organization-member.guard";
+import { PermissionGuard } from "../auth/guards/permission.guard";
+import { Permission } from "../auth/decorators/permission.decorator";
+import { RoleActionEnum, RoleModuleEnum } from "../roles/roles.dto";
 import { ChecklistService, type ChecklistOrgAccess } from "./checklist.service";
 import { clientIpFromRequest } from "./checklist-client-ip";
 import {
@@ -27,7 +30,7 @@ function orgAccess(req: OrgScopedRequest): ChecklistOrgAccess {
 
 @ApiTags("checklist")
 @Controller("organizations/:organizationId/checklist")
-@UseGuards(JwtAuthGuard, OrganizationMemberGuard)
+@UseGuards(JwtAuthGuard, OrganizationMemberGuard, PermissionGuard)
 @ApiBearerAuth()
 export class ChecklistController {
   constructor(private readonly checklistService: ChecklistService) {}
@@ -35,6 +38,7 @@ export class ChecklistController {
   // ─── Templates ──────────────────────────────────────────────────────────────
 
   @Get("templates")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Listar templates de checklist" })
   listTemplates(
     @Param("organizationId") organizationId: string,
@@ -49,6 +53,7 @@ export class ChecklistController {
   }
 
   @Post("templates")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Criar template de checklist" })
   createTemplate(
     @Param("organizationId") organizationId: string,
@@ -59,6 +64,7 @@ export class ChecklistController {
   }
 
   @Get("templates/:templateId")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Buscar template por ID" })
   getTemplate(
     @Param("organizationId") organizationId: string,
@@ -69,6 +75,7 @@ export class ChecklistController {
   }
 
   @Patch("templates/:templateId")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Atualizar template" })
   updateTemplate(
     @Param("organizationId") organizationId: string,
@@ -85,6 +92,7 @@ export class ChecklistController {
   }
 
   @Delete("templates/:templateId")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.DELETE)
   @ApiOperation({ summary: "Excluir/desativar template" })
   deleteTemplate(
     @Param("organizationId") organizationId: string,
@@ -95,6 +103,7 @@ export class ChecklistController {
   }
 
   @Post("upload")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.CREATE)
   @HttpCode(201)
   @ApiOperation({ summary: "Upload de anexo para checklist (foto, arquivo ou PNG de assinatura)" })
   @ApiConsumes("multipart/form-data")
@@ -139,6 +148,7 @@ export class ChecklistController {
   // ─── Reports ────────────────────────────────────────────────────────────────
 
   @Get("reports/summary")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Resumo agregado de entradas de checklist (por status e por template)" })
   @ApiOkResponse({ type: ChecklistSummaryResponseDto })
   getEntriesSummary(
@@ -156,6 +166,7 @@ export class ChecklistController {
   // ─── Entries ────────────────────────────────────────────────────────────────
 
   @Get("entries")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Listar entradas de checklist" })
   listEntries(
     @Param("organizationId") organizationId: string,
@@ -166,6 +177,7 @@ export class ChecklistController {
   }
 
   @Post("entries")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.CREATE)
   @ApiOperation({ summary: "Criar e submeter checklist preenchido" })
   async createEntry(
     @Param("organizationId") organizationId: string,
@@ -179,6 +191,7 @@ export class ChecklistController {
   }
 
   @Get("entries/:entryId")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.VIEW)
   @ApiOperation({ summary: "Buscar entrada por ID" })
   getEntry(
     @Param("organizationId") organizationId: string,
@@ -189,6 +202,7 @@ export class ChecklistController {
   }
 
   @Patch("entries/:entryId")
+  @Permission(RoleModuleEnum.CHECKLIST, RoleActionEnum.EDIT)
   @ApiOperation({ summary: "Atualizar status da entrada" })
   updateEntryStatus(
     @Param("organizationId") organizationId: string,
