@@ -333,17 +333,22 @@ export const organizationAPI = {
   ) => externalApi.patch(`/api/organizations/${organizationId}`, data),
   getMembers: (
     organizationId: string,
-    params?: { customerId?: string | null; includeInactive?: boolean }
-  ) =>
-    externalApi.get(`/api/organizations/${organizationId}/members`, {
-      params:
-        params?.customerId != null || params?.includeInactive === true
-          ? {
-              ...(params?.customerId != null ? { customerId: params.customerId } : {}),
-              ...(params?.includeInactive === true ? { includeInactive: "true" } : {}),
-            }
-          : undefined,
-    }),
+    params?: {
+      customerId?: string | null;
+      includeInactive?: boolean;
+      activeOnly?: boolean;
+      inactiveOnly?: boolean;
+    }
+  ) => {
+    const query: Record<string, string> = {};
+    if (params?.customerId != null) query.customerId = params.customerId;
+    if (params?.includeInactive === true) query.includeInactive = "true";
+    if (params?.activeOnly === true) query.activeOnly = "true";
+    if (params?.inactiveOnly === true) query.inactiveOnly = "true";
+    return externalApi.get(`/api/organizations/${organizationId}/members`, {
+      params: Object.keys(query).length > 0 ? query : undefined,
+    });
+  },
   createMember: (
     organizationId: string,
     data: {

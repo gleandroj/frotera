@@ -88,6 +88,7 @@ describe('MembersController', () => {
         orgId,
         undefined,
         false,
+        { activeOnly: false, inactiveOnly: false },
       );
       expect(result).toEqual(mockResponse);
     });
@@ -110,6 +111,7 @@ describe('MembersController', () => {
         orgId,
         customerId,
         false,
+        { activeOnly: false, inactiveOnly: false },
       );
       expect(result).toEqual(mockResponse);
     });
@@ -131,6 +133,41 @@ describe('MembersController', () => {
         orgId,
         undefined,
         false,
+        { activeOnly: false, inactiveOnly: false },
+      );
+    });
+
+    it('should pass activeOnly=true when activeOnly query param is "true"', async () => {
+      const mockResponse = { memberships: [] };
+      mockMembersService.getMembers.mockResolvedValueOnce(mockResponse);
+
+      const req = { user: { userId } } as any;
+
+      await controller.getMembers(req, orgId, undefined, undefined, 'true');
+
+      expect(mockMembersService.getMembers).toHaveBeenCalledWith(
+        userId,
+        orgId,
+        undefined,
+        false,
+        { activeOnly: true, inactiveOnly: false },
+      );
+    });
+
+    it('should pass inactiveOnly=true when inactiveOnly query param is "true"', async () => {
+      const mockResponse = { memberships: [] };
+      mockMembersService.getMembers.mockResolvedValueOnce(mockResponse);
+
+      const req = { user: { userId } } as any;
+
+      await controller.getMembers(req, orgId, undefined, undefined, undefined, 'true');
+
+      expect(mockMembersService.getMembers).toHaveBeenCalledWith(
+        userId,
+        orgId,
+        undefined,
+        false,
+        { activeOnly: false, inactiveOnly: true },
       );
     });
   });

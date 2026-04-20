@@ -53,7 +53,16 @@ export class MembersService {
     organizationId: string,
     filterCustomerId?: string,
     includeInactive = false,
+    statusFilter: { activeOnly?: boolean; inactiveOnly?: boolean } = {},
   ): Promise<MembersListResponseDto> {
+    const { activeOnly = false, inactiveOnly = false } = statusFilter;
+    const statusWhere = activeOnly
+      ? { active: true }
+      : inactiveOnly
+        ? { active: false }
+        : includeInactive
+          ? {}
+          : { active: true };
     const requestingUser = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { isSuperAdmin: true },
@@ -70,7 +79,7 @@ export class MembersService {
     let members = await this.prisma.organizationMember.findMany({
       where: {
         organizationId,
-        ...(includeInactive ? {} : { active: true }),
+        ...statusWhere,
         ...(requestingUser?.isSuperAdmin === true
           ? {}
           : { user: { isSuperAdmin: false, isSystemUser: false } }),

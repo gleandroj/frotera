@@ -33,13 +33,18 @@ export class MembersController {
     @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
-    @Query('includeInactive') includeInactive?: string,
+    @Query('includeInactive') includeInactiveRaw?: string,
+    @Query('activeOnly') activeOnlyRaw?: string,
+    @Query('inactiveOnly') inactiveOnlyRaw?: string,
   ): Promise<MembersListResponseDto> {
+    const activeOnly = activeOnlyRaw === 'true' || activeOnlyRaw === '1';
+    const inactiveOnly = inactiveOnlyRaw === 'true' || inactiveOnlyRaw === '1';
     return this.membersService.getMembers(
       req.user.userId,
       organizationId,
       customerId ?? undefined,
-      includeInactive === 'true',
+      includeInactiveRaw === 'true',
+      { activeOnly, inactiveOnly },
     );
   }
 

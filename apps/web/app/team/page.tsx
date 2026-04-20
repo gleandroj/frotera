@@ -11,66 +11,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getUserInitials } from "@/lib/user-initials";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  RecordStatusFilter,
+  RECORD_STATUS_ALL,
+  RECORD_STATUS_ACTIVE,
+  RECORD_STATUS_INACTIVE,
+  type RecordListStatus,
+} from "@/components/list-filters/record-status-filter";
 import { useTranslation } from "@/i18n/useTranslation";
 import { organizationAPI } from "@/lib/frontend/api-client";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { TeamMembersTableSkeleton, SkeletonPageLayout } from "@/components/ui";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Mail,
-  MoreHorizontal,
-  Pencil,
-  Shield,
-  User,
-  UserPlus,
-} from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useCallback, useEffect, useState } from "react";
+import { UserPlus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MemberEditSheet } from "./member-edit-sheet";
 import { MemberCreateSheet } from "./member-create-sheet";
+import { getTeamColumns, type TeamMember } from "./columns";
 import { toast } from "sonner";
-
-interface TeamMemberRole {
-  id: string;
-  name: string;
-  description?: string | null;
-  isSystem: boolean;
-  color?: string | null;
-  permissions: Array<{ id: string; module: string; actions: string[]; scope: string }>;
-}
-
-interface TeamMember {
-  id: string;
-  user: {
-    id: string;
-    name: string | null;
-    email: string;
-  };
-  role: TeamMemberRole;
-  joinedAt: string;
-  isActive?: boolean;
-  customerRestricted?: boolean;
-  customers?: { id: string; name: string }[];
-}
 
 export default function TeamPage() {
   const { t } = useTranslation();
@@ -80,7 +40,7 @@ export default function TeamPage() {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
-  const [showInactive, setShowInactive] = useState(false);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ALL);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -132,7 +92,9 @@ export default function TeamPage() {
     try {
       const membersRes = await organizationAPI.getMembers(orgId, {
         customerId: selectedCustomerId ?? undefined,
-        includeInactive: showInactive,
+        activeOnly: listStatus === RECORD_STATUS_ACTIVE,
+        inactiveOnly: listStatus === RECORD_STATUS_INACTIVE,
+        includeInactive: listStatus === RECORD_STATUS_ALL,
       });
       setMembers(membersRes.data.memberships ?? []);
     } catch (err: any) {
@@ -141,39 +103,32 @@ export default function TeamPage() {
     } finally {
       setLoadingMembers(false);
     }
-  }, [currentOrganization?.id, selectedCustomerId, showInactive, t]);
+  }, [currentOrganization?.id, selectedCustomerId, listStatus, t]);
 
   useEffect(() => {
     setMembers([]);
     loadMembers();
   }, [loadMembers]);
 
-  const getRoleColor = (role: TeamMemberRole) => {
-    if (role.color) return "";
-    switch (role.name) {
-      case "Dono da Empresa":
-        return "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900";
-      case "Administrador":
-        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900";
-      case "Operador":
-        return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900";
-      case "Motorista":
-        return "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900";
-      default:
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800";
-    }
-  };
+  const handleRequestRemove = useCallback((memberId: string) => {
+    setMemberToRemove(memberId);
+    setRemoveDialogOpen(true);
+  }, []);
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return t('common.notAvailable');
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return t('common.notAvailable');
-      return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-    } catch {
-      return t('common.notAvailable');
-    }
-  };
+  const columns = useMemo(
+    () =>
+      getTeamColumns(t, {
+        currentUserId: user?.id,
+        canManageTeam,
+        canDeleteTeam,
+        canEnableTeam,
+        onEdit: setEditMemberId,
+        onRemove: handleRequestRemove,
+        onEnable: enableMember,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, user?.id, canManageTeam, canDeleteTeam, canEnableTeam, handleRequestRemove],
+  );
 
   if (!currentOrganization) {
     return (
@@ -196,20 +151,12 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('team.title')}</h1>
           <p className="text-muted-foreground">
             {t('team.showingMembersFor', { organizationName: currentOrganization.name })}
           </p>
-          <label className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-            />
-            {t('team.showInactive')}
-          </label>
         </div>
         {canManageTeam && (
           <PlanLimitWrapper resourceType="team_members" onAction={() => setCreateOpen(true)}>
@@ -241,122 +188,25 @@ export default function TeamPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card className="mt-4">
-        <CardContent className="pt-6">
-          {members.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">{t('team.emptyStates.noMembers')}</p>
-              {canManageTeam && (
-                <Button onClick={() => setCreateOpen(true)}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  {t('team.emptyStates.addFirstUser')}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('team.table.name')}</TableHead>
-                  <TableHead>{t('team.table.email')}</TableHead>
-                  <TableHead>{t('team.table.role')}</TableHead>
-                  <TableHead>{t('team.table.access')}</TableHead>
-                  <TableHead>{t('team.table.joinedAt')}</TableHead>
-                  {(canManageTeam || canDeleteTeam) && (
-                    <TableHead className="text-right w-[80px]">{t('team.table.actions')}</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {getUserInitials(member.user.name, member.user.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{member.user.name || t('team.noName')}</span>
-                        {member.isActive === false && (
-                          <Badge variant="secondary" className="text-xs">
-                            {t('team.inactiveBadge')}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        {member.user.email}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={`text-xs ${getRoleColor(member.role)}`}
-                        style={
-                          member.role.color
-                            ? { backgroundColor: `${member.role.color}20`, color: member.role.color }
-                            : {}
-                        }
-                      >
-                        <span className="flex items-center gap-1">
-                          <Shield className="w-3 h-3" />
-                          {member.role.name}
-                        </span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {member.customerRestricted
-                        ? t('team.accessLimitedTo', { count: member.customers?.length ?? 0 })
-                        : t('team.accessFull')}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(member.joinedAt)}
-                    </TableCell>
-                    {(canManageTeam || canDeleteTeam) && (
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {canManageTeam && member.isActive !== false && (
-                              <DropdownMenuItem onClick={() => setEditMemberId(member.id)}>
-                                <Pencil className="w-4 h-4 mr-2" />
-                                {t('team.actions.editMember')}
-                              </DropdownMenuItem>
-                            )}
-                            {canDeleteTeam && member.user.id !== user?.id && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setMemberToRemove(member.id);
-                                  setRemoveDialogOpen(true);
-                                }}
-                                className="text-destructive"
-                                disabled={member.isActive === false}
-                              >
-                                {t('team.actions.removeMember')}
-                              </DropdownMenuItem>
-                            )}
-                            {canEnableTeam && member.isActive === false && (
-                              <DropdownMenuItem onClick={() => enableMember(member.id)}>
-                                {t('team.actions.enableMember')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <DataTable<TeamMember, unknown>
+        columns={columns}
+        data={members}
+        filterColumnId="name"
+        filterPlaceholder={t("common.search")}
+        noResultsLabel={
+          members.length === 0
+            ? t("team.emptyStates.noMembers")
+            : t("common.noResults")
+        }
+        toolbarLeading={
+          <RecordStatusFilter
+            id="team-list-status"
+            value={listStatus}
+            onValueChange={setListStatus}
+          />
+        }
+      />
+
       <MemberCreateSheet
         open={createOpen}
         onOpenChange={setCreateOpen}
