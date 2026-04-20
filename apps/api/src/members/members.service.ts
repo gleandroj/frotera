@@ -442,6 +442,7 @@ export class MembersService {
       include: {
         user: true,
         role: { include: { permissions: true } },
+        customers: { select: { customerId: true } },
       },
     });
 
@@ -451,14 +452,22 @@ export class MembersService {
 
     const isEditingSelf = memberToUpdate.userId === userId;
 
-    if (data.roleId !== undefined && isEditingSelf) {
+    if (data.roleId !== undefined && data.roleId !== memberToUpdate.roleId && isEditingSelf) {
       throw new BadRequestException(ApiCode.MEMBER_CANNOT_CHANGE_OWN_ROLE);
     }
 
-    // Only members with USERS:EDIT can edit own customer access
+    // Only block self-edit of customer access when values actually change
+    const currentCustomerIdSet = new Set(memberToUpdate.customers.map((c) => c.customerId));
+    const customerIdsChanging =
+      data.customerIds !== undefined &&
+      (data.customerIds.length !== currentCustomerIdSet.size ||
+        data.customerIds.some((id) => !currentCustomerIdSet.has(id)));
     if (
       isEditingSelf &&
-      (data.customerRestricted !== undefined || data.customerIds !== undefined)
+      (
+        (data.customerRestricted !== undefined && data.customerRestricted !== memberToUpdate.customerRestricted) ||
+        customerIdsChanging
+      )
     ) {
       throw new BadRequestException({
         errorCode: ApiCode.MEMBER_CANNOT_EDIT_OWN_ACCESS,

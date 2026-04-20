@@ -44,9 +44,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { MemberEditSheet } from "./member-edit-sheet";
+import { MemberCreateSheet } from "./member-create-sheet";
 import { toast } from "sonner";
 
 interface TeamMemberRole {
@@ -74,8 +74,6 @@ interface TeamMember {
 
 export default function TeamPage() {
   const { t } = useTranslation();
-  const router = useRouter();
-
   const { currentOrganization, user, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -83,6 +81,8 @@ export default function TeamPage() {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [editMemberId, setEditMemberId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const canManageTeam = can(Module.USERS, Action.CREATE);
   const canDeleteTeam = can(Module.USERS, Action.DELETE);
@@ -121,31 +121,32 @@ export default function TeamPage() {
     }
   };
 
-  useEffect(() => {
+  const loadMembers = useCallback(async () => {
     const orgId = currentOrganization?.id;
     if (!orgId) {
       setMembers([]);
       setLoadingMembers(false);
       return;
     }
-    setMembers([]);
-    const load = async () => {
-      setLoadingMembers(true);
-      try {
-        const membersRes = await organizationAPI.getMembers(orgId, {
-          customerId: selectedCustomerId ?? undefined,
-          includeInactive: showInactive,
-        });
-        setMembers(membersRes.data.memberships ?? []);
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.error || err.message || t('team.errorMessages.failedToLoadMembers');
-        toast.error(t('team.toastMessages.error'), { description: errorMessage });
-      } finally {
-        setLoadingMembers(false);
-      }
-    };
-    load();
+    setLoadingMembers(true);
+    try {
+      const membersRes = await organizationAPI.getMembers(orgId, {
+        customerId: selectedCustomerId ?? undefined,
+        includeInactive: showInactive,
+      });
+      setMembers(membersRes.data.memberships ?? []);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || t('team.errorMessages.failedToLoadMembers');
+      toast.error(t('team.toastMessages.error'), { description: errorMessage });
+    } finally {
+      setLoadingMembers(false);
+    }
   }, [currentOrganization?.id, selectedCustomerId, showInactive, t]);
+
+  useEffect(() => {
+    setMembers([]);
+    loadMembers();
+  }, [loadMembers]);
 
   const getRoleColor = (role: TeamMemberRole) => {
     if (role.color) return "";
@@ -211,12 +212,10 @@ export default function TeamPage() {
           </label>
         </div>
         {canManageTeam && (
-          <PlanLimitWrapper resourceType="team_members" onAction={() => router.push("/team/new")}>
-            <Button asChild>
-              <Link href="/team/new">
-                <UserPlus className="w-4 h-4 mr-2" />
-                {t('team.addUser')}
-              </Link>
+          <PlanLimitWrapper resourceType="team_members" onAction={() => setCreateOpen(true)}>
+            <Button onClick={() => setCreateOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              {t('team.addUser')}
             </Button>
           </PlanLimitWrapper>
         )}
@@ -248,11 +247,9 @@ export default function TeamPage() {
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">{t('team.emptyStates.noMembers')}</p>
               {canManageTeam && (
-                <Button asChild>
-                  <Link href="/team/new">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    {t('team.emptyStates.addFirstUser')}
-                  </Link>
+                <Button onClick={() => setCreateOpen(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {t('team.emptyStates.addFirstUser')}
                 </Button>
               )}
             </div>
@@ -327,11 +324,9 @@ export default function TeamPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {canManageTeam && member.isActive !== false && (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/team/${member.id}`}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  {t('team.actions.editMember')}
-                                </Link>
+                              <DropdownMenuItem onClick={() => setEditMemberId(member.id)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                {t('team.actions.editMember')}
                               </DropdownMenuItem>
                             )}
                             {canDeleteTeam && member.user.id !== user?.id && (
@@ -362,6 +357,17 @@ export default function TeamPage() {
           )}
         </CardContent>
       </Card>
+      <MemberCreateSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={loadMembers}
+      />
+      <MemberEditSheet
+        open={!!editMemberId}
+        onOpenChange={(open) => { if (!open) setEditMemberId(null); }}
+        memberId={editMemberId}
+        onSuccess={loadMembers}
+      />
     </div>
   );
 }
