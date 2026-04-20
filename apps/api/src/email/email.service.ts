@@ -67,7 +67,7 @@ export class EmailService implements OnModuleInit {
   }
 
   public async sendMail(mailOptions: nodemailer.SendMailOptions) {
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
     const appDomain = this.configService.get("APP_DOMAIN", "example.com");
     return this.sendMailInternal({
       ...mailOptions,
@@ -89,7 +89,7 @@ export class EmailService implements OnModuleInit {
     loginUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -123,7 +123,7 @@ export class EmailService implements OnModuleInit {
     verificationUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -157,7 +157,7 @@ export class EmailService implements OnModuleInit {
     resetUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(
@@ -195,7 +195,7 @@ export class EmailService implements OnModuleInit {
     loginUrl: string;
     language?: string;
   }) {
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
     const translations = getEmailTranslations(language);
 
     const html = await render(

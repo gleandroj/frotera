@@ -1,4 +1,4 @@
-# Rotera
+# Frotera
 
 ## User Flags (`isSuperAdmin` vs `isSystemUser`)
 

@@ -104,7 +104,7 @@ export class NotificationsService {
       return;
     }
 
-    const appName = this.configService.get("APP_NAME", "Rotera");
+    const appName = this.configService.get("APP_NAME", "Frotera");
 
     // Send email to each recipient
     const emailPromises = recipients.map(async (recipient) => {
