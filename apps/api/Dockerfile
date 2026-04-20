@@ -37,7 +37,10 @@ COPY packages/shared/package.json ./packages/shared/package.json
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/public ./apps/api/public
+COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
 
 EXPOSE 3001
 WORKDIR /app/apps/api
+RUN chmod +x docker-entrypoint.sh
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/main"]
