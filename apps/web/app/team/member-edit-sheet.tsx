@@ -135,6 +135,7 @@ export function MemberEditSheet({
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [driverSearch, setDriverSearch] = useState("");
+  const [expanded, setExpanded] = useState(true);
 
   const schema = z
     .object({
@@ -260,6 +261,10 @@ export function MemberEditSheet({
   }, [open, currentOrganization?.id]);
 
   useEffect(() => {
+    if (open) setExpanded(true);
+  }, [open]);
+
+  useEffect(() => {
     if (!member || !members.length) return;
     const currentUserMembership = members.find((m) => m.user.id === user?.id);
     const currentUserRestricted = currentUserMembership?.customerRestricted === true;
@@ -280,7 +285,6 @@ export function MemberEditSheet({
   const isEditingSelf = member?.user.id === user?.id;
   const canEditOwnAccess = can(Module.USERS, Action.EDIT);
   const disableRoleAndAccess = isEditingSelf && !canEditOwnAccess;
-  const [expanded, setExpanded] = useState(false);
   const selectedRole = roles.find((r) => r.id === form.watch("roleId"));
   const scopeSummary = summarizeRoleScope(t, selectedRole);
   const hasAssignedScope = scopeSummary.hasAssignedScope;
@@ -444,10 +448,6 @@ export function MemberEditSheet({
                     )}
                   />
 
-                  {!expanded && (
-                    <RoleHelpPanel role={selectedRole} t={t} />
-                  )}
-
                   {newPassword.length > 0 && (
                     <FormField
                       control={form.control}
@@ -502,6 +502,10 @@ export function MemberEditSheet({
                       </FormItem>
                     )}
                   />
+
+                  {!expanded && (
+                    <RoleHelpPanel role={selectedRole} t={t} />
+                  )}
 
                   {user?.isSuperAdmin === true && (
                     <Card>

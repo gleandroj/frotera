@@ -207,7 +207,7 @@ export function MemberCreateSheet({
   const fullAccess = form.watch("fullAccess");
   const customerIds = form.watch("customerIds");
   const sendCredentials = form.watch("sendCredentials");
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const selectedRole = roles.find((role) => role.id === form.watch("roleId"));
   const scopeSummary = summarizeRoleScope(t, selectedRole);
   const hasAssignedScope = scopeSummary.hasAssignedScope;
@@ -299,7 +299,9 @@ export function MemberCreateSheet({
       setVehicleSearch("");
       setDriverSearch("");
       setExpanded(false);
+      return;
     }
+    setExpanded(true);
   }, [open]);
 
   const filteredCustomers = useMemo(() => {
@@ -502,10 +504,6 @@ export function MemberCreateSheet({
                   )}
                 />
 
-                {!expanded && (
-                  <RoleHelpPanel role={selectedRole} t={t} />
-                )}
-
                 {sendCredentials ? (
                   <div className="rounded-md border bg-muted/40 p-4 space-y-2">
                     <p className="text-sm font-medium">Senha temporária gerada</p>
@@ -595,6 +593,10 @@ export function MemberCreateSheet({
                     </FormItem>
                   )}
                 />
+
+                {!expanded && (
+                  <RoleHelpPanel role={selectedRole} t={t} />
+                )}
 
                 {user?.isSuperAdmin === true && (
                   <Card>
