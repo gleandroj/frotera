@@ -6,6 +6,7 @@ import { customersAPI, type Customer } from "@/lib/frontend/api-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { DataTable } from "@/components/ui/data-table";
 import {
   RecordStatusFilter,
@@ -50,6 +51,22 @@ export default function CustomersPage() {
       .finally(() => setLoading(false));
   }, [currentOrganization?.id, selectedCustomerId, listStatus, t]);
 
+  const handleReactivate = useCallback(
+    async (customer: Customer) => {
+      if (!currentOrganization?.id) return;
+      try {
+        await customersAPI.update(currentOrganization.id, customer.id, {
+          inactive: false,
+        });
+        toast.success(t("customers.reactivated"));
+        fetchCustomers();
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message ?? t("common.error"));
+      }
+    },
+    [currentOrganization?.id, fetchCustomers, t],
+  );
+
   useEffect(() => {
     if (!currentOrganization?.id) {
       setLoading(false);
@@ -64,12 +81,13 @@ export default function CustomersPage() {
         customers,
         onEdit: setEditCustomer,
         onDelete: setDeleteCustomer,
+        onReactivate: handleReactivate,
         canEditCustomer,
         canDeleteCustomer,
         isSuperAdmin: user?.isSuperAdmin === true,
         isOrganizationOwner: currentOrganization?.role?.key === 'ORGANIZATION_OWNER',
       }),
-    [t, customers, canEditCustomer, canDeleteCustomer, user?.isSuperAdmin, currentOrganization?.role?.key],
+    [t, customers, handleReactivate, canEditCustomer, canDeleteCustomer, user?.isSuperAdmin, currentOrganization?.role?.key],
   );
 
   if (!currentOrganization) {

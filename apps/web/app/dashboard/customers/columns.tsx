@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Ban, MoreVertical, Pencil } from "lucide-react";
+import { ArrowUpDown, Ban, CheckCircle2, MoreVertical, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export interface CustomerColumnsOptions {
   customers: Customer[];
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
+  onReactivate: (customer: Customer) => void;
   canEditCustomer: boolean;
   canDeleteCustomer: boolean;
   isSuperAdmin: boolean;
@@ -41,6 +42,7 @@ export function getCustomerColumns(
     customers,
     onEdit,
     onDelete,
+    onReactivate,
     canEditCustomer,
     canDeleteCustomer,
     isSuperAdmin,
@@ -148,6 +150,12 @@ export function getCustomerColumns(
                   >
                     <Ban className="mr-2 h-4 w-4" />
                     {t("common.deactivate")}
+                  </DropdownMenuItem>
+                )}
+                {canDeleteCustomer && customer.inactive && (
+                  <DropdownMenuItem onClick={() => onReactivate(customer)}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {t("common.activate")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

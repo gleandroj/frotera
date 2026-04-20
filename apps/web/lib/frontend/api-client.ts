@@ -488,7 +488,7 @@ export const customersAPI = {
   update: (
     organizationId: string,
     customerId: string,
-    data: { name?: string; parentId?: string | null }
+    data: { name?: string; parentId?: string | null; inactive?: boolean }
   ) =>
     externalApi.patch<Customer>(
       `/api/organizations/${organizationId}/customers/${customerId}`,

@@ -344,11 +344,21 @@ export class CustomersService {
         }
       }
     }
+    if (dto.inactive === false && existing.parentId) {
+      const parent = await this.prisma.customer.findFirst({
+        where: { id: existing.parentId, organizationId },
+        select: { inactive: true },
+      });
+      if (!parent || parent.inactive) {
+        throw new BadRequestException(ApiCode.COMMON_INVALID_INPUT);
+      }
+    }
     const customer = await this.prisma.customer.update({
       where: { id: customerId },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.parentId !== undefined && { parentId: dto.parentId }),
+        ...(dto.inactive !== undefined && { inactive: dto.inactive }),
       },
     });
     return this.toResponse(customer);

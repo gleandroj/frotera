@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
 
 export class CustomerResponseDto {
   @ApiProperty()
@@ -48,6 +48,11 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsString()
   parentId?: string | null;
+
+  @ApiPropertyOptional({ description: "Soft-deactivated company" })
+  @IsOptional()
+  @IsBoolean()
+  inactive?: boolean;
 }
 
 export class CustomersListResponseDto {
