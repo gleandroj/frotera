@@ -33,6 +33,7 @@ export class DriversService {
     activeOnly?: boolean,
     inactiveOnly?: boolean,
     allowedDriverIds: string[] | null = null,
+    vehicleId?: string,
   ): Promise<DriverResponseDto[]> {
     const allowedCustomerIds = await this.customersService.getAllowedCustomerIds(
       member,
@@ -83,6 +84,10 @@ export class DriversService {
       } else if (scopeClauses.length === 1) {
         Object.assign(where, scopeClauses[0]);
       }
+    }
+
+    if (vehicleId) {
+      where.vehicleAssignments = { some: { vehicleId, endDate: null } };
     }
 
     const rows = await this.prisma.driver.findMany({

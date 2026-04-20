@@ -45,6 +45,7 @@ export class DriversController {
     @Query('customerId') customerId?: string,
     @Query('activeOnly') activeOnlyRaw?: string,
     @Query('inactiveOnly') inactiveOnlyRaw?: string,
+    @Query('vehicleId') vehicleId?: string,
   ): Promise<DriversListResponseDto> {
     const activeOnly = activeOnlyRaw === 'true' || activeOnlyRaw === '1';
     const inactiveOnly = inactiveOnlyRaw === 'true' || inactiveOnlyRaw === '1';
@@ -56,6 +57,7 @@ export class DriversController {
       activeOnly,
       inactiveOnly,
       req.allowedDriverIds,
+      vehicleId,
     );
     return { drivers };
   }
