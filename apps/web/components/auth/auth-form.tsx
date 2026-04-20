@@ -31,6 +31,19 @@ export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthF
   const { t } = useTranslation();
   const router = useRouter();
   const { login } = useAuth();
+  const resolvePostLoginRedirect = (mustChangePassword?: boolean) => {
+    if (mustChangePassword) {
+      router.replace("/change-password");
+      return;
+    }
+
+    if (redirect) {
+      router.replace(redirect);
+      return;
+    }
+
+    router.replace("/dashboard");
+  };
 
   useEffect(() => {
     if (signupDisabledParam === "disabled") {
@@ -52,10 +65,8 @@ export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthF
     try {
       const { data } = await login(email, password);
 
-      // If we get here, login was successful without 2FA
-      if (redirect) {
-        router.replace(redirect);
-      } else router.push("/dashboard");
+      // Keep post-login destination aligned with mustChangePassword flag
+      resolvePostLoginRedirect(data?.user?.mustChangePassword);
     } catch (error) {
       if (error instanceof AxiosError) {
         const errorData = error.response?.data;
@@ -81,11 +92,9 @@ export function AuthForm({ signupEnabled, redirect, signupDisabledParam }: AuthF
     setIsLoading(true);
 
     try {
-      await login(email, password, code);
-      // If we get here, login was successful with 2FA
-      if (redirect) {
-        router.replace(redirect);
-      } else router.push("/dashboard");
+      const { data } = await login(email, password, code);
+      // Keep post-login destination aligned with mustChangePassword flag
+      resolvePostLoginRedirect(data?.user?.mustChangePassword);
     } catch (error) {
       let message = "";
       if (error instanceof AxiosError) {

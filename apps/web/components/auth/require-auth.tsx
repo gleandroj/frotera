@@ -11,6 +11,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",
+  CHANGE_PASSWORD: "/change-password",
 } as const;
 
 // Loading spinner component for reuse
@@ -41,7 +42,7 @@ interface RequireAuthProps {
  */
 export function RequireAuth({ children }: RequireAuthProps) {
   const { t } = useTranslation();
-  const { isAuthenticated, isLoading, isLoggingOut, organizations } = useAuth();
+  const { isAuthenticated, isLoading, isLoggingOut, organizations, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const redirectActioned = useRef(false);
@@ -68,6 +69,11 @@ export function RequireAuth({ children }: RequireAuthProps) {
         return;
       }
 
+      if (isAuthenticated && user?.mustChangePassword && pathname !== ROUTES.CHANGE_PASSWORD) {
+        handleRedirect(ROUTES.CHANGE_PASSWORD);
+        return;
+      }
+
       if (isAuthenticated && (!organizations || organizations.length === 0)) {
         if (pathname !== ROUTES.DASHBOARD) {
           // Redirect to dashboard which will show the create organization modal
@@ -78,7 +84,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
       setIsChecking(false);
     }
-  }, [isLoading, isAuthenticated, isLoggingOut, organizations, router, pathname]);
+  }, [isLoading, isAuthenticated, isLoggingOut, organizations, user, router, pathname]);
 
   if (isLoading || isChecking) {
     return <AuthLoadingSpinner />;
