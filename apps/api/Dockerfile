@@ -27,22 +27,17 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install production dependencies only (skips postinstall; prisma generate runs below)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/package.json
+# Copy node_modules from builder (Prisma client already generated in deps stage)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY packages/shared/package.json ./packages/shared/package.json
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy compiled artifacts
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/public ./apps/api/public
 
-# Generate Prisma client against the installed engine
-RUN cd apps/api && pnpm exec prisma generate --schema=./prisma/schema.prisma
-
 EXPOSE 3001
-# Set CWD to app dir so process.cwd() resolves paths (public/, etc.) correctly
 WORKDIR /app/apps/api
 CMD ["node", "dist/main"]

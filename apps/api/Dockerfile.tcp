@@ -27,19 +27,15 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install production dependencies only
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/package.json
+# Copy node_modules from builder (Prisma client already generated in deps stage)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY packages/shared/package.json ./packages/shared/package.json
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy compiled artifacts
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY apps/api/prisma ./apps/api/prisma
-
-# Generate Prisma client
-RUN cd apps/api && pnpm exec prisma generate --schema=./prisma/schema.prisma
 
 # TRACKER_TCP_PORT default: 5023
 EXPOSE 5023
