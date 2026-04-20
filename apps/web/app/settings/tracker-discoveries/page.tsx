@@ -31,7 +31,7 @@ import {
   type SuperadminVehicleWithoutTrackerRow,
   type TrackerDiscoveryLoginRow,
 } from "@/lib/frontend/api-client";
-import { useAuth } from "@/lib/hooks/use-auth";
+import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
 import { Link2, Loader2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -40,7 +40,8 @@ import { toast } from "sonner";
 export default function TrackerDiscoveriesPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useAuth();
+  const { canGlobal } = usePermissions();
+  const canAccessTrackerDiscoveries = canGlobal(Module.TRACKER_DISCOVERIES, Action.VIEW);
   const [rows, setRows] = useState<TrackerDiscoveryLoginRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,22 +67,22 @@ export default function TrackerDiscoveriesPage() {
   }, [t]);
 
   useEffect(() => {
-    if (!user?.isSuperAdmin) {
+    if (!canAccessTrackerDiscoveries) {
       router.replace("/dashboard");
       return;
     }
     void loadList();
-  }, [user?.isSuperAdmin, router, loadList]);
+  }, [canAccessTrackerDiscoveries, router, loadList]);
 
   useEffect(() => {
-    if (!dialogOpen || !user?.isSuperAdmin) return;
+    if (!dialogOpen || !canAccessTrackerDiscoveries) return;
     setLoadingOrgs(true);
     superadminTrackerDiscoveryAPI
       .listOrganizations()
       .then((res) => setOrgs(res.data))
       .catch(() => toast.error(t("settings.trackerDiscoveries.loadOrgsFailed")))
       .finally(() => setLoadingOrgs(false));
-  }, [dialogOpen, user?.isSuperAdmin, t]);
+  }, [dialogOpen, canAccessTrackerDiscoveries, t]);
 
   useEffect(() => {
     if (!orgId) {
@@ -134,7 +135,7 @@ export default function TrackerDiscoveriesPage() {
     }
   };
 
-  if (!user?.isSuperAdmin) {
+  if (!canAccessTrackerDiscoveries) {
     return null;
   }
 

@@ -429,6 +429,7 @@ enum IncidentSeverity {
 enum RoleModule {
   VEHICLES
   TRACKING
+  TRACKER_DISCOVERIES
   COMPANIES
   USERS
   REPORTS

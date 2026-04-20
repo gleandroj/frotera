@@ -12,6 +12,7 @@ import { Type } from 'class-transformer';
 export enum RoleModuleEnum {
   VEHICLES  = 'VEHICLES',
   TRACKING  = 'TRACKING',
+  TRACKER_DISCOVERIES = 'TRACKER_DISCOVERIES',
   COMPANIES = 'COMPANIES',
   USERS     = 'USERS',
   REPORTS   = 'REPORTS',

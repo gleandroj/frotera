@@ -38,6 +38,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     permissions: [
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                          scope: 'ALL' },
+      { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],                scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'REPORTS',   actions: ['VIEW'],                          scope: 'ALL' },
@@ -57,6 +58,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     permissions: [
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                          scope: 'ALL' },
+      { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],                scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE','EDIT'],          scope: 'ALL' },
       { module: 'REPORTS',   actions: ['VIEW'],                          scope: 'ALL' },
@@ -76,6 +78,7 @@ const SYSTEM_ROLES: Record<RoleKey, RoleDefinition> = {
     permissions: [
       { module: 'VEHICLES',  actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'TRACKING',  actions: ['VIEW'],                 scope: 'ALL' },
+      { module: 'TRACKER_DISCOVERIES', actions: ['VIEW'],       scope: 'ALL' },
       { module: 'COMPANIES', actions: ['VIEW','CREATE','EDIT','DELETE'], scope: 'ALL' },
       { module: 'USERS',     actions: ['VIEW','CREATE'],        scope: 'ALL' },
       { module: 'REPORTS',   actions: ['VIEW'],                 scope: 'ALL' },

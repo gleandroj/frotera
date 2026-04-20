@@ -18,8 +18,8 @@ import {
 } from "@nestjs/swagger";
 import { TrackerModel } from "@prisma/client";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
-import { SuperAdminGuard } from "@/auth/guards/super-admin.guard";
 import { TrackerDiscoveryService } from "./tracker-discovery.service";
+import { TrackerDiscoveriesAccessGuard } from "./tracker-discoveries-access.guard";
 import {
   IMEI_PARAM_REGEX,
   RegisterDiscoveryToVehicleDto,
@@ -31,7 +31,7 @@ import {
 
 @ApiTags("superadmin-tracker-discoveries")
 @Controller("superadmin/tracker-discoveries")
-@UseGuards(JwtAuthGuard, SuperAdminGuard)
+@UseGuards(JwtAuthGuard, TrackerDiscoveriesAccessGuard)
 @ApiBearerAuth()
 export class SuperadminTrackerDiscoveriesController {
   constructor(private readonly discovery: TrackerDiscoveryService) {}

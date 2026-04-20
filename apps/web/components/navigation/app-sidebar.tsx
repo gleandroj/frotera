@@ -60,7 +60,7 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { currentOrganization, user } = useAuth();
-  const { can } = usePermissions();
+  const { can, canGlobal } = usePermissions();
   const unreadTelemetry = useUnreadAlerts(currentOrganization?.id);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
   const canViewTracking = can(Module.TRACKING, Action.VIEW);
@@ -70,6 +70,7 @@ export function AppSidebar() {
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
     : false;
   const isSuperAdmin = user?.isSuperAdmin === true;
+  const canViewTrackerDiscoveries = canGlobal(Module.TRACKER_DISCOVERIES, Action.VIEW);
   const settingsItems: NavigationItem[] = [
     ...(!isMember && isSuperAdmin
       ? [
@@ -79,6 +80,10 @@ export function AppSidebar() {
             icon: Building2,
             current: pathname.startsWith("/settings/organizations"),
           },
+        ]
+      : []),
+    ...(canViewTrackerDiscoveries
+      ? [
           {
             name: t("navigation.items.trackerDiscoveries"),
             href: "/settings/tracker-discoveries",

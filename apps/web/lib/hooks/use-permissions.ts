@@ -5,6 +5,7 @@ import { useAuth } from "./use-auth";
 export enum Module {
   VEHICLES  = 'VEHICLES',
   TRACKING  = 'TRACKING',
+  TRACKER_DISCOVERIES = 'TRACKER_DISCOVERIES',
   COMPANIES = 'COMPANIES',
   USERS     = 'USERS',
   REPORTS   = 'REPORTS',
@@ -25,7 +26,7 @@ export enum Action {
 }
 
 export function usePermissions() {
-  const { user, currentOrganization } = useAuth();
+  const { user, currentOrganization, organizations } = useAuth();
 
   function can(module: Module, action: Action): boolean {
     if (!currentOrganization) return false;
@@ -40,6 +41,17 @@ export function usePermissions() {
 
   function canAny(module: Module, actions: Action[]): boolean {
     return actions.some((action) => can(module, action));
+  }
+
+  function canGlobal(module: Module, action: Action): boolean {
+    if (user?.isSuperAdmin) return true;
+
+    return organizations.some((organization) => {
+      const role = organization.role;
+      if (!role?.permissions) return false;
+      const perm = role.permissions.find((p) => p.module === module);
+      return perm?.actions?.includes(action) ?? false;
+    });
   }
 
   function getRoleName(): string {
@@ -57,6 +69,7 @@ export function usePermissions() {
   return {
     can,
     canAny,
+    canGlobal,
     getRoleName,
     getRoleColor,
     canManageUsers,

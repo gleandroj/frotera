@@ -4,10 +4,10 @@
  */
 import { Module } from "@nestjs/common";
 import { AppJwtModule } from "@/auth/app-jwt.module";
-import { SuperAdminGuard } from "@/auth/guards/super-admin.guard";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { TrackerDevicesController } from "./devices/tracker-devices.controller";
 import { SuperadminTrackerDiscoveriesController } from "./discovery/superadmin-tracker-discoveries.controller";
+import { TrackerDiscoveriesAccessGuard } from "./discovery/tracker-discoveries-access.guard";
 import { VehiclesController } from "./vehicles/vehicles.controller";
 import {
   TrackerPositionsStreamService,
@@ -25,7 +25,7 @@ import { TrackersCoreModule } from "./trackers-core.module";
   providers: [
     TrackerPositionsStreamService,
     TrackerPositionsGateway,
-    SuperAdminGuard,
+    TrackerDiscoveriesAccessGuard,
   ],
   exports: [TrackersCoreModule],
 })
