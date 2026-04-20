@@ -46,19 +46,51 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const FRIENDLY_PASSWORD_WORDS = [
-  "Frota", "Veiculo", "Caminhao", "Onibus", "Motor",
-  "Diesel", "Rota", "Carga", "Reboque", "Pneu",
-  "Tanque", "Placa", "Eixo", "Chassis", "Painel",
+  "rota",
+  "pneu",
+  "carga",
+  "motor",
+  "eixo",
+  "placa",
+  "diesel",
+  "tanque",
+  "chassi",
+  "freio",
 ];
 
-function generateFriendlyPassword(): string {
-  const word = FRIENDLY_PASSWORD_WORDS[Math.floor(Math.random() * FRIENDLY_PASSWORD_WORDS.length)];
-  const safeDigits = "23456789";
-  let number = "";
-  for (let i = 0; i < 4; i++) {
-    number += safeDigits[Math.floor(Math.random() * safeDigits.length)];
+const FRIENDLY_PASSWORD_JOINERS = [".", "-", "_", "@"];
+const FRIENDLY_PASSWORD_SUFFIXES = [
+  "go",
+  "rio",
+  "sol",
+  "lua",
+  "mar",
+  "zen",
+  "via",
+  "pro",
+];
+
+function randomInt(max: number): number {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    return array[0] % max;
   }
-  return `${word}.${number}`;
+  return Math.floor(Math.random() * max);
+}
+
+function pickRandom<T>(items: T[]): T {
+  return items[randomInt(items.length)];
+}
+
+function generateFriendlyPassword(): string {
+  const digits = "23456789";
+  const word = pickRandom(FRIENDLY_PASSWORD_WORDS);
+  const joiner = pickRandom(FRIENDLY_PASSWORD_JOINERS);
+  const suffix = pickRandom(FRIENDLY_PASSWORD_SUFFIXES);
+  const d1 = digits[randomInt(digits.length)];
+  const d2 = digits[randomInt(digits.length)];
+  return `${word}${joiner}${suffix}${d1}${d2}`;
 }
 
 function getDescendantIds(
