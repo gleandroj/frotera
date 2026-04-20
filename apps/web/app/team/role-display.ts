@@ -51,6 +51,14 @@ export function summarizeRolePermissions(t: TranslationFn, role?: Role): string[
   });
 }
 
+function translateScopeBadge(t: TranslationFn, scope: string): string {
+  if (scope === "ALL") return t("roles.scopeAll");
+  if (scope === "ASSIGNED") return t("roles.scopeAssigned");
+  /** Legacy / external data */
+  if (scope === "GLOBAL") return t("roles.scopeAll");
+  return scope;
+}
+
 export function summarizeRoleScope(t: TranslationFn, role?: Role): {
   hasAssignedScope: boolean;
   labels: string[];
@@ -66,16 +74,19 @@ export function summarizeRoleScope(t: TranslationFn, role?: Role): {
 
   const scopes = [...new Set(role.permissions.map((permission) => permission.scope))];
   const hasAssignedScope = scopes.includes("ASSIGNED");
-  const hasGlobalScope = scopes.includes("GLOBAL");
+  const hasOrgWideScope =
+    scopes.includes("ALL") || scopes.includes("GLOBAL");
 
   let explanation = t("team.roleContext.scopeUnknown");
-  if (hasGlobalScope && hasAssignedScope) {
+  if (hasOrgWideScope && hasAssignedScope) {
     explanation = t("team.roleContext.scopeMixed");
-  } else if (hasGlobalScope) {
+  } else if (hasOrgWideScope) {
     explanation = t("team.roleContext.scopeGlobalOnly");
   } else if (hasAssignedScope) {
     explanation = t("team.roleContext.scopeAssignedOnly");
   }
 
-  return { hasAssignedScope, labels: scopes, explanation };
+  const labels = scopes.map((s) => translateScopeBadge(t, s));
+
+  return { hasAssignedScope, labels, explanation };
 }

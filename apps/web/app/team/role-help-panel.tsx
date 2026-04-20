@@ -29,8 +29,8 @@ export function RoleHelpPanel({ role, t }: RoleHelpPanelProps) {
             {scopeSummary.labels.length === 0 ? (
               <span className="text-sm text-muted-foreground">{t("team.roleContext.noScopeDefined")}</span>
             ) : (
-              scopeSummary.labels.map((scope) => (
-                <Badge key={scope} variant="secondary">{scope}</Badge>
+              scopeSummary.labels.map((label, i) => (
+                <Badge key={`${label}-${i}`} variant="secondary">{label}</Badge>
               ))
             )}
           </div>

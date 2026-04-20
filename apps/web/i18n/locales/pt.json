@@ -1532,6 +1532,7 @@
     "modules": {
       "VEHICLES": "Veículos",
       "TRACKING": "Rastreamento",
+      "TRACKER_DISCOVERIES": "Descobertas de rastreadores",
       "COMPANIES": "Empresas",
       "USERS": "Usuários",
       "REPORTS": "Relatórios",
@@ -1539,9 +1540,16 @@
       "DOCUMENTS": "Documentos",
       "FUEL": "Abastecimento",
       "CHECKLIST": "Checklist",
+      "CHECKLIST_TEMPLATES": "Modelos de checklist",
       "INCIDENTS": "Ocorrências",
       "TELEMETRY": "Telemetria",
-      "FINANCIAL": "Financeiro"
+      "FINANCIAL": "Financeiro",
+      "DASHBOARD": "Painel",
+      "REPORTS_FUEL_CONSUMPTION": "Relatório: consumo de combustível",
+      "REPORTS_FUEL_COSTS": "Relatório: custos de combustível",
+      "REPORTS_FUEL_BENCHMARK": "Relatório: benchmark de combustível",
+      "REPORTS_FUEL_EFFICIENCY": "Relatório: eficiência de combustível",
+      "REPORTS_FUEL_SUMMARY": "Relatório: resumo de combustível"
     },
     "actions": {
       "VIEW": "Visualizar",
