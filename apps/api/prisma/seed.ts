@@ -181,50 +181,6 @@ async function seedSystemRoles(): Promise<Record<RoleKey, string>> {
   return roleIds as Record<RoleKey, string>;
 }
 
-async function migrateExistingRoles(roleIds: Record<RoleKey, string>): Promise<void> {
-  console.log("🔄 Migrating existing OrganizationMember roles...");
-
-  // Use raw query to find members without roleId (avoids Prisma null-filter limitation)
-  let rawMembers: Array<{ id: string; role: string }> = [];
-  try {
-    rawMembers = await prisma.$queryRaw<Array<{ id: string; role: string }>>`
-      SELECT id, role FROM "organizationMembers" WHERE "roleId" IS NULL
-    `;
-  } catch {
-    console.log("   ⚠️  Legacy 'role' column not found — assigning Dono da Empresa to all unmigrated members");
-    const ids = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM "organizationMembers" WHERE "roleId" IS NULL
-    `;
-    rawMembers = ids.map((m) => ({ id: m.id, role: 'OWNER' }));
-  }
-
-  if (rawMembers.length === 0) {
-    console.log("   ✓ No members need migration (all have roleId set)");
-    return;
-  }
-
-  console.log(`   Found ${rawMembers.length} members to migrate`);
-
-  const roleMapping: Record<string, string> = {
-    'OWNER': roleIds.COMPANY_OWNER,
-    'ADMIN': roleIds.COMPANY_ADMIN,
-    'MEMBER': roleIds.VIEWER,
-  };
-
-  let migrated = 0;
-  for (const member of rawMembers) {
-    const targetRoleId = roleMapping[member.role] ?? roleIds.VIEWER;
-    await prisma.$executeRaw`
-      UPDATE "organizationMembers"
-      SET "roleId" = ${targetRoleId}
-      WHERE id = ${member.id}
-    `;
-    migrated++;
-  }
-
-  console.log(`   ✅ Migrated ${migrated} members`);
-}
-
 async function seedAdminUser(ownerRoleId: string) {
   const appDomain = process.env.APP_DOMAIN;
 
@@ -397,17 +353,11 @@ async function main() {
   const roleIds = await seedSystemRoles();
   console.log("");
 
-  // 3. Migrate existing OrganizationMember roles
-  console.log("🔄 Migrating existing member roles");
-  console.log("-----------------------------------");
-  await migrateExistingRoles(roleIds);
-  console.log("");
-
   let adminUserCreated = false;
   let organizationCreated = false;
   let organizationName = "";
 
-  // 4. Seed Admin User
+  // 3. Seed Admin User
   if (options.seedAdminUser) {
     console.log("👤 Seeding Admin User & Organization");
     console.log("-------------------------------------");

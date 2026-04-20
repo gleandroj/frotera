@@ -2,16 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { RoleResponseDto } from '../roles/roles.dto';
 
-/**
- * OrganizationRole enum mantido apenas para compatibilidade com model Invitation e código legado.
- * NÃO usar para OrganizationMember (que agora usa roleId FK).
- */
-export enum OrganizationRole {
-  OWNER = 'OWNER',
-  ADMIN = 'ADMIN',
-  MEMBER = 'MEMBER',
-}
-
 export class CreateMemberDto {
   @ApiProperty({ description: 'Email address for the new user', example: 'user@example.com' })
   @IsEmail()

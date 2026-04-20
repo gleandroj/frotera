@@ -382,7 +382,6 @@ model Invitation {
   id                 String           @id @default(cuid())
   email              String
   token              String           @unique
-  role               MemberRole       @default(MEMBER)
   status             InvitationStatus @default(PENDING)
   organizationId     String
   inviterId          String?
@@ -410,12 +409,6 @@ model InvitationCustomer {
 
   @@unique([invitationId, customerId])
   @@map("invitationCustomers")
-}
-
-enum MemberRole {
-  OWNER
-  ADMIN
-  MEMBER
 }
 
 enum InvitationStatus {
