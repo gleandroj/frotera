@@ -67,6 +67,7 @@ interface TeamMember {
   };
   role: TeamMemberRole;
   joinedAt: string;
+  isActive?: boolean;
   customerRestricted?: boolean;
   customers?: { id: string; name: string }[];
 }
@@ -81,9 +82,11 @@ export default function TeamPage() {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const canManageTeam = can(Module.USERS, Action.CREATE);
   const canDeleteTeam = can(Module.USERS, Action.DELETE);
+  const canEnableTeam = can(Module.USERS, Action.EDIT);
 
   const removeMember = async (memberId: string) => {
     if (!currentOrganization) return;
@@ -103,6 +106,21 @@ export default function TeamPage() {
     }
   };
 
+  const enableMember = async (memberId: string) => {
+    if (!currentOrganization) return;
+
+    try {
+      await organizationAPI.enableMember(currentOrganization.id, memberId);
+      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, isActive: true } : m)));
+      toast.success("Usuário reabilitado", {
+        description: "O usuário foi reabilitado com sucesso.",
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || "Falha ao reabilitar usuário";
+      toast.error(t('team.toastMessages.error'), { description: errorMessage });
+    }
+  };
+
   useEffect(() => {
     const orgId = currentOrganization?.id;
     if (!orgId) {
@@ -116,6 +134,7 @@ export default function TeamPage() {
       try {
         const membersRes = await organizationAPI.getMembers(orgId, {
           customerId: selectedCustomerId ?? undefined,
+          includeInactive: showInactive,
         });
         setMembers(membersRes.data.memberships ?? []);
       } catch (err: any) {
@@ -126,7 +145,7 @@ export default function TeamPage() {
       }
     };
     load();
-  }, [currentOrganization?.id, selectedCustomerId, t]);
+  }, [currentOrganization?.id, selectedCustomerId, showInactive, t]);
 
   const getRoleColor = (role: TeamMemberRole) => {
     if (role.color) return "";
@@ -182,6 +201,14 @@ export default function TeamPage() {
           <p className="text-muted-foreground">
             {t('team.showingMembersFor', { organizationName: currentOrganization.name })}
           </p>
+          <label className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+            />
+            Mostrar desabilitados
+          </label>
         </div>
         {canManageTeam && (
           <PlanLimitWrapper resourceType="team_members" onAction={() => router.push("/team/new")}>
@@ -254,6 +281,11 @@ export default function TeamPage() {
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{member.user.name || t('team.noName')}</span>
+                        {member.isActive === false && (
+                          <Badge variant="secondary" className="text-xs">
+                            Desabilitado
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -294,7 +326,7 @@ export default function TeamPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {canManageTeam && (
+                            {canManageTeam && member.isActive !== false && (
                               <DropdownMenuItem asChild>
                                 <Link href={`/team/${member.id}`}>
                                   <Pencil className="w-4 h-4 mr-2" />
@@ -309,8 +341,14 @@ export default function TeamPage() {
                                   setRemoveDialogOpen(true);
                                 }}
                                 className="text-destructive"
+                                disabled={member.isActive === false}
                               >
                                 {t('team.actions.removeMember')}
+                              </DropdownMenuItem>
+                            )}
+                            {canEnableTeam && member.isActive === false && (
+                              <DropdownMenuItem onClick={() => enableMember(member.id)}>
+                                Reabilitar usuário
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

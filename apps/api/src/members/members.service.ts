@@ -52,6 +52,7 @@ export class MembersService {
     userId: string,
     organizationId: string,
     filterCustomerId?: string,
+    includeInactive = false,
   ): Promise<MembersListResponseDto> {
     const requestingUser = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -59,7 +60,7 @@ export class MembersService {
     });
 
     const organizationMember = await this.prisma.organizationMember.findFirst({
-      where: { userId, organizationId },
+      where: { userId, organizationId, active: true },
     });
 
     if (!organizationMember) {
@@ -69,6 +70,7 @@ export class MembersService {
     let members = await this.prisma.organizationMember.findMany({
       where: {
         organizationId,
+        ...(includeInactive ? {} : { active: true }),
         ...(requestingUser?.isSuperAdmin === true
           ? {}
           : { user: { isSuperAdmin: false, isSystemUser: false } }),
@@ -90,10 +92,14 @@ export class MembersService {
       orderBy: { createdAt: "asc" },
     });
 
-    const requestingUserAllowedIds = await this.customersService.getAllowedCustomerIds(
-      { id: organizationMember.id, customerRestricted: organizationMember.customerRestricted },
-      organizationId,
-    );
+    const requestingUserAllowedIds =
+      await this.customersService.getAllowedCustomerIds(
+        {
+          id: organizationMember.id,
+          customerRestricted: organizationMember.customerRestricted,
+        },
+        organizationId,
+      );
 
     if (requestingUserAllowedIds !== null) {
       const filtered = await Promise.all(
@@ -111,30 +117,38 @@ export class MembersService {
     }
 
     if (filterCustomerId?.trim()) {
-      const customerIdAndAncestors = await this.customersService.getCustomerIdAndAncestorIds(
-        filterCustomerId.trim(),
-        organizationId,
-      );
+      const customerIdAndAncestors =
+        await this.customersService.getCustomerIdAndAncestorIds(
+          filterCustomerId.trim(),
+          organizationId,
+        );
       if (customerIdAndAncestors.length > 0) {
         const ancestorSet = new Set(customerIdAndAncestors);
         if (requestingUserAllowedIds === null) {
           members = members.filter((member) => {
             if (!member.customerRestricted) return true;
-            const memberCustomerIds = member.customers?.map((mc) => mc.customer.id) ?? [];
+            const memberCustomerIds =
+              member.customers?.map((mc) => mc.customer.id) ?? [];
             return memberCustomerIds.some((id) => ancestorSet.has(id));
           });
         } else {
           const filtered = await Promise.all(
             members.map(async (member) => {
-              const mAllowed = await this.customersService.getAllowedCustomerIds(
-                { id: member.id, customerRestricted: member.customerRestricted },
-                organizationId,
-              );
+              const mAllowed =
+                await this.customersService.getAllowedCustomerIds(
+                  {
+                    id: member.id,
+                    customerRestricted: member.customerRestricted,
+                  },
+                  organizationId,
+                );
               if (mAllowed === null || mAllowed.length === 0) return null;
               return mAllowed.some((id) => ancestorSet.has(id)) ? member : null;
             }),
           );
-          members = filtered.filter((m): m is NonNullable<typeof m> => m !== null);
+          members = filtered.filter(
+            (m): m is NonNullable<typeof m> => m !== null,
+          );
         }
       }
     }
@@ -144,8 +158,13 @@ export class MembersService {
         id: member.id,
         role: formatMemberRole(member.role),
         joinedAt: member.createdAt,
+        isActive: member.active,
         customerRestricted: member.customerRestricted,
-        customers: member.customers?.map((mc) => ({ id: mc.customer.id, name: mc.customer.name })) ?? [],
+        customers:
+          member.customers?.map((mc) => ({
+            id: mc.customer.id,
+            name: mc.customer.name,
+          })) ?? [],
         user: member.user,
       })),
     };
@@ -154,7 +173,7 @@ export class MembersService {
   async createMember(
     userId: string,
     organizationId: string,
-    data: CreateMemberDto
+    data: CreateMemberDto,
   ): Promise<CreateMemberResponseDto> {
     const userRecord = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -162,7 +181,7 @@ export class MembersService {
     });
 
     const userMembership = await this.prisma.organizationMember.findFirst({
-      where: { userId, organizationId },
+      where: { userId, organizationId, active: true },
       include: { role: { include: { permissions: true } } },
     });
 
@@ -177,8 +196,10 @@ export class MembersService {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
-    const usersPerm = userMembership.role.permissions.find((p) => p.module === 'USERS');
-    const canCreate = usersPerm?.actions?.includes('CREATE' as any) ?? false;
+    const usersPerm = userMembership.role.permissions.find(
+      (p) => p.module === "USERS",
+    );
+    const canCreate = usersPerm?.actions?.includes("CREATE" as any) ?? false;
     if (!canCreate) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
@@ -191,13 +212,15 @@ export class MembersService {
       },
     });
     if (!targetRole) {
-      throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+      throw new BadRequestException({
+        errorCode: ApiCode.COMMON_INVALID_INPUT,
+      });
     }
 
     // Only members with USERS:EDIT can assign COMPANY_OWNER role
     const isAssigningOwnerRole = targetRole.key === SystemRoleKey.COMPANY_OWNER;
     if (isAssigningOwnerRole) {
-      const canEdit = usersPerm?.actions?.includes('EDIT' as any) ?? false;
+      const canEdit = usersPerm?.actions?.includes("EDIT" as any) ?? false;
       if (!canEdit) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
@@ -210,28 +233,38 @@ export class MembersService {
       }
     }
 
-    const customerRestricted = data.customerRestricted ?? (data.customerIds?.length ? true : false);
+    const customerRestricted =
+      data.customerRestricted ?? (data.customerIds?.length ? true : false);
     const customerIdsToValidate = data.customerIds ?? [];
 
     // COMPANY_OWNER must always be assigned to at least one specific company
     if (targetRole.key === SystemRoleKey.COMPANY_OWNER) {
       if (!customerRestricted || customerIdsToValidate.length === 0) {
-        throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
+        throw new BadRequestException({
+          errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS,
+        });
       }
     }
 
     const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
-      { id: userMembership.id, customerRestricted: userMembership.customerRestricted },
-      organizationId
+      {
+        id: userMembership.id,
+        customerRestricted: userMembership.customerRestricted,
+      },
+      organizationId,
     );
     if (editorAllowedIds !== null) {
       if (!customerRestricted || customerIdsToValidate.length === 0) {
-        throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
+        throw new BadRequestException({
+          errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS,
+        });
       }
       const allowedSet = new Set(editorAllowedIds);
       const invalid = customerIdsToValidate.filter((id) => !allowedSet.has(id));
       if (invalid.length > 0) {
-        throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+        throw new BadRequestException({
+          errorCode: ApiCode.COMMON_INVALID_INPUT,
+        });
       }
     } else if (customerRestricted && customerIdsToValidate.length > 0) {
       const customersInOrg = await this.prisma.customer.findMany({
@@ -241,7 +274,9 @@ export class MembersService {
       const validIds = new Set(customersInOrg.map((c) => c.id));
       const invalid = customerIdsToValidate.filter((id) => !validIds.has(id));
       if (invalid.length > 0) {
-        throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+        throw new BadRequestException({
+          errorCode: ApiCode.COMMON_INVALID_INPUT,
+        });
       }
     }
 
@@ -257,13 +292,18 @@ export class MembersService {
       email: data.email,
       password: data.password,
       name: data.name,
-      isSuperAdmin: userRecord?.isSuperAdmin === true ? data.isSuperAdmin : undefined,
-      isSystemUser: userRecord?.isSuperAdmin === true ? data.isSystemUser : undefined,
+      isSuperAdmin:
+        userRecord?.isSuperAdmin === true ? data.isSuperAdmin : undefined,
+      isSystemUser:
+        userRecord?.isSuperAdmin === true ? data.isSystemUser : undefined,
     });
 
     let customerIdsToStore =
       customerRestricted && customerIdsToValidate.length > 0
-        ? await this.customersService.getRootCustomerIds(organizationId, customerIdsToValidate)
+        ? await this.customersService.getRootCustomerIds(
+            organizationId,
+            customerIdsToValidate,
+          )
         : [];
 
     const member = await this.prisma.$transaction(async (tx) => {
@@ -275,7 +315,11 @@ export class MembersService {
           customerRestricted,
           customers:
             customerIdsToStore.length > 0
-              ? { create: customerIdsToStore.map((customerId) => ({ customerId })) }
+              ? {
+                  create: customerIdsToStore.map((customerId) => ({
+                    customerId,
+                  })),
+                }
               : undefined,
         },
         include: {
@@ -304,7 +348,10 @@ export class MembersService {
     }
 
     const loginUrl = `${process.env.APP_URL || ""}/login`;
-    if (data.sendCredentials) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (data.sendCredentials && organization) {
       this.emailService
         .sendWelcomeCredentialsEmail({
           to: user.email,
@@ -313,15 +360,27 @@ export class MembersService {
           temporaryPassword: data.password,
           loginUrl,
           language: "pt",
+          organizationName: organization.name,
         })
         .catch((err) => {
-          console.error("[MembersService] Failed to send welcome credentials email:", err);
+          console.error(
+            "[MembersService] Failed to send welcome credentials email:",
+            err,
+          );
         });
     } else {
       this.emailService
-        .sendAccountCreatedEmail({ to: user.email, name: user.name, loginUrl, language: "pt" })
+        .sendAccountCreatedEmail({
+          to: user.email,
+          name: user.name,
+          loginUrl,
+          language: "pt",
+        })
         .catch((err) => {
-          console.error("[MembersService] Failed to send account-created email:", err);
+          console.error(
+            "[MembersService] Failed to send account-created email:",
+            err,
+          );
         });
     }
 
@@ -331,8 +390,13 @@ export class MembersService {
         id: member.id,
         role: formatMemberRole(member.role),
         joinedAt: member.createdAt,
+        isActive: member.active,
         customerRestricted: member.customerRestricted,
-        customers: member.customers?.map((mc) => ({ id: mc.customer.id, name: mc.customer.name })) ?? [],
+        customers:
+          member.customers?.map((mc) => ({
+            id: mc.customer.id,
+            name: mc.customer.name,
+          })) ?? [],
         user: member.user,
       },
     };
@@ -342,7 +406,7 @@ export class MembersService {
     userId: string,
     organizationId: string,
     memberId: string,
-    data: UpdateMemberDto
+    data: UpdateMemberDto,
   ): Promise<UpdateMemberResponseDto> {
     const userRecord = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -350,7 +414,7 @@ export class MembersService {
     });
 
     const userMembership = await this.prisma.organizationMember.findFirst({
-      where: { userId, organizationId },
+      where: { userId, organizationId, active: true },
       include: { role: { include: { permissions: true } } },
     });
 
@@ -365,8 +429,10 @@ export class MembersService {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
 
-    const usersPerm = userMembership.role.permissions.find((p) => p.module === 'USERS');
-    const canEdit = usersPerm?.actions?.includes('EDIT' as any) ?? false;
+    const usersPerm = userMembership.role.permissions.find(
+      (p) => p.module === "USERS",
+    );
+    const canEdit = usersPerm?.actions?.includes("EDIT" as any) ?? false;
     if (!canEdit) {
       throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
     }
@@ -390,8 +456,13 @@ export class MembersService {
     }
 
     // Only members with USERS:EDIT can edit own customer access
-    if (isEditingSelf && (data.customerRestricted !== undefined || data.customerIds !== undefined)) {
-      throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_EDIT_OWN_ACCESS });
+    if (
+      isEditingSelf &&
+      (data.customerRestricted !== undefined || data.customerIds !== undefined)
+    ) {
+      throw new BadRequestException({
+        errorCode: ApiCode.MEMBER_CANNOT_EDIT_OWN_ACCESS,
+      });
     }
 
     // Validate new roleId if provided
@@ -403,7 +474,9 @@ export class MembersService {
         },
       });
       if (!targetRole) {
-        throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+        throw new BadRequestException({
+          errorCode: ApiCode.COMMON_INVALID_INPUT,
+        });
       }
       // Only superadmin can assign ORGANIZATION_OWNER role
       if (targetRole.key === SystemRoleKey.ORGANIZATION_OWNER) {
@@ -414,12 +487,18 @@ export class MembersService {
     }
 
     const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
-      { id: userMembership.id, customerRestricted: userMembership.customerRestricted },
+      {
+        id: userMembership.id,
+        customerRestricted: userMembership.customerRestricted,
+      },
       organizationId,
     );
     if (editorAllowedIds !== null) {
       const targetAllowed = await this.customersService.getAllowedCustomerIds(
-        { id: memberToUpdate.id, customerRestricted: memberToUpdate.customerRestricted },
+        {
+          id: memberToUpdate.id,
+          customerRestricted: memberToUpdate.customerRestricted,
+        },
         organizationId,
       );
       if (
@@ -430,13 +509,17 @@ export class MembersService {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
       if (data.customerRestricted === false) {
-        throw new BadRequestException({ errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS });
+        throw new BadRequestException({
+          errorCode: ApiCode.MEMBER_CANNOT_GRANT_FULL_ACCESS,
+        });
       }
       if (data.customerIds !== undefined && data.customerIds.length > 0) {
         const allowedSet = new Set(editorAllowedIds);
         const invalid = data.customerIds.filter((id) => !allowedSet.has(id));
         if (invalid.length > 0) {
-          throw new BadRequestException({ errorCode: ApiCode.COMMON_INVALID_INPUT });
+          throw new BadRequestException({
+            errorCode: ApiCode.COMMON_INVALID_INPUT,
+          });
         }
       }
     }
@@ -448,17 +531,24 @@ export class MembersService {
         select: { id: true },
       });
       if (existingUser && existingUser.id !== memberToUpdate.userId) {
-        throw new BadRequestException({ errorCode: ApiCode.USER_ALREADY_EXISTS });
+        throw new BadRequestException({
+          errorCode: ApiCode.USER_ALREADY_EXISTS,
+        });
       }
     }
 
     const updateData: { roleId?: string; customerRestricted?: boolean } = {};
     if (data.roleId !== undefined) updateData.roleId = data.roleId;
-    if (data.customerRestricted !== undefined) updateData.customerRestricted = data.customerRestricted;
+    if (data.customerRestricted !== undefined)
+      updateData.customerRestricted = data.customerRestricted;
 
-    let customerIdsToStore = data.customerIds ?? (data.customerRestricted ? [] : undefined);
+    let customerIdsToStore =
+      data.customerIds ?? (data.customerRestricted ? [] : undefined);
     if (customerIdsToStore !== undefined && customerIdsToStore.length > 0) {
-      customerIdsToStore = await this.customersService.getRootCustomerIds(organizationId, customerIdsToStore);
+      customerIdsToStore = await this.customersService.getRootCustomerIds(
+        organizationId,
+        customerIdsToStore,
+      );
     }
 
     let hashedPassword: string | undefined;
@@ -475,15 +565,22 @@ export class MembersService {
         isSystemUser?: boolean;
       } = {};
       if (data.name !== undefined) userUpdateData.name = data.name;
-      if (data.email !== undefined) userUpdateData.email = data.email.toLowerCase();
-      if (hashedPassword !== undefined) userUpdateData.password = hashedPassword;
+      if (data.email !== undefined)
+        userUpdateData.email = data.email.toLowerCase();
+      if (hashedPassword !== undefined)
+        userUpdateData.password = hashedPassword;
       if (userRecord?.isSuperAdmin === true) {
-        if (data.isSuperAdmin !== undefined) userUpdateData.isSuperAdmin = data.isSuperAdmin;
-        if (data.isSystemUser !== undefined) userUpdateData.isSystemUser = data.isSystemUser;
+        if (data.isSuperAdmin !== undefined)
+          userUpdateData.isSuperAdmin = data.isSuperAdmin;
+        if (data.isSystemUser !== undefined)
+          userUpdateData.isSystemUser = data.isSystemUser;
       }
 
       if (Object.keys(userUpdateData).length > 0) {
-        await tx.user.update({ where: { id: memberToUpdate.userId }, data: userUpdateData });
+        await tx.user.update({
+          where: { id: memberToUpdate.userId },
+          data: userUpdateData,
+        });
       }
 
       await tx.organizationMember.update({
@@ -491,11 +588,19 @@ export class MembersService {
         data: updateData,
       });
 
-      if (data.customerRestricted !== undefined || data.customerIds !== undefined) {
-        await tx.organizationMemberCustomer.deleteMany({ where: { organizationMemberId: memberId } });
+      if (
+        data.customerRestricted !== undefined ||
+        data.customerIds !== undefined
+      ) {
+        await tx.organizationMemberCustomer.deleteMany({
+          where: { organizationMemberId: memberId },
+        });
         if (customerIdsToStore !== undefined && customerIdsToStore.length > 0) {
           await tx.organizationMemberCustomer.createMany({
-            data: customerIdsToStore.map((customerId) => ({ organizationMemberId: memberId, customerId })),
+            data: customerIdsToStore.map((customerId) => ({
+              organizationMemberId: memberId,
+              customerId,
+            })),
             skipDuplicates: true,
           });
         }
@@ -526,8 +631,13 @@ export class MembersService {
         id: updatedMember.id,
         role: formatMemberRole(updatedMember.role),
         joinedAt: updatedMember.createdAt,
+        isActive: updatedMember.active,
         customerRestricted: updatedMember.customerRestricted,
-        customers: updatedMember.customers?.map((mc) => ({ id: mc.customer.id, name: mc.customer.name })) ?? [],
+        customers:
+          updatedMember.customers?.map((mc) => ({
+            id: mc.customer.id,
+            name: mc.customer.name,
+          })) ?? [],
         user: updatedMember.user,
       },
     };
@@ -536,7 +646,7 @@ export class MembersService {
   async removeMember(
     userId: string,
     organizationId: string,
-    memberId: string
+    memberId: string,
   ): Promise<DeleteMemberResponseDto> {
     const userRecord = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -544,7 +654,7 @@ export class MembersService {
     });
 
     const userMembership = await this.prisma.organizationMember.findFirst({
-      where: { userId, organizationId },
+      where: { userId, organizationId, active: true },
       include: { role: { include: { permissions: true } } },
     });
 
@@ -553,8 +663,10 @@ export class MembersService {
     }
 
     if (userRecord?.isSuperAdmin !== true) {
-      const usersPerm = userMembership.role.permissions.find((p) => p.module === 'USERS');
-      const canDelete = usersPerm?.actions?.includes('DELETE' as any) ?? false;
+      const usersPerm = userMembership.role.permissions.find(
+        (p) => p.module === "USERS",
+      );
+      const canDelete = usersPerm?.actions?.includes("DELETE" as any) ?? false;
       if (!canDelete) {
         throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
       }
@@ -573,12 +685,18 @@ export class MembersService {
     }
 
     const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
-      { id: userMembership.id, customerRestricted: userMembership.customerRestricted },
+      {
+        id: userMembership.id,
+        customerRestricted: userMembership.customerRestricted,
+      },
       organizationId,
     );
     if (editorAllowedIds !== null) {
       const targetAllowed = await this.customersService.getAllowedCustomerIds(
-        { id: memberToRemove.id, customerRestricted: memberToRemove.customerRestricted },
+        {
+          id: memberToRemove.id,
+          customerRestricted: memberToRemove.customerRestricted,
+        },
         organizationId,
       );
       if (
@@ -590,8 +708,80 @@ export class MembersService {
       }
     }
 
-    await this.prisma.organizationMember.delete({ where: { id: memberId } });
+    await this.prisma.organizationMember.update({
+      where: { id: memberId },
+      data: { active: false },
+    });
 
     return { message: ApiCode.MEMBER_REMOVED_SUCCESSFULLY };
+  }
+
+  async enableMember(
+    userId: string,
+    organizationId: string,
+    memberId: string,
+  ): Promise<DeleteMemberResponseDto> {
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
+    const userMembership = await this.prisma.organizationMember.findFirst({
+      where: { userId, organizationId, active: true },
+      include: { role: { include: { permissions: true } } },
+    });
+
+    if (!userMembership) {
+      throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+    }
+
+    if (userRecord?.isSuperAdmin !== true) {
+      const usersPerm = userMembership.role.permissions.find(
+        (p) => p.module === "USERS",
+      );
+      const canEdit = usersPerm?.actions?.includes("EDIT" as any) ?? false;
+      if (!canEdit) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
+
+    const memberToEnable = await this.prisma.organizationMember.findFirst({
+      where: { id: memberId, organizationId },
+    });
+
+    if (!memberToEnable) {
+      throw new NotFoundException(ApiCode.MEMBER_NOT_FOUND);
+    }
+
+    const editorAllowedIds = await this.customersService.getAllowedCustomerIds(
+      {
+        id: userMembership.id,
+        customerRestricted: userMembership.customerRestricted,
+      },
+      organizationId,
+    );
+    if (editorAllowedIds !== null) {
+      const targetAllowed = await this.customersService.getAllowedCustomerIds(
+        {
+          id: memberToEnable.id,
+          customerRestricted: memberToEnable.customerRestricted,
+        },
+        organizationId,
+      );
+      if (
+        targetAllowed === null ||
+        targetAllowed.length === 0 ||
+        !targetAllowed.some((id) => editorAllowedIds.includes(id))
+      ) {
+        throw new ForbiddenException(ApiCode.AUTH_FORBIDDEN);
+      }
+    }
+
+    await this.prisma.organizationMember.update({
+      where: { id: memberId },
+      data: { active: true },
+    });
+
+    return { message: ApiCode.MEMBER_ENABLED_SUCCESSFULLY };
   }
 }

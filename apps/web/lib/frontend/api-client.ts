@@ -333,9 +333,18 @@ export const organizationAPI = {
     organizationId: string,
     data: { name?: string; description?: string }
   ) => externalApi.patch(`/api/organizations/${organizationId}`, data),
-  getMembers: (organizationId: string, params?: { customerId?: string | null }) =>
+  getMembers: (
+    organizationId: string,
+    params?: { customerId?: string | null; includeInactive?: boolean }
+  ) =>
     externalApi.get(`/api/organizations/${organizationId}/members`, {
-      params: params?.customerId != null ? { customerId: params.customerId } : undefined,
+      params:
+        params?.customerId != null || params?.includeInactive === true
+          ? {
+              ...(params?.customerId != null ? { customerId: params.customerId } : {}),
+              ...(params?.includeInactive === true ? { includeInactive: "true" } : {}),
+            }
+          : undefined,
     }),
   createMember: (
     organizationId: string,
@@ -376,6 +385,10 @@ export const organizationAPI = {
   removeMember: (organizationId: string, memberId: string) =>
     externalApi.delete(
       `/api/organizations/${organizationId}/members/${memberId}`
+    ),
+  enableMember: (organizationId: string, memberId: string) =>
+    externalApi.patch(
+      `/api/organizations/${organizationId}/members/${memberId}/enable`
     ),
   getRoles: (organizationId: string) =>
     externalApi.get(`/api/organizations/${organizationId}/roles`),

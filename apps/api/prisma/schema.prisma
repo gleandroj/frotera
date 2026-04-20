@@ -346,6 +346,7 @@ model OrganizationMember {
   roleId             String
   userId             String
   organizationId     String
+  active             Boolean  @default(true)
   customerRestricted Boolean  @default(false)
 
   createdAt DateTime @default(now())

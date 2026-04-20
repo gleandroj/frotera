@@ -121,6 +121,9 @@ export class MemberResponseDto {
   @ApiProperty()
   joinedAt: Date;
 
+  @ApiProperty({ description: "Whether the member account is active in this organization" })
+  isActive: boolean;
+
   @ApiProperty({ description: 'Whether member is restricted to specific customers' })
   customerRestricted: boolean;
 

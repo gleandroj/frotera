@@ -27,8 +27,14 @@ export class MembersController {
     @Request() req: JwtAuthenticatedRequest,
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
+    @Query('includeInactive') includeInactive?: string,
   ): Promise<MembersListResponseDto> {
-    return this.membersService.getMembers(req.user.userId, organizationId, customerId ?? undefined);
+    return this.membersService.getMembers(
+      req.user.userId,
+      organizationId,
+      customerId ?? undefined,
+      includeInactive === 'true',
+    );
   }
 
   @Post()
@@ -76,5 +82,18 @@ export class MembersController {
     @Param('memberId') memberId: string,
   ): Promise<DeleteMemberResponseDto> {
     return this.membersService.removeMember(req.user.userId, organizationId, memberId);
+  }
+
+  @Patch(':memberId/enable')
+  @ApiOperation({ summary: 'Enable member in organization' })
+  @ApiResponse({ status: 200, type: DeleteMemberResponseDto })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  async enableMember(
+    @Request() req: JwtAuthenticatedRequest,
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+  ): Promise<DeleteMemberResponseDto> {
+    return this.membersService.enableMember(req.user.userId, organizationId, memberId);
   }
 }

@@ -145,10 +145,20 @@ describe('MembersService - Dependency Resolution', () => {
       expect(mockPrisma.organizationMember.findMany).toHaveBeenCalledWith({
         where: {
           organizationId: orgId,
+          active: true,
           user: { isSuperAdmin: false, isSystemUser: false },
         },
         include: {
-          user: { select: { id: true, email: true, name: true, createdAt: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              createdAt: true,
+              isSuperAdmin: true,
+              isSystemUser: true,
+            },
+          },
           role: { include: { permissions: true } },
           customers: { include: { customer: true } },
         },
@@ -298,13 +308,14 @@ describe('MembersService - Dependency Resolution', () => {
         .mockResolvedValueOnce(membershipWithDelete)
         .mockResolvedValueOnce(memberToDelete);
       mockCustomersService.getAllowedCustomerIds.mockResolvedValue(null);
-      mockPrisma.organizationMember.delete.mockResolvedValueOnce(memberToDelete);
+      mockPrisma.organizationMember.update.mockResolvedValueOnce(memberToDelete);
 
       const result = await service.removeMember(userId, orgId, memberId);
 
       expect(result).toEqual({ message: 'MEMBER_REMOVED_SUCCESSFULLY' });
-      expect(mockPrisma.organizationMember.delete).toHaveBeenCalledWith({
+      expect(mockPrisma.organizationMember.update).toHaveBeenCalledWith({
         where: { id: memberId },
+        data: { active: false },
       });
     });
   });

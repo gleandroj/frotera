@@ -87,6 +87,7 @@ describe('MembersController', () => {
         userId,
         orgId,
         undefined,
+        false,
       );
       expect(result).toEqual(mockResponse);
     });
@@ -108,6 +109,7 @@ describe('MembersController', () => {
         userId,
         orgId,
         customerId,
+        false,
       );
       expect(result).toEqual(mockResponse);
     });
@@ -128,6 +130,7 @@ describe('MembersController', () => {
         userId,
         orgId,
         undefined,
+        false,
       );
     });
   });
