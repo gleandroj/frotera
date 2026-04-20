@@ -154,15 +154,45 @@ export class VehiclesService {
       id,
     );
 
+    const { trackerDeviceId, ...restDto } = dto;
     const data = Object.fromEntries(
-      (Object.entries(dto) as [keyof UpdateVehicleDto, unknown][]).filter(
+      (Object.entries(restDto) as [keyof Omit<UpdateVehicleDto, "trackerDeviceId">, unknown][]).filter(
         ([, value]) => value !== undefined,
       ),
     ) as Prisma.VehicleUncheckedUpdateInput;
-    const vehicle = await this.prisma.vehicle.update({
-      where: { id },
-      data,
-    });
+
+    let vehicle: { id: string } | null = null;
+
+    if (trackerDeviceId === null) {
+      vehicle = await this.prisma.vehicle.update({
+        where: { id },
+        data: { ...data, trackerDeviceId: null },
+      });
+    } else if (trackerDeviceId !== undefined) {
+      const tracker = await this.prisma.trackerDevice.findFirst({
+        where: { id: trackerDeviceId, organizationId },
+        select: { id: true },
+      });
+      if (!tracker) {
+        throw new BadRequestException(ApiCode.ORGANIZATION_NOT_FOUND);
+      }
+
+      vehicle = await this.prisma.$transaction(async (tx) => {
+        await tx.vehicle.updateMany({
+          where: { organizationId, trackerDeviceId, id: { not: id } },
+          data: { trackerDeviceId: null },
+        });
+        return tx.vehicle.update({
+          where: { id },
+          data: { ...data, trackerDeviceId },
+        });
+      });
+    } else {
+      vehicle = await this.prisma.vehicle.update({
+        where: { id },
+        data,
+      });
+    }
     const withDevice = await this.prisma.vehicle.findUnique({
       where: { id: vehicle.id },
       include: { trackerDevice: true, customer: true },

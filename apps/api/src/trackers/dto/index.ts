@@ -651,10 +651,11 @@ export class UpdateVehicleDto {
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
+  @ValidateIf((_, v) => v !== null)
   @IsString()
-  trackerDeviceId?: string;
+  trackerDeviceId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
