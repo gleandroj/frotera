@@ -212,7 +212,9 @@ export function findGpsOffset(buf: Buffer): number | null {
   for (let i = 0; i <= buf.length - 18; i++) {
     const yy = buf[i];
     const mm = buf[i + 1];
-    if (yy >= 0x20 && yy <= 0x30 && mm >= 0x01 && mm <= 0x12) {
+    // GT06 firmwares may send YY as BCD (0x20..0x30) or binary (e.g. 0x1a for 2026).
+    const yearLooksPlausible = (yy >= 0x20 && yy <= 0x30) || yy <= 0x63;
+    if (yearLooksPlausible && mm >= 0x01 && mm <= 0x12) {
       return i;
     }
   }
@@ -282,6 +284,51 @@ function parseGt06Datetime6Binary(content: Buffer, o: number): string | null {
     return null;
   }
   const year = 2000 + y;
+  return new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
+}
+
+function parseGt06Datetime6Bcd(content: Buffer, o: number): string | null {
+  if (!isPlausibleGt06BcdDate(content, o)) return null;
+  const year = 2000 + ((content[o] >> 4) * 10 + (content[o] & 0x0f));
+  const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
+  const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
+  const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
+  const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
+  const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
+  return new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
+}
+
+type Gt06LocationDateMode = "auto" | "bcd" | "binary" | "yearBinaryBcd";
+type Gt06HemisphereMode = "legacy" | "std";
+interface Gt06LocationOptions {
+  divisor?: number;
+  dateMode?: Gt06LocationDateMode;
+  hemisphereMode?: Gt06HemisphereMode;
+  gpsFixMask?: number;
+}
+
+function parseGt06Datetime6YearBinaryBcdRest(
+  content: Buffer,
+  o: number,
+): string | null {
+  if (content.length < o + 6) return null;
+  const year = 2000 + content[o];
+  const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
+  const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
+  const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
+  const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
+  const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour > 23 ||
+    min > 59 ||
+    sec > 59
+  ) {
+    return null;
+  }
   return new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
 }
 
@@ -363,32 +410,12 @@ export function parseGT06TerminalInfo(b: number): {
 export function getPositionFromGT06LocationStd(
   content: Buffer,
 ): NormalizedPosition | null {
-  if (content.length < 18) return null;
-
-  const year = 2000 + ((content[0] >> 4) * 10 + (content[0] & 0x0f));
-  const month = (content[1] >> 4) * 10 + (content[1] & 0x0f);
-  const day = (content[2] >> 4) * 10 + (content[2] & 0x0f);
-  const hour = (content[3] >> 4) * 10 + (content[3] & 0x0f);
-  const min = (content[4] >> 4) * 10 + (content[4] & 0x0f);
-  const sec = (content[5] >> 4) * 10 + (content[5] & 0x0f);
-  const recordedAt = new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
-
-  let lat = content.readInt32BE(7) / 1_800_000;
-  let lng = content.readInt32BE(11) / 1_800_000;
-  const speed = (content[15] ?? 0) * 1.852;
-  const courseStatus = content.readUInt16BE(16);
-
-  const gpsFixed = (courseStatus & 0x1000) !== 0;  // bit 12
-  const latSouth = (courseStatus & 0x0800) !== 0;  // bit 11
-  const lngWest  = (courseStatus & 0x0400) !== 0;  // bit 10
-  const course   = courseStatus & 0x03ff;
-
-  if (latSouth) lat = -lat;
-  if (lngWest)  lng = -lng;
-
-  if (!gpsFixed) return null;
-
-  return { latitude: lat, longitude: lng, speed, heading: course, recordedAt };
+  return getPositionFromGT06Location(content, 0, true, {
+    divisor: 1_800_000,
+    dateMode: "yearBinaryBcd",
+    hemisphereMode: "std",
+    gpsFixMask: 0x1000,
+  });
 }
 
 /**
@@ -437,8 +464,8 @@ export function parseGT06AlarmPacket(content: Buffer): NormalizedPosition | null
   const lngWest  = (courseStatus & 0x2000) !== 0;
   const course   = courseStatus & 0x03ff;
 
-  if (latSouth) lat = -lat;
-  if (lngWest)  lng = -lng;
+  if (latSouth) lat = -Math.abs(lat);
+  if (lngWest)  lng = -Math.abs(lng);
 
   const lbsLen = content[18];
   const statusOffset = 18 + lbsLen;
@@ -522,6 +549,7 @@ export function getPositionFromGT06Location(
   content: Buffer,
   startOffset: number = 0,
   requireGpsFix: boolean = true,
+  options?: Gt06LocationOptions,
 ): NormalizedPosition | null {
   if (content.length < startOffset + 18) return null;
 
@@ -534,29 +562,26 @@ export function getPositionFromGT06Location(
     return decodeGpsBlockTraccarStyle(content, o, requireGpsFix);
   }
 
-  const useBcdDate = isPlausibleGt06BcdDate(content, o);
-  let recordedAt: string;
-  if (useBcdDate) {
-    const year =
-      2000 + ((content[o + 0] >> 4) * 10 + (content[o + 0] & 0x0f));
-    const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
-    const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
-    const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
-    const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
-    const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
-    recordedAt = new Date(
-      Date.UTC(year, month - 1, day, hour, min, sec),
-    ).toISOString();
+  let recordedAt: string | null = null;
+  const dateMode = options?.dateMode ?? "auto";
+  if (dateMode === "bcd") {
+    recordedAt = parseGt06Datetime6Bcd(content, o);
+  } else if (dateMode === "binary") {
+    recordedAt = parseGt06Datetime6Binary(content, o);
+  } else if (dateMode === "yearBinaryBcd") {
+    recordedAt = parseGt06Datetime6YearBinaryBcdRest(content, o);
   } else {
-    const bin = parseGt06Datetime6Binary(content, o);
-    if (!bin) return null;
-    recordedAt = bin;
+    recordedAt =
+      parseGt06Datetime6Bcd(content, o) ??
+      parseGt06Datetime6YearBinaryBcdRest(content, o) ??
+      parseGt06Datetime6Binary(content, o);
   }
+  if (!recordedAt) return null;
 
   const latRaw = content.readInt32BE(o + 7);
   const lngRaw = content.readInt32BE(o + 11);
   const isShort18 = content.length === 18;
-  const divisor = isShort18 ? 30_000 : 300_000;
+  const divisor = options?.divisor ?? (isShort18 ? 30_000 : 300_000);
   let lat = latRaw / divisor;
   let lng = lngRaw / divisor;
 
@@ -565,17 +590,28 @@ export function getPositionFromGT06Location(
   const courseStatus = content.readUInt16BE(o + 16);
   const course = courseStatus & 0x03ff;
   const gpsFixed =
-    (courseStatus & 0x8000) !== 0 || (courseStatus & 0x1000) !== 0;
+    options?.gpsFixMask != null
+      ? (courseStatus & options.gpsFixMask) !== 0
+      : (courseStatus & 0x8000) !== 0 || (courseStatus & 0x1000) !== 0;
   const gpsInfo = content[o + 6];
   const satellites = gpsInfo & 0x0f;
   const fixFromInfo = (gpsInfo & 0x80) !== 0;
 
-  const statusBits = courseStatus & 0xfc00;
-  if (statusBits !== 0) {
-    const latSouth = (courseStatus & 0x4000) !== 0;
-    const lngWest = (courseStatus & 0x2000) !== 0;
+  const hemisphereMode = options?.hemisphereMode ?? "legacy";
+  if (hemisphereMode === "std") {
+    // GT06 std semantics: bit10=North when set (else South), bit11=West when set.
+    const latSouth = (courseStatus & 0x0400) === 0;
+    const lngWest = (courseStatus & 0x0800) !== 0;
     if (latSouth) lat = -Math.abs(lat);
     if (lngWest) lng = -Math.abs(lng);
+  } else {
+    const statusBits = courseStatus & 0xfc00;
+    if (statusBits !== 0) {
+      const latSouth = (courseStatus & 0x4000) !== 0;
+      const lngWest = (courseStatus & 0x2000) !== 0;
+      if (latSouth) lat = -Math.abs(lat);
+      if (lngWest) lng = -Math.abs(lng);
+    }
   }
 
   if (
@@ -685,41 +721,24 @@ export function getPositionFromGT06LocationOnDemand(
   if (content.length < 18) return null;
   const o = findGpsOffset(content) ?? 0;
   if (content.length < o + 18) return null;
+  const parsed = getPositionFromGT06Location(content, o, false, {
+    divisor: 1_800_000,
+    dateMode: "yearBinaryBcd",
+    hemisphereMode: "std",
+    gpsFixMask: 0x1000,
+  });
+  if (!parsed) return null;
 
-  const year = 2000 + ((content[o + 0] >> 4) * 10 + (content[o + 0] & 0x0f));
-  const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
-  const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
-  const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
-  const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
-  const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
-  const recordedAt = new Date(
-    Date.UTC(year, month - 1, day, hour, min, sec),
-  ).toISOString();
+  let lat = parsed.latitude;
+  let lng = parsed.longitude;
+  const latLegacy = Math.abs(content.readInt32BE(o + 7)) / 300_000;
+  const lngLegacy = Math.abs(content.readInt32BE(o + 11)) / 300_000;
 
-  let lat = content.readInt32BE(o + 7) / 300000;
-  let lng = content.readInt32BE(o + 11) / 300000;
-  const speed = (content[o + 15] ?? 0) * 1.852;
-  const courseStatus = content.readUInt16BE(o + 16);
-  const latSouth = (courseStatus & 0x4000) !== 0;
-  const lngWest = (courseStatus & 0x2000) !== 0;
-  const course = courseStatus & 0x03ff;
+  // Some 0x1A firmwares encode S/W using wrapped ranges in legacy scaling.
+  if (latLegacy > 90) lat = -Math.abs(lat);
+  if (lngLegacy > 180) lng = -Math.abs(lng);
 
-  // Some 0x1A firmwares send South as lat>90 (then 90-lat) and West as lng>180 (then lng-360)
-  if (lat > 90) lat = 90 - lat;
-  else if (latSouth) lat = -Math.abs(lat);
-  if (lng > 180) lng = lng - 360;
-  else if (lngWest) lng = -Math.abs(lng);
-  if (lng < -180) lng += 360;
-  if (lat < -90) lat = -90;
-  if (lat > 90) lat = 90;
-
-  return {
-    latitude: lat,
-    longitude: lng,
-    speed,
-    heading: course,
-    recordedAt,
-  };
+  return { ...parsed, latitude: lat, longitude: lng };
 }
 
 /**
