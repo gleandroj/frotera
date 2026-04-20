@@ -13,7 +13,6 @@ import {
   Crown,
   Edit,
   Plus,
-  Settings,
   Shield,
   User,
 } from "lucide-react";
@@ -89,8 +88,6 @@ export default function OrganizationsPage() {
     const newUrl = newParams.toString() ? `?${newParams}` : '';
     router.replace(`/settings/organizations${newUrl}`, { scroll: false });
   };
-
-  const canEditOrganization = (_org: any) => true;
 
   if (!user?.isSuperAdmin) {
     return null;
@@ -174,40 +171,38 @@ export default function OrganizationsPage() {
                     {t('settings.organizations.switchTo')}
                   </Button>
                 )}
-                {canEditOrganization(org) && (
-                  <Dialog
-                    open={editingOrgId === org.id}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setEditingOrgId(org.id);
-                      } else {
-                        handleEditSuccess(null);
-                      }
-                    }}
-                  >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>{t('organizations.updateOrganization')}</DialogTitle>
-                        <DialogDescription>
-                          {t('organizations.editOrganizationDialogDescription')}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <EditOrganizationForm
-                        organizationId={org.id}
-                        onSuccess={handleEditSuccess}
-                        onCancel={() => setEditingOrgId(null)}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                )}
+                <Dialog
+                  open={editingOrgId === org.id}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setEditingOrgId(org.id);
+                    } else {
+                      handleEditSuccess(null);
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>{t('organizations.updateOrganization')}</DialogTitle>
+                      <DialogDescription>
+                        {t('organizations.editOrganizationDialogDescription')}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <EditOrganizationForm
+                      organizationId={org.id}
+                      onSuccess={handleEditSuccess}
+                      onCancel={() => setEditingOrgId(null)}
+                    />
+                  </DialogContent>
+                </Dialog>
 
               </div>
             </CardContent>
