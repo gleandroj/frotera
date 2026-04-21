@@ -600,7 +600,7 @@ export interface UpdateVehiclePayload {
   speedLimit?: number | null;
   initialOdometerKm?: number | null;
   notes?: string;
-  trackerDeviceId?: string;
+  trackerDeviceId?: string | null;
   customerId?: string;
 }
 

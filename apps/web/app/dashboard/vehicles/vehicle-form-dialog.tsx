@@ -324,7 +324,9 @@ export function VehicleFormDialog({
 
     const payload: CreateVehiclePayload | UpdateVehiclePayload = {
       ...base,
-      trackerDeviceId: values.trackerDeviceId || undefined,
+      trackerDeviceId: isEdit
+        ? (values.trackerDeviceId || null)
+        : (values.trackerDeviceId || undefined),
     };
 
     try {
