@@ -80,7 +80,9 @@
     "createNewVehicle": "Novo veículo",
     "createNewDriver": "Novo motorista",
     "createNewCompany": "Nova empresa",
-    "forbidden": "Acesso não autorizado"
+    "forbidden": "Acesso não autorizado",
+    "reports": "Relatórios",
+    "reportsDescription": "Visualize todos os relatórios disponíveis em um único local"
   },
   "errors": {
     "api": {

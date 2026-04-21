@@ -17,7 +17,6 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
-  BarChart2,
   BarChart3,
   Bell,
   Building,
@@ -90,6 +89,8 @@ export function AppSidebar() {
     Action.VIEW,
   );
   const canViewTrackingReports = can(Module.REPORTS_TRACKING, Action.VIEW);
+  const canViewChecklistReports = can(Module.CHECKLIST, Action.VIEW);
+  const canViewAnyReport = canViewAnyFuelReport || canViewTrackingReports || canViewChecklistReports;
   const canViewReferencePoints = can(Module.REFERENCE_POINTS, Action.VIEW);
 
   const isMember = currentOrganization
@@ -212,20 +213,15 @@ export function AppSidebar() {
           !pathname.startsWith("/dashboard/fuel/reports"),
       });
     }
-    if (canViewAnyFuelReport) {
+    if (canViewAnyReport) {
       items.push({
-        name: t("navigation.items.fuelReports"),
-        href: "/dashboard/fuel/reports",
+        name: t("common.reports"),
+        href: "/dashboard/reports",
         icon: BarChart3,
-        current: pathname.startsWith("/dashboard/fuel/reports"),
-      });
-    }
-    if (canViewTrackingReports) {
-      items.push({
-        name: t("navigation.items.trackingReports"),
-        href: "/dashboard/vehicles/reports",
-        icon: BarChart2,
-        current: pathname.startsWith("/dashboard/vehicles/reports"),
+        current: pathname.startsWith("/dashboard/reports") ||
+                 pathname.startsWith("/dashboard/fuel/reports") ||
+                 pathname.startsWith("/dashboard/vehicles/reports") ||
+                 pathname.startsWith("/dashboard/checklist/reports"),
       });
     }
     if (canViewReferencePoints) {
@@ -258,7 +254,7 @@ export function AppSidebar() {
     t, pathname, canViewTracking, canViewDashboard, canViewVehicles,
     canAccessTrackerHelp,
     canViewChecklist, canViewIncidents, canViewDrivers, canViewDocuments,
-    canViewFuel, canViewAnyFuelReport, canViewTrackingReports, canViewReferencePoints, canViewTelemetry, canViewCustomers,
+    canViewFuel, canViewAnyReport, canViewReferencePoints, canViewTelemetry, canViewCustomers,
     unreadTelemetry,
   ]);
 
