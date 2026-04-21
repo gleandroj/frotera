@@ -159,7 +159,15 @@
       "title": "Excluir Rastreador",
       "description": "Tem certeza que deseja excluir este rastreador?"
     },
-    "openActionsMenu": "Abrir menu de ações"
+    "openActionsMenu": "Abrir menu de ações",
+    "noResults": "Nenhum resultado encontrado",
+    "odometerSource": "Fonte do Odômetro",
+    "odometerSourceCalculated": "Calculado",
+    "odometerSourceDevice": "Dispositivo",
+    "connectedAt": "Última conexão",
+    "sectionOdometer": "Configurações do Odômetro",
+    "sectionIdentification": "Identificação do Rastreador",
+    "configureDevice": "Configurar Rastreador"
   },
   "vehicles": {
     "selectOrganization": "Selecione uma organização para ver os veículos.",

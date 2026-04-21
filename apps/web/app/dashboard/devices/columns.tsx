@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface Device {
   id: string;
@@ -17,6 +18,9 @@ interface Device {
   imei: string;
   model: string;
   name?: string | null;
+  carrier?: string | null;
+  odometerSource?: string;
+  connectedAt?: string | null;
   vehicleId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -78,6 +82,46 @@ export function getDeviceColumns(
       meta: { labelKey: "devices.model" },
       header: t("devices.model"),
       cell: ({ row }) => <span>{row.original.model}</span>,
+    },
+    {
+      accessorKey: "carrier",
+      meta: { labelKey: "devices.carrier" },
+      header: t("devices.carrier"),
+      cell: ({ row }) => (
+        <span>{row.original.carrier ?? t("common.notAvailable")}</span>
+      ),
+    },
+    {
+      accessorKey: "odometerSource",
+      meta: { labelKey: "devices.odometerSource" },
+      header: t("devices.odometerSource"),
+      cell: ({ row }) => {
+        const source = row.original.odometerSource;
+        return (
+          <span>
+            {source === "DEVICE"
+              ? t("devices.odometerSourceDevice")
+              : t("devices.odometerSourceCalculated")}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "connectedAt",
+      meta: { labelKey: "devices.connectedAt" },
+      header: t("devices.connectedAt"),
+      cell: ({ row }) => {
+        const connectedAt = row.original.connectedAt;
+        return connectedAt ? (
+          <Badge variant="outline" className="text-green-600 border-green-600">
+            {t("devices.connected")}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground">
+            {t("devices.disconnected")}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",

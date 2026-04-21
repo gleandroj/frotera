@@ -22,9 +22,9 @@ interface TrackerDevice {
   carrier?: string | null;
   simCardNumber?: string | null;
   cellNumber?: string | null;
+  odometerSource?: string;
   vehicleId?: string | null;
   connectedAt?: string | null;
-  odometerSource?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -120,8 +120,8 @@ export default function DevicesPage() {
       {!loading && !error && devices.length > 0 && (
         <DataTable<TrackerDevice, unknown>
           columns={getDeviceColumns(t, {
-            onEdit: (device: any) => setEditDevice(device),
-            onDelete: (device: any) => setDeleteDevice(device),
+            onEdit: (device: TrackerDevice) => setEditDevice(device),
+            onDelete: (device: TrackerDevice) => setDeleteDevice(device),
           })}
           data={devices}
           filterPlaceholder={t("common.search")}

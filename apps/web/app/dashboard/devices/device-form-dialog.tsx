@@ -28,7 +28,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { trackerDevicesAPI } from "@/lib/frontend/api-client";
+import {
+  trackerDevicesAPI,
+  type CreateVehicleNewDevicePayload,
+} from "@/lib/frontend/api-client";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 
@@ -43,17 +46,25 @@ interface Device {
   carrier?: string | null;
   simCardNumber?: string | null;
   cellNumber?: string | null;
+  odometerSource?: string | null;
 }
 
 interface DeviceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  device: Device | null;
-  organizationId: string;
-  onSuccess: () => void;
+  hideOverlay?: boolean;
+  // API mode (devices page — standalone create / edit)
+  device?: Device | null;
+  organizationId?: string;
+  onSuccess?: () => void;
+  // Sub-form mode (vehicle form — no API call, just collects data)
+  onConfirm?: (data: CreateVehicleNewDevicePayload) => void;
+  initialData?: Partial<CreateVehicleNewDevicePayload>;
 }
 
-const baseSchema = z.object({
+const editSchema = z.object({
+  imei: z.string().default(""),
+  model: z.string().default(""),
   name: z.string().default(""),
   serialSat: z.string().default(""),
   equipmentModel: z.string().default(""),
@@ -61,94 +72,119 @@ const baseSchema = z.object({
   carrier: z.string().default(""),
   simCardNumber: z.string().default(""),
   cellNumber: z.string().default(""),
+  odometerSource: z.enum(["CALCULATED", "DEVICE"]).default("CALCULATED"),
 });
 
-const createSchema = baseSchema.extend({
+const createSchema = editSchema.extend({
   imei: z.string().min(1, "IMEI é obrigatório"),
   model: z.string().min(1, "Modelo é obrigatório"),
 });
 
-type DeviceFormValues = z.infer<typeof baseSchema>;
-type CreateFormValues = z.infer<typeof createSchema>;
+type FormValues = z.infer<typeof createSchema>;
 
-function defaultValues(device: Device | null): any {
-  if (!device) {
+function toFormValues(
+  device: Device | null,
+  initialData?: Partial<CreateVehicleNewDevicePayload>,
+): FormValues {
+  if (device) {
     return {
-      name: "",
-      serialSat: "",
-      equipmentModel: "",
-      individualPassword: "",
-      carrier: "",
-      simCardNumber: "",
-      cellNumber: "",
-      imei: "",
-      model: "X12_GT06",
+      imei: device.imei,
+      model: device.model,
+      name: device.name ?? "",
+      serialSat: device.serialSat ?? "",
+      equipmentModel: device.equipmentModel ?? "",
+      individualPassword: device.individualPassword ?? "",
+      carrier: device.carrier ?? "",
+      simCardNumber: device.simCardNumber ?? "",
+      cellNumber: device.cellNumber ?? "",
+      odometerSource: device.odometerSource === "DEVICE" ? "DEVICE" : "CALCULATED",
     };
   }
   return {
-    name: device.name || "",
-    serialSat: device.serialSat || "",
-    equipmentModel: device.equipmentModel || "",
-    individualPassword: device.individualPassword || "",
-    carrier: device.carrier || "",
-    simCardNumber: device.simCardNumber || "",
-    cellNumber: device.cellNumber || "",
+    imei: initialData?.imei ?? "",
+    model: initialData?.model ?? "X12_GT06",
+    name: initialData?.name ?? "",
+    serialSat: initialData?.serialSat ?? "",
+    equipmentModel: initialData?.equipmentModel ?? "",
+    individualPassword: initialData?.individualPassword ?? "",
+    carrier: initialData?.carrier ?? "",
+    simCardNumber: initialData?.simCardNumber ?? "",
+    cellNumber: initialData?.cellNumber ?? "",
+    odometerSource: "CALCULATED",
   };
 }
 
 export function DeviceFormDialog({
   open,
   onOpenChange,
-  device,
+  hideOverlay,
+  device = null,
   organizationId,
   onSuccess,
+  onConfirm,
+  initialData,
 }: DeviceFormDialogProps) {
   const { t } = useTranslation();
   const isEdit = !!device;
+  const isSubform = !!onConfirm;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<any>({
-    resolver: zodResolver(isEdit ? baseSchema : createSchema),
-    defaultValues: defaultValues(device),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(isEdit ? editSchema : createSchema),
+    defaultValues: toFormValues(device, initialData),
     mode: "onTouched",
   });
 
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues(device));
+      form.reset(toFormValues(device, initialData));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, device]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: FormValues) => {
+    if (isSubform && onConfirm) {
+      onConfirm({
+        imei: data.imei,
+        model: data.model,
+        name: data.name || undefined,
+        serialSat: data.serialSat || undefined,
+        equipmentModel: data.equipmentModel || undefined,
+        individualPassword: data.individualPassword || undefined,
+        carrier: data.carrier || undefined,
+        simCardNumber: data.simCardNumber || undefined,
+        cellNumber: data.cellNumber || undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    if (!organizationId || !onSuccess) return;
+
     setIsSubmitting(true);
 
+    const commonFields = {
+      name: data.name || undefined,
+      serialSat: data.serialSat || undefined,
+      equipmentModel: data.equipmentModel || undefined,
+      individualPassword: data.individualPassword || undefined,
+      carrier: data.carrier || undefined,
+      simCardNumber: data.simCardNumber || undefined,
+      cellNumber: data.cellNumber || undefined,
+      odometerSource: data.odometerSource,
+    };
+
     const promise = isEdit
-      ? trackerDevicesAPI.update(organizationId, device!.id, {
-          name: data.name || undefined,
-          serialSat: data.serialSat || undefined,
-          equipmentModel: data.equipmentModel || undefined,
-          individualPassword: data.individualPassword || undefined,
-          carrier: data.carrier || undefined,
-          simCardNumber: data.simCardNumber || undefined,
-          cellNumber: data.cellNumber || undefined,
-        } as any)
+      ? trackerDevicesAPI.update(organizationId, device!.id, commonFields)
       : trackerDevicesAPI.create(organizationId, {
+          ...commonFields,
           imei: data.imei,
           model: data.model,
-          name: data.name || undefined,
-          serialSat: data.serialSat || undefined,
-          equipmentModel: data.equipmentModel || undefined,
-          individualPassword: data.individualPassword || undefined,
-          carrier: data.carrier || undefined,
-          simCardNumber: data.simCardNumber || undefined,
-          cellNumber: data.cellNumber || undefined,
-        } as any);
+        });
 
     promise
       .then(() => {
         toast.success(
-          isEdit ? t("devices.toastUpdated") : t("devices.toastCreated")
+          isEdit ? t("devices.toastUpdated") : t("devices.toastCreated"),
         );
         onSuccess();
         onOpenChange(false);
@@ -163,7 +199,10 @@ export function DeviceFormDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent
+        hideOverlay={hideOverlay}
+        className="w-full sm:max-w-2xl overflow-y-auto"
+      >
         <SheetHeader>
           <SheetTitle>
             {isEdit ? t("devices.editDevice") : t("devices.createDevice")}
@@ -171,19 +210,34 @@ export function DeviceFormDialog({
         </SheetHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-            {!isEdit && (
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6 mt-6"
+            autoComplete="off"
+          >
+            {/* Identification */}
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              <p className="text-sm font-medium">
+                {t("devices.sectionIdentification")}
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="imei"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("devices.imei")} *</FormLabel>
+                      <FormLabel>
+                        {t("devices.imei")}
+                        {!isEdit && " *"}
+                      </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t("devices.imeiPlaceholder") || "000000000000000"}
+                          placeholder={
+                            t("devices.imeiPlaceholder") || "000000000000000"
+                          }
                           className="font-mono"
+                          autoComplete="off"
+                          disabled={isEdit}
                           {...field}
                         />
                       </FormControl>
@@ -196,8 +250,15 @@ export function DeviceFormDialog({
                   name="model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("devices.model")} *</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <FormLabel>
+                        {t("devices.model")}
+                        {!isEdit && " *"}
+                      </FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isEdit}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
@@ -212,8 +273,9 @@ export function DeviceFormDialog({
                   )}
                 />
               </div>
-            )}
+            </div>
 
+            {/* Details */}
             <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
               <p className="text-sm font-medium">{t("devices.sectionDetails")}</p>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -224,7 +286,11 @@ export function DeviceFormDialog({
                     <FormItem className="sm:col-span-2">
                       <FormLabel>{t("devices.name")}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("common.name")} {...field} />
+                        <Input
+                          placeholder={t("common.name")}
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -237,7 +303,11 @@ export function DeviceFormDialog({
                     <FormItem>
                       <FormLabel>{t("devices.equipmentModel")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: SUNT CH" {...field} />
+                        <Input
+                          placeholder="Ex: SUNT CH"
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -250,7 +320,11 @@ export function DeviceFormDialog({
                     <FormItem>
                       <FormLabel>{t("devices.serialSat")}</FormLabel>
                       <FormControl>
-                        <Input className="font-mono" {...field} />
+                        <Input
+                          className="font-mono"
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -263,17 +337,18 @@ export function DeviceFormDialog({
                     <FormItem className="sm:col-span-2">
                       <FormLabel>{t("devices.individualPassword")}</FormLabel>
                       <FormControl>
-                        <Input type="password" autoComplete="off" {...field} />
+                        <Input autoComplete="off" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+            </div>
 
-              <p className="text-sm font-medium pt-2">
-                {t("devices.sectionSimData")}
-              </p>
+            {/* SIM */}
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              <p className="text-sm font-medium">{t("devices.sectionSimData")}</p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -282,7 +357,11 @@ export function DeviceFormDialog({
                     <FormItem>
                       <FormLabel>{t("devices.carrier")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: SMARTSIM" {...field} />
+                        <Input
+                          placeholder="Ex: SMARTSIM"
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -295,7 +374,11 @@ export function DeviceFormDialog({
                     <FormItem>
                       <FormLabel>{t("devices.simCardNumber")}</FormLabel>
                       <FormControl>
-                        <Input className="font-mono" {...field} />
+                        <Input
+                          className="font-mono"
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -308,7 +391,11 @@ export function DeviceFormDialog({
                     <FormItem>
                       <FormLabel>{t("devices.cellNumber")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: 16995636896" {...field} />
+                        <Input
+                          placeholder="Ex: 16995636896"
+                          autoComplete="off"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -316,6 +403,43 @@ export function DeviceFormDialog({
                 />
               </div>
             </div>
+
+            {/* Odometer — API mode only */}
+            {!isSubform && (
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                <p className="text-sm font-medium">
+                  {t("devices.sectionOdometer")}
+                </p>
+                <FormField
+                  control={form.control}
+                  name="odometerSource"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("devices.odometerSource")}</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CALCULATED">
+                            {t("devices.odometerSourceCalculated")}
+                          </SelectItem>
+                          <SelectItem value="DEVICE">
+                            {t("devices.odometerSourceDevice")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-6 border-t">
               <Button
@@ -331,9 +455,11 @@ export function DeviceFormDialog({
                   ? isEdit
                     ? t("common.updating")
                     : t("common.creating")
-                  : isEdit
-                    ? t("common.save")
-                    : t("common.create")}
+                  : isSubform
+                    ? t("common.confirm")
+                    : isEdit
+                      ? t("common.save")
+                      : t("common.create")}
               </Button>
             </div>
           </form>

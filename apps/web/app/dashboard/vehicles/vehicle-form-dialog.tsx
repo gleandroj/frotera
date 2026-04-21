@@ -54,6 +54,7 @@ import {
   type Customer,
   type CreateVehiclePayload,
   type UpdateVehiclePayload,
+  type CreateVehicleNewDevicePayload,
 } from "@/lib/frontend/api-client";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,7 @@ import { toast } from "sonner";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
+import { DeviceFormDialog } from "@/app/dashboard/devices/device-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
@@ -160,20 +162,7 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
         : z.string().min(1, t("vehicles.customerRequired")),
       trackerDeviceId: z.string().default(""),
       deviceOption: z.enum(["none", "existing", "new"]).default("none"),
-      newImei: z.string().default(""),
-      newDeviceName: z.string().default(""),
-      newSerialSat: z.string().default(""),
-      newEquipmentModel: z.string().default(""),
-      newIndividualPassword: z.string().default(""),
-      newCarrier: z.string().default(""),
-      newSimCardNumber: z.string().default(""),
-      newCellNumber: z.string().default(""),
-    })
-    .refine(
-      (data) =>
-        data.deviceOption !== "new" || (data.newImei?.trim() ?? "") !== "",
-      { message: t("vehicles.imeiRequired"), path: ["newImei"] }
-    );
+    });
 }
 
 function defaultValues(
@@ -207,14 +196,6 @@ function defaultValues(
     customerId: isEdit ? (vehicle?.customerId ?? "") : (defaultCustomerId ?? ""),
     trackerDeviceId: vehicle?.trackerDeviceId ?? "",
     deviceOption: "none",
-    newImei: "",
-    newDeviceName: "",
-    newSerialSat: "",
-    newEquipmentModel: "",
-    newIndividualPassword: "",
-    newCarrier: "",
-    newSimCardNumber: "",
-    newCellNumber: "",
   };
 }
 
@@ -254,6 +235,8 @@ export function VehicleFormDialog({
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
   const [customerFormOpen, setCustomerFormOpen] = useState(false);
+  const [deviceSheetOpen, setDeviceSheetOpen] = useState(false);
+  const [newDeviceData, setNewDeviceData] = useState<CreateVehicleNewDevicePayload | null>(null);
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(buildSchema(t, isEdit)),
@@ -281,6 +264,7 @@ export function VehicleFormDialog({
             : defaultCustomerId
         : defaultCustomerId;
     form.reset(defaultValues(vehicle, isEdit, effectiveDefault));
+    setNewDeviceData(null);
   }, [open, vehicle?.id]);
 
   useEffect(() => {
@@ -346,24 +330,16 @@ export function VehicleFormDialog({
       customerId: values.customerId?.trim() || undefined,
     };
 
+    if (values.deviceOption === "new" && !newDeviceData) {
+      toast.error(t("vehicles.imeiRequired"));
+      return;
+    }
+
     let payload: CreateVehiclePayload | UpdateVehiclePayload;
     if (isEdit) {
       payload = { ...base, trackerDeviceId: values.trackerDeviceId || undefined };
-    } else if (values.deviceOption === "new" && values.newImei?.trim()) {
-      payload = {
-        ...base,
-        newDevice: {
-          imei: values.newImei.trim(),
-          model: "X12_GT06",
-          name: values.newDeviceName?.trim() || undefined,
-          serialSat: values.newSerialSat?.trim() || undefined,
-          equipmentModel: values.newEquipmentModel?.trim() || undefined,
-          individualPassword: values.newIndividualPassword?.trim() || undefined,
-          carrier: values.newCarrier?.trim() || undefined,
-          simCardNumber: values.newSimCardNumber?.trim() || undefined,
-          cellNumber: values.newCellNumber?.trim() || undefined,
-        },
-      };
+    } else if (values.deviceOption === "new" && newDeviceData) {
+      payload = { ...base, newDevice: newDeviceData };
     } else if (values.deviceOption === "existing" && values.trackerDeviceId) {
       payload = { ...base, trackerDeviceId: values.trackerDeviceId };
     } else {
@@ -1004,129 +980,38 @@ export function VehicleFormDialog({
                   )}
 
                   {deviceOption === "new" && (
-                    <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-                      <p className="text-sm font-medium">{t("vehicles.sectionDevice")}</p>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="newImei"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.imei")} *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder={t("vehicles.imeiPlaceholder")}
-                                  className="font-mono"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newDeviceName"
-                          render={({ field }) => (
-                            <FormItem className="sm:col-span-2">
-                              <FormLabel>{t("vehicles.deviceNameOptional")}</FormLabel>
-                              <FormControl>
-                                <Input placeholder={t("common.name")} {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newEquipmentModel"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.equipmentModel")}</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ex: SUNT CH" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newSerialSat"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.serialSat")}</FormLabel>
-                              <FormControl>
-                                <Input className="font-mono" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newIndividualPassword"
-                          render={({ field }) => (
-                            <FormItem className="sm:col-span-2">
-                              <FormLabel>{t("vehicles.individualPassword")}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="password"
-                                  autoComplete="off"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    newDeviceData ? (
+                      <div className="rounded-lg border bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono text-sm font-medium truncate">
+                            {newDeviceData.imei}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {[newDeviceData.name, newDeviceData.carrier]
+                              .filter(Boolean)
+                              .join(" · ") || newDeviceData.model}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => setDeviceSheetOpen(true)}
+                        >
+                          {t("common.edit")}
+                        </Button>
                       </div>
-
-                      <p className="text-sm font-medium pt-2">
-                        {t("vehicles.sectionSimData")}
-                      </p>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="newCarrier"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.carrier")}</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ex: SMARTSIM" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newSimCardNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.simCardNumber")}</FormLabel>
-                              <FormControl>
-                                <Input className="font-mono" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="newCellNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("vehicles.cellNumber")}</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ex: 16995636896" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setDeviceSheetOpen(true)}
+                      >
+                        {t("devices.configureDevice")}
+                      </Button>
+                    )
                   )}
                 </div>
               )}
@@ -1153,9 +1038,17 @@ export function VehicleFormDialog({
             </div>
           </form>
         </Form>
-        <DrawerStackParentDim show={customerFormOpen} />
+        <DrawerStackParentDim show={customerFormOpen || deviceSheetOpen} />
       </SheetContent>
     </Sheet>
+
+    <DeviceFormDialog
+      open={deviceSheetOpen}
+      onOpenChange={setDeviceSheetOpen}
+      onConfirm={setNewDeviceData}
+      initialData={newDeviceData ?? undefined}
+      hideOverlay
+    />
 
     <CustomerFormDialog
       open={customerFormOpen}
