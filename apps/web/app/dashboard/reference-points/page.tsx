@@ -286,93 +286,100 @@ export default function ReferencePointsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 flex gap-2">
-          <Input
-            placeholder={t("common.searchByName")}
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="max-w-xs"
-          />
+      <div className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:flex-wrap md:items-end">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <span className="text-xs text-muted-foreground">{t("common.searchByName")}</span>
+            <Input
+              placeholder={t("common.searchByName")}
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <span className="text-xs text-muted-foreground">{t("common.status")}</span>
+            <Select value={listStatus} onValueChange={(v: any) => setListStatus(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("common.all")}</SelectItem>
+                <SelectItem value="ACTIVE">{t("common.active")}</SelectItem>
+                <SelectItem value="INACTIVE">{t("common.inactive")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Select value={listStatus} onValueChange={(v: any) => setListStatus(v)}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("common.all")}</SelectItem>
-            <SelectItem value="ACTIVE">{t("common.active")}</SelectItem>
-            <SelectItem value="INACTIVE">{t("common.inactive")}</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {loading ? (
-        <p className="text-muted-foreground">{t("common.loading")}</p>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Map */}
-          <div className="lg:col-span-2">
-            <div className="h-[500px] rounded-lg overflow-hidden border">
-              <ReferencePointsMapDynamic
-                points={points}
-                onMapClick={sheetOpen ? handleMapClick : undefined}
-                latitude={sheetOpen && latitude ? parseFloat(latitude) : undefined}
-                longitude={sheetOpen && longitude ? parseFloat(longitude) : undefined}
-              />
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            <div className="text-sm font-medium">
-              {points.length} Ponto{points.length !== 1 ? "s" : ""}
-            </div>
-            {points.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("referencePoints.noPoints")}</p>
-            ) : (
-              points.map((point) => (
-                <div key={point.id} className="rounded-lg border p-3 space-y-2 hover:bg-muted/50">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{point.name}</p>
-                      <p className="text-xs text-muted-foreground">{point.customer?.name || "—"}</p>
-                      {point.address && (
-                        <p className="text-xs text-muted-foreground truncate">{point.address}</p>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      {typeOptions.find((opt) => opt.value === point.type)?.label}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleOpenSheet(point)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-destructive"
-                        onClick={() => handleDelete(point.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Map — always mounted to avoid flicker on filter changes */}
+        <div className="lg:col-span-2">
+          <div className="h-[500px] rounded-lg overflow-hidden border">
+            <ReferencePointsMapDynamic
+              points={points}
+              onMapClick={sheetOpen ? handleMapClick : undefined}
+              latitude={sheetOpen && latitude ? parseFloat(latitude) : undefined}
+              longitude={sheetOpen && longitude ? parseFloat(longitude) : undefined}
+            />
           </div>
         </div>
-      )}
+
+        {/* List */}
+        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : (
+            <>
+              <div className="text-sm font-medium">
+                {points.length} Ponto{points.length !== 1 ? "s" : ""}
+              </div>
+              {points.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("referencePoints.noPoints")}</p>
+              ) : (
+                points.map((point) => (
+                  <div key={point.id} className="rounded-lg border p-3 space-y-2 hover:bg-muted/50">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{point.name}</p>
+                        <p className="text-xs text-muted-foreground">{point.customer?.name || "—"}</p>
+                        {point.address && (
+                          <p className="text-xs text-muted-foreground truncate">{point.address}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {typeOptions.find((opt) => opt.value === point.type)?.label}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleOpenSheet(point)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive"
+                          onClick={() => handleDelete(point.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Form Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -436,7 +443,6 @@ export default function ReferencePointsPage() {
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         placeholder={t("referencePoints.addressSearchPlaceholder")}
-                        readOnly={!editingPoint}
                       />
                     </div>
                   </PopoverTrigger>

@@ -82,7 +82,9 @@
     "createNewCompany": "Nova empresa",
     "forbidden": "Acesso não autorizado",
     "reports": "Relatórios",
-    "reportsDescription": "Visualize todos os relatórios disponíveis em um único local"
+    "reportsDescription": "Visualize todos os relatórios disponíveis em um único local",
+    "searchByName": "Pesquisar por nome",
+    "searching": "Pesquisando..."
   },
   "errors": {
     "api": {
@@ -2036,6 +2038,11 @@
     "customer": "Cliente",
     "noCustomer": "Nenhum",
     "noPoints": "Nenhum ponto de referência.",
+    "address": "Endereço",
+    "addressSearchPlaceholder": "Digite um endereço para buscar...",
+    "searchAddress": "Pesquisar endereço...",
+    "selectCompany": "Selecionar empresa",
+    "searchCompany": "Pesquisar empresa...",
     "types": {
       "DEPOT": "Depósito",
       "CUSTOMER_SITE": "Local do Cliente",
