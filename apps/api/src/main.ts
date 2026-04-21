@@ -108,4 +108,13 @@ async function bootstrap() {
   console.log(`Application is running on: http://localhost:${port}`);
 }
 
-bootstrap();
+// Set a timeout to kill the process if bootstrap hangs
+setTimeout(() => {
+  console.error('Bootstrap timeout - app hung for 15 seconds');
+  process.exit(1);
+}, 15000);
+
+bootstrap().catch((err) => {
+  console.error('Failed to start application:', err);
+  process.exit(1);
+});

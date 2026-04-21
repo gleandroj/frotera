@@ -27,9 +27,16 @@ export class PrismaService
   async onModuleInit() {
     try {
       this.logger.log("Connecting to database...");
-      await this.$connect();
+      await Promise.race([
+        this.$connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Database connection timeout after 10s")), 10000)
+        ),
+      ]);
       this.logger.log("Successfully connected to database");
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("🔴 Failed to connect to database:", message);
       this.logger.error("Failed to connect to database", error);
       throw error;
     }

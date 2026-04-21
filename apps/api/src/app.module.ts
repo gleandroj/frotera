@@ -31,7 +31,7 @@ import { TripsModule } from "./trips/trips.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: "../../.env",
+      envFilePath: [".env.local", ".env"],
     }),
     ScheduleModule.forRoot(),
     SettingsModule,
