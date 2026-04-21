@@ -15,13 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import type { Vehicle } from "@/lib/frontend/api-client";
-import { ArrowLeft, Info, MapPin, Pencil, ClipboardList, Fuel, FileText, Users, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Info, MapPin, Pencil, ClipboardList, Fuel, FileText, Users, AlertTriangle, Play } from "lucide-react";
 import { VehicleFormDialog } from "../vehicle-form-dialog";
 import { VehicleChecklistsTab } from "./tabs/vehicle-checklists-tab";
 import { VehicleFuelTab } from "./tabs/vehicle-fuel-tab";
 import { VehicleDocumentsTab } from "./tabs/vehicle-documents-tab";
 import { VehicleDriversTab } from "./tabs/vehicle-drivers-tab";
 import { VehicleIncidentsTab } from "./tabs/vehicle-incidents-tab";
+import { VehicleReplayTab } from "./tabs/vehicle-replay-tab";
 
 const DeviceMapDynamic = dynamic(
   () =>
@@ -79,6 +80,7 @@ export default function VehicleDetailPage() {
   const canViewDocuments = can(Module.DOCUMENTS, Action.VIEW);
   const canViewDrivers = can(Module.DRIVERS, Action.VIEW);
   const canViewIncidents = can(Module.INCIDENTS, Action.VIEW);
+  const canViewTracking = can(Module.TRACKING, Action.VIEW);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [initialHistory, setInitialHistory] = useState<PositionPoint[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -231,6 +233,12 @@ export default function VehicleDetailPage() {
               <MapPin className="h-4 w-4" />
               {t("vehicles.tabs.tracking")}
             </TabsTrigger>
+            {canViewTracking && vehicle.trackerDevice && (
+              <TabsTrigger value="replay" className={triggerClassName}>
+                <Play className="h-4 w-4" />
+                {t("vehicles.tabs.replay")}
+              </TabsTrigger>
+            )}
             {canViewChecklist && (
               <TabsTrigger value="checklists" className={triggerClassName}>
                 <ClipboardList className="h-4 w-4" />
@@ -480,6 +488,16 @@ export default function VehicleDetailPage() {
               </div>
             )}
           </TabsContent>
+
+          {canViewTracking && vehicle.trackerDevice && activeTab === "replay" && (
+            <TabsContent value="replay" className="mt-6">
+              <VehicleReplayTab
+                vehicleId={vehicleId}
+                deviceId={deviceId!}
+                organizationId={orgId}
+              />
+            </TabsContent>
+          )}
 
           {canViewChecklist && activeTab === "checklists" && (
             <TabsContent value="checklists" className="mt-6">

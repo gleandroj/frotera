@@ -1651,3 +1651,87 @@ export const publicChecklistAPI = {
     );
   },
 };
+
+// ── TRACKING REPORTS & REFERENCE POINTS ──────────────────────────────────────
+
+export interface VehicleTrip {
+  id: string;
+  organizationId: string;
+  vehicleId: string;
+  deviceId: string;
+  driverId?: string | null;
+  startedAt: string;
+  endedAt: string;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  startAddress?: string | null;
+  endAddress?: string | null;
+  distanceMeters: number;
+  maxSpeedKmh?: number | null;
+  avgSpeedKmh?: number | null;
+  durationSeconds: number;
+  idleSeconds: number;
+  pointCount: number;
+  vehicle?: { id: string; name?: string | null; plate?: string | null };
+}
+
+export interface VehicleStop {
+  id: string;
+  vehicleId: string;
+  deviceId: string;
+  startedAt: string;
+  endedAt?: string | null;
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+  durationSeconds?: number | null;
+  vehicle?: { id: string; name?: string | null; plate?: string | null };
+}
+
+export interface ReferencePoint {
+  id: string;
+  organizationId: string;
+  customerId?: string | null;
+  name: string;
+  description?: string | null;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  type: 'DEPOT' | 'CUSTOMER_SITE' | 'FUEL_STATION' | 'WORKSHOP' | 'OTHER';
+  active: boolean;
+  createdAt: string;
+  customer?: { id: string; name: string } | null;
+}
+
+export const trackingReportsAPI = {
+  listPositions: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; limit?: number; offset?: number }) =>
+    externalApi.get<{ items: unknown[]; total: number }>(
+      `/api/organizations/${organizationId}/reports/positions`,
+      { params }
+    ),
+  listTrips: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; driverId?: string; limit?: number; offset?: number }) =>
+    externalApi.get<{ items: VehicleTrip[]; total: number }>(
+      `/api/organizations/${organizationId}/reports/trips`,
+      { params }
+    ),
+  listStops: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; limit?: number; offset?: number }) =>
+    externalApi.get<{ items: VehicleStop[]; total: number }>(
+      `/api/organizations/${organizationId}/reports/stops`,
+      { params }
+    ),
+  detectTrips: (organizationId: string, body: { vehicleId: string; from: string; to: string }) =>
+    externalApi.post(`/api/organizations/${organizationId}/reports/trips/detect`, body),
+};
+
+export const referencePointsAPI = {
+  list: (organizationId: string, params?: { customerId?: string; active?: boolean }) =>
+    externalApi.get<ReferencePoint[]>(`/api/organizations/${organizationId}/reference-points`, { params }),
+  create: (organizationId: string, data: Omit<ReferencePoint, 'id' | 'organizationId' | 'createdAt' | 'customer'>) =>
+    externalApi.post<ReferencePoint>(`/api/organizations/${organizationId}/reference-points`, data),
+  update: (organizationId: string, id: string, data: Partial<Omit<ReferencePoint, 'id' | 'organizationId' | 'createdAt' | 'customer'>>) =>
+    externalApi.patch<ReferencePoint>(`/api/organizations/${organizationId}/reference-points/${id}`, data),
+  remove: (organizationId: string, id: string) =>
+    externalApi.delete(`/api/organizations/${organizationId}/reference-points/${id}`),
+};

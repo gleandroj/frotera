@@ -1,0 +1,110 @@
+"use client";
+import { useEffect, useCallback } from "react";
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import type { ReferencePoint } from "@/lib/frontend/api-client";
+
+// Fix default Leaflet marker icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+const defaultCenter: [number, number] = [-15.77972, -47.92972];
+
+function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!onMapClick) return;
+
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [map, onMapClick]);
+
+  return null;
+}
+
+function FormMarker({
+  latitude,
+  longitude,
+}: {
+  latitude?: number;
+  longitude?: number;
+}) {
+  if (!latitude || !longitude) return null;
+
+  return (
+    <Marker position={[latitude, longitude]}>
+      <Popup>Nova localização</Popup>
+    </Marker>
+  );
+}
+
+interface Props {
+  points: ReferencePoint[];
+  onMapClick?: (lat: number, lng: number) => void;
+  latitude?: number;
+  longitude?: number;
+}
+
+export function ReferencePointsMap({ points, onMapClick, latitude, longitude }: Props) {
+  const center =
+    points.length > 0
+      ? ([points[0].latitude, points[0].longitude] as [number, number])
+      : defaultCenter;
+
+  return (
+    <MapContainer
+      center={center}
+      zoom={14}
+      scrollWheelZoom
+      style={{ height: "100%", width: "100%" }}
+      className="rounded-lg"
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+
+      {/* Reference points circles */}
+      {points.map((point) => (
+        <Circle
+          key={point.id}
+          center={[point.latitude, point.longitude]}
+          radius={point.radiusMeters}
+          color={point.active ? "#3b82f6" : "#9ca3af"}
+          fill
+          fillColor={point.active ? "#93c5fd" : "#e5e7eb"}
+          fillOpacity={0.3}
+          weight={2}
+        >
+          <Popup>
+            <div className="text-sm">
+              <p className="font-medium">{point.name}</p>
+              {point.customer && <p className="text-xs text-muted-foreground">{point.customer.name}</p>}
+              <p className="text-xs text-muted-foreground">
+                Raio: {point.radiusMeters}m
+              </p>
+            </div>
+          </Popup>
+        </Circle>
+      ))}
+
+      {/* Form marker for new/editing point */}
+      <FormMarker latitude={latitude} longitude={longitude} />
+
+      {/* Click handler */}
+      <MapClickHandler onMapClick={onMapClick} />
+    </MapContainer>
+  );
+}

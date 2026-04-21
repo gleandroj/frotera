@@ -260,6 +260,7 @@
       "documents": "Documentos",
       "drivers": "Motoristas",
       "incidents": "Ocorrências",
+      "replay": "Replay",
       "emptyChecklists": "Nenhum checklist para este veículo.",
       "emptyFuel": "Nenhum abastecimento para este veículo.",
       "emptyDocuments": "Nenhum documento para este veículo.",
@@ -974,7 +975,9 @@
       "companyFleetSettings": "Empresa e telemetria",
       "trackerDiscoveries": "Rastreadores Conectados",
       "tracking": "Rastreamento",
-      "help": "Ajuda"
+      "help": "Ajuda",
+      "trackingReports": "Relatórios de Rastreamento",
+      "referencePoints": "Pontos de Referência"
     },
     "footer": {
       "copyright": "© {{year}} Frotera",
@@ -1930,5 +1933,75 @@
     "viewVehicle": "Ver veículo",
     "viewFuel": "Abastecimentos",
     "viewChecklist": "Checklists"
+  },
+  "trackingReports": {
+    "title": "Relatórios de Rastreamento",
+    "description": "Análise de posições, viagens e paradas dos veículos.",
+    "noPermission": "Sem permissão para acessar relatórios de rastreamento.",
+    "selectVehicle": "Selecione um veículo",
+    "allVehicles": "Todos os veículos",
+    "recordsFound": "{{count}} registros encontrados",
+    "searching": "Buscando...",
+    "search": "Buscar",
+    "processing": "Processando...",
+    "startDate": "Início",
+    "endDate": "Fim",
+    "dateTime": "Data/Hora",
+    "heading": "Direção",
+    "speed": "Velocidade",
+    "duration": "Duração",
+    "distance": "Distância",
+    "ignition": "Ignição",
+    "ignitionOn": "Ligada",
+    "ignitionOff": "Desligada",
+    "positions": {
+      "title": "Histórico de Posições",
+      "subtitle": "Posições registradas com filtros",
+      "latitude": "Latitude",
+      "longitude": "Longitude"
+    },
+    "trips": {
+      "title": "Viagens e Paradas",
+      "subtitle": "Relatório de viagens e paradas detectadas",
+      "description": "Relatório de viagens realizadas e paradas detectadas pelo sistema.",
+      "tabTrips": "Viagens ({{count}})",
+      "tabStops": "Paradas ({{count}})",
+      "maxSpeed": "Vel. Máx",
+      "avgSpeed": "Vel. Média",
+      "origin": "Origem",
+      "destination": "Destino",
+      "reprocess": "Reprocessar",
+      "noTripsMessage": "Nenhuma viagem encontrada. Use o botão \"Reprocessar\" para detectar viagens.",
+      "noStopsMessage": "Nenhuma parada encontrada."
+    },
+    "replay": {
+      "selectPeriodMessage": "Selecione um período e clique em Buscar."
+    }
+  },
+  "referencePoints": {
+    "title": "Pontos de Referência",
+    "description": "Gerenciar locais importantes para rastreamento",
+    "newPoint": "Novo Ponto",
+    "editPoint": "Editar Ponto de Referência",
+    "newPointForm": "Novo Ponto de Referência",
+    "mapInstructions": "Clique no mapa para definir a localização ou preencha manualmente",
+    "namePlaceholder": "Ex: Depósito Principal",
+    "descriptionPlaceholder": "Detalhes sobre este ponto",
+    "typeLabel": "Tipo",
+    "latitude": "Latitude",
+    "latitudePlaceholder": "-15.77972",
+    "longitude": "Longitude",
+    "longitudePlaceholder": "-47.92972",
+    "radius": "Raio (metros)",
+    "customer": "Cliente",
+    "noCustomer": "Nenhum",
+    "noPoints": "Nenhum ponto de referência.",
+    "types": {
+      "DEPOT": "Depósito",
+      "CUSTOMER_SITE": "Local do Cliente",
+      "FUEL_STATION": "Posto de Combustível",
+      "WORKSHOP": "Oficina",
+      "OTHER": "Outro"
+    }
   }
 }

@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
+  BarChart2,
   BarChart3,
   Bell,
   Building,
@@ -28,6 +29,7 @@ import {
   HelpCircle,
   Home,
   MapPin,
+  MapPinned,
   Radio,
   SlidersHorizontal,
   User,
@@ -87,6 +89,8 @@ export function AppSidebar() {
     ],
     Action.VIEW,
   );
+  const canViewTrackingReports = can(Module.REPORTS_TRACKING, Action.VIEW);
+  const canViewReferencePoints = can(Module.REFERENCE_POINTS, Action.VIEW);
 
   const isMember = currentOrganization
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
@@ -216,6 +220,22 @@ export function AppSidebar() {
         current: pathname.startsWith("/dashboard/fuel/reports"),
       });
     }
+    if (canViewTrackingReports) {
+      items.push({
+        name: t("navigation.items.trackingReports"),
+        href: "/dashboard/vehicles/reports",
+        icon: BarChart2,
+        current: pathname.startsWith("/dashboard/vehicles/reports"),
+      });
+    }
+    if (canViewReferencePoints) {
+      items.push({
+        name: t("navigation.items.referencePoints"),
+        href: "/dashboard/reference-points",
+        icon: MapPinned,
+        current: pathname.startsWith("/dashboard/reference-points"),
+      });
+    }
     if (canViewTelemetry) {
       items.push({
         name: t("navigation.items.telemetry"),
@@ -238,7 +258,7 @@ export function AppSidebar() {
     t, pathname, canViewTracking, canViewDashboard, canViewVehicles,
     canAccessTrackerHelp,
     canViewChecklist, canViewIncidents, canViewDrivers, canViewDocuments,
-    canViewFuel, canViewAnyFuelReport, canViewTelemetry, canViewCustomers,
+    canViewFuel, canViewAnyFuelReport, canViewTrackingReports, canViewReferencePoints, canViewTelemetry, canViewCustomers,
     unreadTelemetry,
   ]);
 
