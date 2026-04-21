@@ -346,12 +346,11 @@ export default function ReferencePointsPage() {
 
             <div>
               <Label htmlFor="customer">{t("referencePoints.customer")}</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
+              <Select value={customerId || ""} onValueChange={(v) => setCustomerId(v || "")}>
                 <SelectTrigger id="customer">
                   <SelectValue placeholder={t("referencePoints.noCustomer")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t("referencePoints.noCustomer")}</SelectItem>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
