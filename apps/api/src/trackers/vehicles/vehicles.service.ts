@@ -87,29 +87,37 @@ export class VehiclesService {
       undefined,
     );
 
-    const vehicle = await this.prisma.vehicle.create({
-      data: {
-        organizationId,
-        name: dto.name,
-        plate: dto.plate,
-        serial: dto.serial,
-        color: dto.color,
-        year: dto.year,
-        renavam: dto.renavam,
-        chassis: dto.chassis,
-        vehicleType: dto.vehicleType,
-        vehicleSpecies: dto.vehicleSpecies,
-        vehicleBodyType: dto.vehicleBodyType,
-        vehicleTraction: dto.vehicleTraction,
-        vehicleUseCategory: dto.vehicleUseCategory,
-        inactive: dto.inactive ?? false,
-        speedLimit: dto.speedLimit ?? undefined,
-        initialOdometerKm: dto.initialOdometerKm,
-        notes: dto.notes,
-        trackerDeviceId,
-        customerId,
-      },
-    });
+    const vehicleData = {
+      organizationId,
+      name: dto.name,
+      plate: dto.plate,
+      serial: dto.serial,
+      color: dto.color,
+      year: dto.year,
+      renavam: dto.renavam,
+      chassis: dto.chassis,
+      vehicleType: dto.vehicleType,
+      vehicleSpecies: dto.vehicleSpecies,
+      vehicleBodyType: dto.vehicleBodyType,
+      vehicleTraction: dto.vehicleTraction,
+      vehicleUseCategory: dto.vehicleUseCategory,
+      inactive: dto.inactive ?? false,
+      speedLimit: dto.speedLimit ?? undefined,
+      initialOdometerKm: dto.initialOdometerKm,
+      notes: dto.notes,
+      trackerDeviceId,
+      customerId,
+    };
+
+    const vehicle = trackerDeviceId
+      ? await this.prisma.$transaction(async (tx) => {
+          await tx.vehicle.updateMany({
+            where: { organizationId, trackerDeviceId },
+            data: { trackerDeviceId: null },
+          });
+          return tx.vehicle.create({ data: vehicleData });
+        })
+      : await this.prisma.vehicle.create({ data: vehicleData });
     const withDevice = await this.prisma.vehicle.findUnique({
       where: { id: vehicle.id },
       include: { trackerDevice: true, customer: true },
