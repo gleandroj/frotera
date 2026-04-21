@@ -111,6 +111,9 @@ export class TrackerPersistCronService {
         lbsMnc?: number;
         lbsLac?: number;
         lbsCellId?: number;
+        receivedAt?: Date;
+        odometerKm?: number;
+        city?: string;
       }> = [];
       const idsToAck: string[] = [];
 
@@ -133,6 +136,9 @@ export class TrackerPersistCronService {
           lbsMnc,
           lbsLac,
           lbsCellId,
+          receivedAt,
+          odometerKm,
+          city,
         } = message;
         if (!deviceId || !latitude || !longitude || !recordedAt) {
           this.logger.warn(
@@ -159,6 +165,9 @@ export class TrackerPersistCronService {
           lbsMnc: lbsMnc ? parseInt(lbsMnc, 10) : undefined,
           lbsLac: lbsLac ? parseInt(lbsLac, 10) : undefined,
           lbsCellId: lbsCellId ? parseInt(lbsCellId, 10) : undefined,
+          receivedAt: receivedAt ? new Date(receivedAt) : undefined,
+          odometerKm: odometerKm ? parseFloat(odometerKm) : undefined,
+          city: city || undefined,
         });
         idsToAck.push(id);
       }

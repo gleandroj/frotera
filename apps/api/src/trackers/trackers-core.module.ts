@@ -12,6 +12,7 @@ import { TrackerDevicesService } from "./devices/tracker-devices.service";
 import { TrackerDiscoveryService } from "./discovery/tracker-discovery.service";
 import { VehiclesService } from "./vehicles/vehicles.service";
 import { TRACKER_REDIS_SUB } from "./positions/tracker-positions-stream.service";
+import { GeocodingService } from "@/geocoding/geocoding.service";
 
 @Module({
   imports: [ConfigModule, PrismaModule],
@@ -40,12 +41,14 @@ import { TRACKER_REDIS_SUB } from "./positions/tracker-positions-stream.service"
     TrackerDevicesService,
     TrackerDiscoveryService,
     VehiclesService,
+    GeocodingService,
   ],
   exports: [
     TrackerDevicesService,
     TrackerDiscoveryService,
     VehiclesService,
     TrackerRedisWriterService,
+    GeocodingService,
     TRACKER_REDIS,
     TRACKER_REDIS_SUB,
   ],

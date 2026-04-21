@@ -158,7 +158,11 @@ export class TrackerDevicesService {
         speed: fromRedis.speed ?? null,
         heading: fromRedis.heading ?? null,
         ignitionOn: fromRedis.ignitionOn ?? null,
+        voltageLevel: fromRedis.voltageLevel ?? null,
         recordedAt: fromRedis.recordedAt,
+        receivedAt: fromRedis.receivedAt ?? null,
+        odometerKm: fromRedis.odometerKm ?? null,
+        city: fromRedis.city ?? null,
         createdAt: new Date().toISOString(),
       };
     }
@@ -201,6 +205,7 @@ export class TrackerDevicesService {
     simCardNumber?: string | null;
     cellNumber?: string | null;
     connectedAt?: Date | null;
+    odometerSource?: string;
     createdAt: Date;
     updatedAt: Date;
     vehicle?: { id: string } | null;
@@ -218,6 +223,7 @@ export class TrackerDevicesService {
       simCardNumber: d.simCardNumber ?? undefined,
       cellNumber: d.cellNumber ?? undefined,
       connectedAt: d.connectedAt != null ? d.connectedAt.toISOString() : null,
+      odometerSource: d.odometerSource ?? undefined,
       vehicleId: d.vehicle?.id,
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
@@ -234,6 +240,10 @@ export class TrackerDevicesService {
     heading: number | null;
     ignitionOn?: boolean | null;
     recordedAt: Date;
+    receivedAt?: Date | null;
+    voltageLevel?: number | null;
+    odometerKm?: number | null;
+    city?: string | null;
     createdAt: Date;
   }): PositionResponseDto {
     return {
@@ -246,6 +256,10 @@ export class TrackerDevicesService {
       heading: p.heading ?? undefined,
       ignitionOn: p.ignitionOn ?? null,
       recordedAt: p.recordedAt.toISOString(),
+      receivedAt: p.receivedAt?.toISOString() ?? null,
+      voltageLevel: p.voltageLevel ?? null,
+      odometerKm: p.odometerKm ?? null,
+      city: p.city ?? null,
       createdAt: p.createdAt.toISOString(),
     };
   }

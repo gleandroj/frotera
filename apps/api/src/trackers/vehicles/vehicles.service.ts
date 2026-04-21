@@ -323,6 +323,7 @@ export class VehiclesService {
           color: v.color ?? null,
           vehicleType: v.vehicleType ?? null,
           inactive: v.inactive,
+          initialOdometerKm: v.initialOdometerKm ?? null,
           customer: v.customer ? { id: v.customer.id, name: v.customer.name } : null,
           trackerDevice: v.trackerDevice
             ? {

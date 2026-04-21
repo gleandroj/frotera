@@ -2,8 +2,19 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { RedisClientType } from "redis";
 import { NormalizedPosition } from "../dto/index";
+import { GeocodingService } from "@/geocoding/geocoding.service";
 
 export const TRACKER_REDIS = "TRACKER_REDIS";
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 @Injectable()
 export class TrackerRedisWriterService {
@@ -14,6 +25,7 @@ export class TrackerRedisWriterService {
   constructor(
     @Inject(TRACKER_REDIS) private readonly redis: RedisClientType,
     private readonly config: ConfigService,
+    private readonly geocoding: GeocodingService,
   ) {
     this.streamKey =
       this.config.get<string>("TRACKER_REDIS_STREAM_KEY") ?? "tracker:positions";
@@ -50,6 +62,37 @@ export class TrackerRedisWriterService {
     const lac = position.lbsLac != null ? String(position.lbsLac) : "";
     const cell = position.lbsCellId != null ? String(position.lbsCellId) : "";
 
+    // Odometer: get last position from hash and accumulate
+    const lastHash = await this.redis.hGetAll(lastKey);
+    let odometerKm = 0;
+    if (lastHash.latitude && lastHash.longitude) {
+      const delta = haversineKm(
+        parseFloat(lastHash.latitude), parseFloat(lastHash.longitude),
+        position.latitude, position.longitude,
+      );
+      odometerKm = parseFloat(lastHash.odometerKm || '0') + delta;
+    } else if (lastHash.odometerKm) {
+      odometerKm = parseFloat(lastHash.odometerKm);
+    }
+    const odo = String(odometerKm);
+
+    // City: use cached geocode from Redis (fire-and-forget update if missing)
+    let city = lastHash.latitude === lat && lastHash.longitude === lng
+      ? (lastHash.city || '')
+      : '';
+    const geoKey = `geocode:reverse:${Math.round(position.latitude * 10000) / 10000}:${Math.round(position.longitude * 10000) / 10000}`;
+    const cachedCity = await this.redis.get(geoKey);
+    if (cachedCity !== null && cachedCity !== '') {
+      city = cachedCity;
+    } else if (cachedCity === null) {
+      // Trigger geocoding async without blocking
+      this.geocoding.reverseGeocode(position.latitude, position.longitude)
+        .then((result) => {
+          if (result) this.redis.hSet(lastKey, 'city', result);
+        })
+        .catch(() => {});
+    }
+
     await this.redis.sendCommand([
       "XADD", this.streamKey, "*",
       "deviceId", deviceId,
@@ -72,6 +115,8 @@ export class TrackerRedisWriterService {
       "lbsMnc", mnc,
       "lbsLac", lac,
       "lbsCellId", cell,
+      "odometerKm", odo,
+      "city", city,
     ]);
 
     await this.redis.hSet(lastKey, {
@@ -82,6 +127,10 @@ export class TrackerRedisWriterService {
       heading: hdg,
       recordedAt: rec,
       receivedAt: rcv,
+      ignitionOn: ign,
+      voltageLevel: volt,
+      odometerKm: odo,
+      city,
       deviceId,
       imei,
     });
@@ -94,6 +143,11 @@ export class TrackerRedisWriterService {
       speed: position.speed ?? null,
       heading: position.heading ?? null,
       recordedAt: position.recordedAt,
+      receivedAt: rcv,
+      ignitionOn: position.ignitionOn ?? null,
+      voltageLevel: position.voltageLevel ?? null,
+      odometerKm,
+      city: city || null,
     });
     await this.redis.publish(pubChannel, payload);
 
@@ -143,6 +197,10 @@ export class TrackerRedisWriterService {
       heading: data.heading ? parseFloat(data.heading) : undefined,
       recordedAt: data.recordedAt ?? new Date().toISOString(),
       receivedAt: data.receivedAt || undefined,
+      ignitionOn: data.ignitionOn === 'true' ? true : data.ignitionOn === 'false' ? false : undefined,
+      voltageLevel: data.voltageLevel ? parseInt(data.voltageLevel, 10) : undefined,
+      odometerKm: data.odometerKm ? parseFloat(data.odometerKm) : undefined,
+      city: data.city || undefined,
     };
   }
 }

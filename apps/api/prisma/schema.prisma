@@ -217,6 +217,13 @@ model Vehicle {
   @@map("vehicles")
 }
 
+enum OdometerSource {
+  CALCULATED
+  DEVICE
+
+  @@map("odometer_source")
+}
+
 model TrackerDevice {
   id                  String        @id @default(cuid())
   organizationId      String
@@ -231,6 +238,7 @@ model TrackerDevice {
   cellNumber          String?       // N. Cel.
   /** Set when device connects to TCP server; null when disconnected. */
   connectedAt         DateTime?
+  odometerSource      OdometerSource @default(CALCULATED)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -268,6 +276,9 @@ model DevicePosition {
   speed       Float?
   heading     Float?
   recordedAt  DateTime
+  receivedAt  DateTime?
+  odometerKm  Float?
+  city        String?
   createdAt   DateTime @default(now())
   // GT06 status fields
   ignitionOn  Boolean?
@@ -283,6 +294,7 @@ model DevicePosition {
 
   device TrackerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
+  @@index([deviceId, receivedAt])
   @@index([deviceId, recordedAt])
   @@map("device_positions")
 }

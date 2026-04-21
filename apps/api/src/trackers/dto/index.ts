@@ -43,6 +43,9 @@ export interface NormalizedPosition {
   lbsMnc?: number;
   lbsLac?: number;
   lbsCellId?: number;
+  odometerKm?: number;      // GPS-accumulated or device odometer
+  city?: string;             // reverse geocoded address
+  deviceOdometerKm?: number; // raw odometer from device packet (if available)
 }
 
 // ─── Devices ─────────────────────────────────────────────────────────────────
@@ -84,6 +87,9 @@ export class TrackerDeviceResponseDto {
   /** Set when device is connected to the tracker TCP server; null when disconnected. */
   @ApiPropertyOptional({ type: String, nullable: true })
   connectedAt?: string | null;
+
+  @ApiPropertyOptional({ enum: ['CALCULATED', 'DEVICE'] })
+  odometerSource?: string | null;
 
   @ApiPropertyOptional()
   vehicleId?: string | null;
@@ -175,6 +181,11 @@ export class UpdateTrackerDeviceDto {
   @IsOptional()
   @IsString()
   cellNumber?: string;
+
+  @ApiPropertyOptional({ enum: ['CALCULATED', 'DEVICE'], description: 'Odometer source: CALCULATED (GPS Haversine) or DEVICE (raw from device packet)' })
+  @IsOptional()
+  @IsIn(['CALCULATED', 'DEVICE'])
+  odometerSource?: string;
 }
 
 // ─── Positions ───────────────────────────────────────────────────────────────
@@ -206,6 +217,18 @@ export class PositionResponseDto {
 
   @ApiProperty()
   recordedAt: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  receivedAt?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  voltageLevel?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  odometerKm?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  city?: string | null;
 
   @ApiProperty()
   createdAt: string;
@@ -262,6 +285,9 @@ export class FleetVehicleStatusDto {
 
   @ApiProperty()
   inactive: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  initialOdometerKm?: number | null;
 
   @ApiPropertyOptional({ type: () => ({ id: String, name: String }), nullable: true })
   customer?: { id: string; name: string } | null;

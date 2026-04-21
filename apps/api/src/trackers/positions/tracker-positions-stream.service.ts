@@ -12,6 +12,11 @@ export interface PositionPayload {
   speed: number | null;
   heading: number | null;
   recordedAt: string;
+  receivedAt: string | null;
+  ignitionOn: boolean | null;
+  voltageLevel: number | null;
+  odometerKm: number | null;
+  city: string | null;
 }
 
 const ROOM_PREFIX = "device:";
