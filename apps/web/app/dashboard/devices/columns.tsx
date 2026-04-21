@@ -81,7 +81,11 @@ export function getDeviceColumns(
       accessorKey: "model",
       meta: { labelKey: "devices.model" },
       header: t("devices.model"),
-      cell: ({ row }) => <span>{row.original.model}</span>,
+      cell: ({ row }) => {
+        const model = row.original.model;
+        const label = model === "X12_GT06" ? "GT06" : model;
+        return <span>{label}</span>;
+      },
     },
     {
       accessorKey: "carrier",

@@ -77,7 +77,7 @@ const editSchema = z.object({
 
 const createSchema = editSchema.extend({
   imei: z.string().min(1, "IMEI é obrigatório"),
-  model: z.string().min(1, "Modelo é obrigatório"),
+  model: z.string().min(1, "Protocolo é obrigatório"),
 });
 
 type FormValues = z.infer<typeof createSchema>;
@@ -265,7 +265,7 @@ export function DeviceFormDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="X12_GT06">X12 GT06</SelectItem>
+                          <SelectItem value="X12_GT06">GT06</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
