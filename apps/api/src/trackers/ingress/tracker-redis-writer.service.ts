@@ -3,8 +3,9 @@ import { ConfigService } from "@nestjs/config";
 import type { RedisClientType } from "redis";
 import { NormalizedPosition } from "../dto/index";
 import { GeocodingService } from "@/geocoding/geocoding.service";
+import { TRACKER_REDIS } from "./tracker-redis.tokens";
 
-export const TRACKER_REDIS = "TRACKER_REDIS";
+export { TRACKER_REDIS };
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;

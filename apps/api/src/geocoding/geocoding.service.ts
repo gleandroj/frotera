@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RedisClientType } from 'redis';
-import { TRACKER_REDIS } from '@/trackers/ingress/tracker-redis-writer.service';
+import { TRACKER_REDIS } from '@/trackers/ingress/tracker-redis.tokens';
 
 @Injectable()
 export class GeocodingService {
