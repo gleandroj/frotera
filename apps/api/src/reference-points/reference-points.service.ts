@@ -6,12 +6,13 @@ import { CreateReferencePointDto, UpdateReferencePointDto } from './dto/referenc
 export class ReferencePointsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(organizationId: string, params?: { customerId?: string; active?: boolean }) {
+  async findAll(organizationId: string, params?: { customerId?: string; active?: boolean; name?: string }) {
     return this.prisma.referencePoint.findMany({
       where: {
         organizationId,
         ...(params?.customerId ? { customerId: params.customerId } : {}),
         ...(params?.active !== undefined ? { active: params.active } : {}),
+        ...(params?.name ? { name: { contains: params.name, mode: 'insensitive' } } : {}),
       },
       include: {
         customer: { select: { id: true, name: true } },
@@ -28,6 +29,7 @@ export class ReferencePointsService {
         description: dto.description,
         latitude: dto.latitude,
         longitude: dto.longitude,
+        address: dto.address ?? null,
         radiusMeters: dto.radiusMeters ?? 100,
         type: dto.type ?? 'OTHER',
         customerId: dto.customerId ?? null,
@@ -52,6 +54,7 @@ export class ReferencePointsService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.latitude !== undefined && { latitude: dto.latitude }),
         ...(dto.longitude !== undefined && { longitude: dto.longitude }),
+        ...(dto.address !== undefined && { address: dto.address }),
         ...(dto.radiusMeters !== undefined && { radiusMeters: dto.radiusMeters }),
         ...(dto.type !== undefined && { type: dto.type }),
         ...(dto.customerId !== undefined && { customerId: dto.customerId }),

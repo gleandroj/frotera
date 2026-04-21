@@ -27,6 +27,11 @@ export class CreateReferencePointDto {
   @IsNumber()
   longitude: number;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string;
+
   @ApiPropertyOptional({ default: 100 })
   @IsOptional()
   @IsNumber()
@@ -73,6 +78,11 @@ export class UpdateReferencePointDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
   @Min(10)
   @Max(50000)
@@ -115,6 +125,9 @@ export class ReferencePointResponseDto {
 
   @ApiProperty()
   longitude: number;
+
+  @ApiPropertyOptional()
+  address?: string | null;
 
   @ApiProperty()
   radiusMeters: number;

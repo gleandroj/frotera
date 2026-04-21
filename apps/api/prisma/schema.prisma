@@ -919,6 +919,7 @@ model ReferencePoint {
   description    String?
   latitude       Float
   longitude      Float
+  address        String?
   radiusMeters   Int                @default(100)
   type           ReferencePointType @default(OTHER)
   active         Boolean            @default(true)

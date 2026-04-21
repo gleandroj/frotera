@@ -45,11 +45,13 @@ export class ReferencePointsController {
     @Param('organizationId') organizationId: string,
     @Query('customerId') customerId?: string,
     @Query('active') activeRaw?: string,
+    @Query('name') name?: string,
   ) {
     const active = activeRaw === 'true' || activeRaw === '1' ? true : activeRaw === 'false' || activeRaw === '0' ? false : undefined;
     return this.referencePointsService.findAll(organizationId, {
       customerId,
       active,
+      name,
     });
   }
 

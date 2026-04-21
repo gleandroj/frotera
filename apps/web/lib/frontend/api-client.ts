@@ -1717,6 +1717,7 @@ export interface ReferencePoint {
   description?: string | null;
   latitude: number;
   longitude: number;
+  address?: string | null;
   radiusMeters: number;
   type: 'DEPOT' | 'CUSTOMER_SITE' | 'FUEL_STATION' | 'WORKSHOP' | 'OTHER';
   active: boolean;
@@ -1745,7 +1746,7 @@ export const trackingReportsAPI = {
 };
 
 export const referencePointsAPI = {
-  list: (organizationId: string, params?: { customerId?: string; active?: boolean }) =>
+  list: (organizationId: string, params?: { customerId?: string; active?: boolean; activeOnly?: boolean; inactiveOnly?: boolean; name?: string }) =>
     externalApi.get<ReferencePoint[]>(`/api/organizations/${organizationId}/reference-points`, { params }),
   create: (organizationId: string, data: Omit<ReferencePoint, 'id' | 'organizationId' | 'createdAt' | 'customer'>) =>
     externalApi.post<ReferencePoint>(`/api/organizations/${organizationId}/reference-points`, data),
@@ -1753,4 +1754,17 @@ export const referencePointsAPI = {
     externalApi.patch<ReferencePoint>(`/api/organizations/${organizationId}/reference-points/${id}`, data),
   remove: (organizationId: string, id: string) =>
     externalApi.delete(`/api/organizations/${organizationId}/reference-points/${id}`),
+};
+
+export interface GeocodeResult {
+  displayName: string;
+  lat: number;
+  lng: number;
+}
+
+export const geocodingAPI = {
+  search: (q: string, limit?: number) =>
+    externalApi.get<{ results: GeocodeResult[] }>('/api/geocoding/search', { params: { q, limit } }),
+  reverse: (lat: number, lng: number) =>
+    externalApi.get<{ address: string | null }>('/api/geocoding/reverse', { params: { lat, lng } }),
 };

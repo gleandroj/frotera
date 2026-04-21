@@ -1,11 +1,11 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useTranslation } from "@/i18n/useTranslation";
-import { referencePointsAPI, customersAPI } from "@/lib/frontend/api-client";
-import type { ReferencePoint, Customer } from "@/lib/frontend/api-client";
+import { referencePointsAPI, customersAPI, geocodingAPI } from "@/lib/frontend/api-client";
+import type { ReferencePoint, Customer, GeocodeResult } from "@/lib/frontend/api-client";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +26,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { RecordListStatus, RECORD_STATUS_ACTIVE, listParamsForRecordStatus } from "@/components/list-filters/record-status-filter";
 
 const ReferencePointsMapDynamic = dynamic(
   () => import("./reference-points-map").then((m) => ({ default: m.ReferencePointsMap })),
@@ -45,7 +60,7 @@ export default function ReferencePointsPage() {
     value,
     label: t(`referencePoints.types.${value}`),
   }));
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
   const canView = can(Module.REFERENCE_POINTS, Action.VIEW);
   const canCreate = can(Module.REFERENCE_POINTS, Action.CREATE);
@@ -58,48 +73,83 @@ export default function ReferencePointsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<ReferencePoint | null>(null);
   const [saving, setSaving] = useState(false);
+  const [listStatus, setListStatus] = useState<RecordListStatus>(RECORD_STATUS_ACTIVE);
+  const [searchName, setSearchName] = useState("");
+  const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<ReferencePointType>("DEPOT");
+  const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radiusMeters, setRadiusMeters] = useState("500");
   const [customerId, setCustomerId] = useState("");
   const [active, setActive] = useState(true);
+  const [geocodeSearching, setGeocodeSearching] = useState(false);
+  const [geocodeResults, setGeocodeResults] = useState<GeocodeResult[]>([]);
+  const [geocodePopoverOpen, setGeocodePopoverOpen] = useState(false);
 
   // Load points and customers
   useEffect(() => {
     if (!currentOrganization?.id) return;
+
     const load = async () => {
       setLoading(true);
       try {
-        const [pointsRes, customersRes] = await Promise.all([
-          referencePointsAPI.list(currentOrganization.id),
-          customersAPI.list(currentOrganization.id),
-        ]);
+        const params = {
+          ...listParamsForRecordStatus(listStatus, selectedCustomerId),
+          ...(searchName ? { name: searchName } : {}),
+        };
+        const pointsRes = await referencePointsAPI.list(currentOrganization.id, params);
         setPoints(Array.isArray(pointsRes.data) ? pointsRes.data : []);
-        setCustomers(Array.isArray(customersRes.data) ? customersRes.data : []);
       } catch (err) {
         toast.error(getApiErrorMessage(err, t));
       } finally {
         setLoading(false);
       }
     };
+
     load();
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, selectedCustomerId, listStatus, searchName]);
+
+  // Load customers for the form
+  useEffect(() => {
+    if (!currentOrganization?.id || !sheetOpen) return;
+
+    const loadCustomers = async () => {
+      setLoadingCustomers(true);
+      try {
+        const res = await customersAPI.list(currentOrganization.id, { activeOnly: true });
+        setCustomers(Array.isArray(res.data?.customers) ? res.data.customers : []);
+      } catch (err) {
+        setCustomers([]);
+      } finally {
+        setLoadingCustomers(false);
+      }
+    };
+
+    loadCustomers();
+  }, [currentOrganization?.id, sheetOpen]);
+
+  const selectedExplicitCustomer = useMemo(() => {
+    return customers.find((c) => c.id === customerId);
+  }, [customers, customerId]);
 
   const resetForm = () => {
     setName("");
     setDescription("");
     setType("DEPOT");
+    setAddress("");
     setLatitude("");
     setLongitude("");
     setRadiusMeters("500");
     setCustomerId("");
     setActive(true);
     setEditingPoint(null);
+    setGeocodeResults([]);
   };
 
   const handleOpenSheet = (point?: ReferencePoint) => {
@@ -108,6 +158,7 @@ export default function ReferencePointsPage() {
       setName(point.name);
       setDescription(point.description || "");
       setType(point.type);
+      setAddress(point.address || "");
       setLatitude(point.latitude.toString());
       setLongitude(point.longitude.toString());
       setRadiusMeters(point.radiusMeters.toString());
@@ -115,13 +166,49 @@ export default function ReferencePointsPage() {
       setActive(point.active);
     } else {
       resetForm();
+      // Pre-populate with selected customer if available
+      if (selectedCustomerId) {
+        setCustomerId(selectedCustomerId);
+      }
     }
     setSheetOpen(true);
   };
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleGeocodeSearch = async () => {
+    if (!address.trim()) return;
+
+    setGeocodeSearching(true);
+    try {
+      const res = await geocodingAPI.search(address.trim(), 5);
+      setGeocodeResults(res.data?.results || []);
+      setGeocodePopoverOpen(true);
+    } catch (err) {
+      toast.error(t("common.error"));
+    } finally {
+      setGeocodeSearching(false);
+    }
+  };
+
+  const handleSelectGeocodeResult = (result: GeocodeResult) => {
+    setLatitude(result.lat.toString());
+    setLongitude(result.lng.toString());
+    setAddress(result.displayName);
+    setGeocodePopoverOpen(false);
+  };
+
+  const handleMapClick = async (lat: number, lng: number) => {
     setLatitude(lat.toString());
     setLongitude(lng.toString());
+
+    // Reverse geocode to get address
+    try {
+      const res = await geocodingAPI.reverse(lat, lng);
+      if (res.data?.address) {
+        setAddress(res.data.address);
+      }
+    } catch (err) {
+      // If reverse geocode fails, just use the coordinates
+    }
   };
 
   const handleSave = async () => {
@@ -138,6 +225,7 @@ export default function ReferencePointsPage() {
         type,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
+        address: address || null,
         radiusMeters: parseInt(radiusMeters),
         customerId: customerId || null,
         active,
@@ -152,7 +240,11 @@ export default function ReferencePointsPage() {
       }
 
       // Reload points
-      const res = await referencePointsAPI.list(currentOrganization.id);
+      const params = {
+        ...listParamsForRecordStatus(listStatus, selectedCustomerId),
+        ...(searchName ? { name: searchName } : {}),
+      };
+      const res = await referencePointsAPI.list(currentOrganization.id, params);
       setPoints(Array.isArray(res.data) ? res.data : []);
       setSheetOpen(false);
       resetForm();
@@ -193,6 +285,28 @@ export default function ReferencePointsPage() {
         )}
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 flex gap-2">
+          <Input
+            placeholder={t("common.searchByName")}
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
+        <Select value={listStatus} onValueChange={(v: any) => setListStatus(v)}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">{t("common.all")}</SelectItem>
+            <SelectItem value="ACTIVE">{t("common.active")}</SelectItem>
+            <SelectItem value="INACTIVE">{t("common.inactive")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {loading ? (
         <p className="text-muted-foreground">{t("common.loading")}</p>
       ) : (
@@ -223,6 +337,9 @@ export default function ReferencePointsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{point.name}</p>
                       <p className="text-xs text-muted-foreground">{point.customer?.name || "—"}</p>
+                      {point.address && (
+                        <p className="text-xs text-muted-foreground truncate">{point.address}</p>
+                      )}
                     </div>
                     <Badge variant="outline" className="text-xs shrink-0">
                       {typeOptions.find((opt) => opt.value === point.type)?.label}
@@ -307,30 +424,61 @@ export default function ReferencePointsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="lat">{t("referencePoints.latitude")} *</Label>
-                <Input
-                  id="lat"
-                  type="number"
-                  step="0.000001"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder={t("referencePoints.latitudePlaceholder")}
-                />
-              </div>
-              <div>
-                <Label htmlFor="lng">{t("referencePoints.longitude")} *</Label>
-                <Input
-                  id="lng"
-                  type="number"
-                  step="0.000001"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder={t("referencePoints.longitudePlaceholder")}
-                />
+            {/* Address Search */}
+            <div>
+              <Label htmlFor="address-search">{t("referencePoints.address")} *</Label>
+              <div className="flex gap-2">
+                <Popover open={geocodePopoverOpen} onOpenChange={setGeocodePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="flex-1">
+                      <Input
+                        id="address-search"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder={t("referencePoints.addressSearchPlaceholder")}
+                        readOnly={!editingPoint}
+                      />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder={t("referencePoints.searchAddress")} />
+                      <CommandList>
+                        {geocodeResults.length === 0 ? (
+                          <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                        ) : (
+                          <CommandGroup>
+                            {geocodeResults.map((result, idx) => (
+                              <CommandItem
+                                key={idx}
+                                value={result.displayName}
+                                onSelect={() => handleSelectGeocodeResult(result)}
+                              >
+                                {result.displayName}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  type="button"
+                  onClick={handleGeocodeSearch}
+                  disabled={geocodeSearching || !address.trim()}
+                >
+                  {geocodeSearching ? t("common.searching") : t("common.search")}
+                </Button>
               </div>
             </div>
+
+            {/* Coordinates display (read-only) */}
+            {latitude && longitude && (
+              <div className="text-xs text-muted-foreground">
+                {latitude}, {longitude}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="radius">{t("referencePoints.radius")}</Label>
@@ -344,20 +492,61 @@ export default function ReferencePointsPage() {
               />
             </div>
 
+            {/* Empresa combobox */}
             <div>
-              <Label htmlFor="customer">{t("referencePoints.customer")}</Label>
-              <Select value={customerId || ""} onValueChange={(v) => setCustomerId(v || "")}>
-                <SelectTrigger id="customer">
-                  <SelectValue placeholder={t("referencePoints.noCustomer")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>{t("referencePoints.customer")}</Label>
+              <Popover open={customerComboboxOpen} onOpenChange={setCustomerComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    disabled={loadingCustomers}
+                    className={cn(
+                      "w-full justify-between",
+                      !customerId && "text-muted-foreground"
+                    )}
+                  >
+                    <span className="truncate">
+                      {customerId && selectedExplicitCustomer ? (
+                        <span style={{ paddingLeft: (selectedExplicitCustomer.depth ?? 0) * 12 }}>
+                          {selectedExplicitCustomer.name}
+                        </span>
+                      ) : (
+                        t("referencePoints.selectCompany")
+                      )}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder={t("referencePoints.searchCompany")} />
+                    <CommandList>
+                      {customers.length === 0 ? (
+                        <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+                      ) : (
+                        <CommandGroup>
+                          {customers.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.name}
+                              onSelect={() => {
+                                setCustomerId(c.id);
+                                setCustomerComboboxOpen(false);
+                              }}
+                            >
+                              <span style={{ paddingLeft: (c.depth ?? 0) * 12 }}>
+                                {c.name}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex items-center gap-2">
