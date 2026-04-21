@@ -951,6 +951,20 @@ export const trackerDevicesAPI = {
       `/api/organizations/${organizationId}/tracker-devices/${deviceId}/positions`,
       { params: query }
     ),
+  create: (organizationId: string, payload: any) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/tracker-devices`,
+      payload
+    ),
+  update: (organizationId: string, deviceId: string, payload: any) =>
+    externalApi.patch(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}`,
+      payload
+    ),
+  delete: (organizationId: string, deviceId: string) =>
+    externalApi.delete(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}`
+    ),
 };
 
 // ── DOCUMENTS ────────────────────────────────────────────────────────────────

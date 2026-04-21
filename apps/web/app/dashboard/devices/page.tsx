@@ -3,17 +3,12 @@
 import { useAuth } from "@/lib/hooks/use-auth";
 import { trackerDevicesAPI } from "@/lib/frontend/api-client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
+import { DataTable } from "@/components/ui/data-table";
+import { getDeviceColumns } from "./columns";
+import { DeviceFormDialog } from "./device-form-dialog";
+import { DeleteDeviceDialog } from "./delete-device-dialog";
 
 interface TrackerDevice {
   id: string;
@@ -32,8 +27,11 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState<TrackerDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editDevice, setEditDevice] = useState<TrackerDevice | null>(null);
+  const [deleteDevice, setDeleteDevice] = useState<TrackerDevice | null>(null);
 
-  useEffect(() => {
+  const loadDevices = () => {
     if (!currentOrganization?.id) {
       setLoading(false);
       return;
@@ -59,7 +57,17 @@ export default function DevicesPage() {
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    loadDevices();
   }, [currentOrganization?.id, t]);
+
+  const handleSuccess = () => {
+    setEditDevice(null);
+    setDeleteDevice(null);
+    loadDevices();
+  };
 
   if (!currentOrganization) {
     return (
@@ -76,13 +84,18 @@ export default function DevicesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {t("navigation.items.devices")}
-        </h1>
-        <p className="text-muted-foreground">
-          {t("devices.listDescription")}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {t("navigation.items.devices")}
+          </h1>
+          <p className="text-muted-foreground">
+            {t("devices.listDescription")}
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          {t("devices.createDevice")}
+        </Button>
       </div>
 
       {loading && (
@@ -97,39 +110,40 @@ export default function DevicesPage() {
         </p>
       )}
       {!loading && !error && devices.length > 0 && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("devices.imei")}</TableHead>
-                <TableHead>{t("devices.model")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {devices.map((device) => (
-                <TableRow key={device.id}>
-                  <TableCell>
-                    {device.name ?? t("common.notAvailable")}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {device.imei}
-                  </TableCell>
-                  <TableCell>{device.model}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/devices/${device.id}`}>
-                        {t("devices.viewLive")}
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable<TrackerDevice, unknown>
+          columns={getDeviceColumns(t, {
+            onEdit: (device: any) => setEditDevice(device),
+            onDelete: (device: any) => setDeleteDevice(device),
+          })}
+          data={devices}
+          filterPlaceholder={t("common.search")}
+          filterColumnId="name"
+          noResultsLabel={t("devices.noResults") || "Nenhum resultado encontrado"}
+        />
       )}
+
+      <DeviceFormDialog
+        open={createOpen || !!editDevice}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateOpen(false);
+            setEditDevice(null);
+          }
+        }}
+        device={editDevice}
+        organizationId={currentOrganization?.id || ""}
+        onSuccess={handleSuccess}
+      />
+
+      <DeleteDeviceDialog
+        open={!!deleteDevice}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDevice(null);
+        }}
+        device={deleteDevice}
+        organizationId={currentOrganization?.id || ""}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }
