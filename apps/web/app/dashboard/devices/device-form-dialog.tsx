@@ -72,20 +72,27 @@ type DeviceFormValues = z.infer<typeof baseSchema>;
 type CreateFormValues = z.infer<typeof createSchema>;
 
 function defaultValues(device: Device | null): any {
+  if (!device) {
+    return {
+      name: "",
+      serialSat: "",
+      equipmentModel: "",
+      individualPassword: "",
+      carrier: "",
+      simCardNumber: "",
+      cellNumber: "",
+      imei: "",
+      model: "X12_GT06",
+    };
+  }
   return {
-    name: device?.name ?? "",
-    serialSat: device?.serialSat ?? "",
-    equipmentModel: device?.equipmentModel ?? "",
-    individualPassword: device?.individualPassword ?? "",
-    carrier: device?.carrier ?? "",
-    simCardNumber: device?.simCardNumber ?? "",
-    cellNumber: device?.cellNumber ?? "",
-    ...(device
-      ? {}
-      : {
-          imei: "",
-          model: "X12_GT06",
-        }),
+    name: device.name || "",
+    serialSat: device.serialSat || "",
+    equipmentModel: device.equipmentModel || "",
+    individualPassword: device.individualPassword || "",
+    carrier: device.carrier || "",
+    simCardNumber: device.simCardNumber || "",
+    cellNumber: device.cellNumber || "",
   };
 }
 
@@ -110,7 +117,8 @@ export function DeviceFormDialog({
     if (open) {
       form.reset(defaultValues(device));
     }
-  }, [open, device, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const onSubmit = (data: any) => {
     setIsSubmitting(true);

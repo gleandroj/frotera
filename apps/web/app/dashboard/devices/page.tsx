@@ -131,6 +131,7 @@ export default function DevicesPage() {
       )}
 
       <DeviceFormDialog
+        key={editDevice?.id ?? "new"}
         open={createOpen || !!editDevice}
         onOpenChange={(open) => {
           if (!open) {
