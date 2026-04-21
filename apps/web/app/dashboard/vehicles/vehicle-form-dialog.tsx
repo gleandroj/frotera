@@ -54,7 +54,6 @@ import {
   type Customer,
   type CreateVehiclePayload,
   type UpdateVehiclePayload,
-  type CreateVehicleNewDevicePayload,
 } from "@/lib/frontend/api-client";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,7 +61,6 @@ import { toast } from "sonner";
 import { ResourceSelectCreateRow } from "@/components/resource-select-create-row";
 import { DrawerStackParentDim } from "@/components/drawer-stack-parent-dim";
 import { CustomerFormDialog } from "@/app/dashboard/customers/customer-form-dialog";
-import { DeviceFormDialog } from "@/app/dashboard/devices/device-form-dialog";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { onRhfInvalidSubmit } from "@/lib/on-rhf-invalid-submit";
@@ -161,7 +159,6 @@ function buildSchema(t: (k: string) => string, isEdit: boolean) {
         ? z.string().default("")
         : z.string().min(1, t("vehicles.customerRequired")),
       trackerDeviceId: z.string().default(""),
-      deviceOption: z.enum(["none", "existing", "new"]).default("none"),
     });
 }
 
@@ -195,7 +192,6 @@ function defaultValues(
     notes: vehicle?.notes ?? "",
     customerId: isEdit ? (vehicle?.customerId ?? "") : (defaultCustomerId ?? ""),
     trackerDeviceId: vehicle?.trackerDeviceId ?? "",
-    deviceOption: "none",
   };
 }
 
@@ -235,8 +231,6 @@ export function VehicleFormDialog({
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [customerComboboxOpen, setCustomerComboboxOpen] = useState(false);
   const [customerFormOpen, setCustomerFormOpen] = useState(false);
-  const [deviceSheetOpen, setDeviceSheetOpen] = useState(false);
-  const [newDeviceData, setNewDeviceData] = useState<CreateVehicleNewDevicePayload | null>(null);
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(buildSchema(t, isEdit)),
@@ -244,7 +238,6 @@ export function VehicleFormDialog({
   });
 
   const { isSubmitting } = form.formState;
-  const deviceOption = form.watch("deviceOption");
   const customerId = form.watch("customerId");
 
   useEffect(() => {
@@ -264,7 +257,6 @@ export function VehicleFormDialog({
             : defaultCustomerId
         : defaultCustomerId;
     form.reset(defaultValues(vehicle, isEdit, effectiveDefault));
-    setNewDeviceData(null);
   }, [open, vehicle?.id]);
 
   useEffect(() => {
@@ -330,21 +322,10 @@ export function VehicleFormDialog({
       customerId: values.customerId?.trim() || undefined,
     };
 
-    if (values.deviceOption === "new" && !newDeviceData) {
-      toast.error(t("vehicles.imeiRequired"));
-      return;
-    }
-
-    let payload: CreateVehiclePayload | UpdateVehiclePayload;
-    if (isEdit) {
-      payload = { ...base, trackerDeviceId: values.trackerDeviceId || undefined };
-    } else if (values.deviceOption === "new" && newDeviceData) {
-      payload = { ...base, newDevice: newDeviceData };
-    } else if (values.deviceOption === "existing" && values.trackerDeviceId) {
-      payload = { ...base, trackerDeviceId: values.trackerDeviceId };
-    } else {
-      payload = base;
-    }
+    const payload: CreateVehiclePayload | UpdateVehiclePayload = {
+      ...base,
+      trackerDeviceId: values.trackerDeviceId || undefined,
+    };
 
     try {
       if (isEdit) {
@@ -872,149 +853,43 @@ export function VehicleFormDialog({
               <Separator />
 
               {/* Dispositivo */}
-              {isEdit ? (
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                    {t("vehicles.device")}
-                  </p>
-                  <FormField
-                    control={form.control}
-                    name="trackerDeviceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("vehicles.device")}</FormLabel>
-                        <Select
-                          value={field.value || "none"}
-                          onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                          disabled={loadingDevices}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={t("vehicles.noDevice")} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
-                            {devices.map((d) => (
-                              <SelectItem key={d.id} value={d.id}>
-                                <span className="font-mono text-xs">{d.imei}</span>
-                                <span className="text-muted-foreground ml-1">
-                                  ({d.model}){d.name ? ` · ${d.name}` : ""}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                    {t("vehicles.deviceAssociation")}
-                  </p>
-
-                  <FormField
-                    control={form.control}
-                    name="deviceOption"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              {t("vehicles.deviceOptionNone")}
-                            </SelectItem>
-                            <SelectItem value="existing">
-                              {t("vehicles.deviceOptionExisting")}
-                            </SelectItem>
-                            <SelectItem value="new">
-                              {t("vehicles.deviceOptionNew")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {deviceOption === "existing" && (
-                    <FormField
-                      control={form.control}
-                      name="trackerDeviceId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("vehicles.device")}</FormLabel>
-                          <Select
-                            value={field.value || "none"}
-                            onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                            disabled={loadingDevices}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("vehicles.noDevice")} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
-                              {devices.map((d) => (
-                                <SelectItem key={d.id} value={d.id}>
-                                  <span className="font-mono text-xs">{d.imei}</span>
-                                  <span className="text-muted-foreground ml-1">
-                                    ({d.model}){d.name ? ` · ${d.name}` : ""}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {deviceOption === "new" && (
-                    newDeviceData ? (
-                      <div className="rounded-lg border bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-mono text-sm font-medium truncate">
-                            {newDeviceData.imei}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {[newDeviceData.name, newDeviceData.carrier]
-                              .filter(Boolean)
-                              .join(" · ") || newDeviceData.model}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={() => setDeviceSheetOpen(true)}
-                        >
-                          {t("common.edit")}
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setDeviceSheetOpen(true)}
+              <div className="space-y-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  {t("vehicles.device")}
+                </p>
+                <FormField
+                  control={form.control}
+                  name="trackerDeviceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("vehicles.device")}</FormLabel>
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                        disabled={loadingDevices}
                       >
-                        {t("devices.configureDevice")}
-                      </Button>
-                    )
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("vehicles.noDevice")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">{t("vehicles.noDevice")}</SelectItem>
+                          {devices.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              <span className="font-mono text-xs">{d.imei}</span>
+                              <span className="text-muted-foreground ml-1">
+                                ({d.model}){d.name ? ` · ${d.name}` : ""}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-              )}
+                />
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t flex justify-end gap-2 bg-background">
@@ -1038,17 +913,9 @@ export function VehicleFormDialog({
             </div>
           </form>
         </Form>
-        <DrawerStackParentDim show={customerFormOpen || deviceSheetOpen} />
+        <DrawerStackParentDim show={customerFormOpen} />
       </SheetContent>
     </Sheet>
-
-    <DeviceFormDialog
-      open={deviceSheetOpen}
-      onOpenChange={setDeviceSheetOpen}
-      onConfirm={setNewDeviceData}
-      initialData={newDeviceData ?? undefined}
-      hideOverlay
-    />
 
     <CustomerFormDialog
       open={customerFormOpen}
