@@ -6,10 +6,13 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { trackingReportsAPI, vehiclesAPI } from "@/lib/frontend/api-client";
 import type { VehicleTrip, VehicleStop, Vehicle } from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
+
+const ALL_VEHICLES = "__trips_all__";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -31,7 +34,7 @@ export default function TripsReportPage() {
   const { can } = usePermissions();
   const canView = can(Module.REPORTS_TRACKING, Action.VIEW);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vehicleId, setVehicleId] = useState<string>("");
+  const [vehicleId, setVehicleId] = useState<string>(ALL_VEHICLES);
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -58,7 +61,7 @@ export default function TripsReportPage() {
     setLoading(true);
     try {
       const params = {
-        ...(vehicleId ? { vehicleId } : {}),
+        ...(vehicleId && vehicleId !== ALL_VEHICLES ? { vehicleId } : {}),
         from: new Date(from).toISOString(),
         to: new Date(to).toISOString(),
       };
@@ -75,7 +78,7 @@ export default function TripsReportPage() {
   }, [currentOrganization?.id, vehicleId, from, to]);
 
   const handleDetect = useCallback(async () => {
-    if (!currentOrganization?.id || !vehicleId) return;
+    if (!currentOrganization?.id || !vehicleId || vehicleId === ALL_VEHICLES) return;
     setDetecting(true);
     try {
       await trackingReportsAPI.detectTrips(currentOrganization.id, {
@@ -94,7 +97,7 @@ export default function TripsReportPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild className="-ml-2">
-          <Link href="/dashboard/vehicles/reports"><ArrowLeft className="h-5 w-5" /></Link>
+          <Link href="/dashboard/reports"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.trips.title")}</h1>
@@ -111,7 +114,7 @@ export default function TripsReportPage() {
               <SelectValue placeholder={t("trackingReports.allVehicles")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t("common.all")}</SelectItem>
+              <SelectItem value={ALL_VEHICLES}>{t("common.all")}</SelectItem>
               {vehicles.map((v) => (
                 <SelectItem key={v.id} value={v.id}>{v.name || v.plate || v.id}</SelectItem>
               ))}
@@ -120,18 +123,16 @@ export default function TripsReportPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">{t("trackingReports.startDate")}</label>
-          <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" />
+          <DateTimePicker value={from} onChange={setFrom} />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">{t("trackingReports.endDate")}</label>
-          <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" />
+          <DateTimePicker value={to} onChange={setTo} />
         </div>
         <Button onClick={fetchData} disabled={loading} size="sm">
           {loading ? t("trackingReports.searching") : t("trackingReports.search")}
         </Button>
-        {vehicleId && (
+        {vehicleId && vehicleId !== ALL_VEHICLES && (
           <Button onClick={handleDetect} disabled={detecting} variant="outline" size="sm" className="gap-2">
             <RefreshCw className={`h-4 w-4 ${detecting ? "animate-spin" : ""}`} />
             {detecting ? t("trackingReports.processing") : t("trackingReports.trips.reprocess")}

@@ -28,13 +28,17 @@ import { useUnreadAlerts } from "@/lib/hooks/use-unread-alerts";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
+  AlertTriangle,
   BarChart3,
   Bell,
   Building,
   Building2,
+  Calendar,
   Car,
+  CheckSquare,
   ChevronRight,
   ClipboardList,
+  DollarSign,
   FileText,
   Fuel,
   HelpCircle,
@@ -42,8 +46,10 @@ import {
   MapPin,
   MapPinned,
   Radio,
+  Route,
   Smartphone,
   SlidersHorizontal,
+  TrendingUp,
   User,
   UserRound,
   Users,
@@ -93,7 +99,7 @@ function NavCollapsibleGroup({ group }: { group: NavGroup }) {
   const isAnyActive = group.items.some((i) => i.isActive);
   return (
     <SidebarMenuItem>
-      <Collapsible defaultOpen className="group/collapsible w-full">
+      <Collapsible defaultOpen={isAnyActive} className="group/collapsible w-full">
         <CollapsibleTrigger asChild>
           <SidebarMenuButton isActive={isAnyActive}>
             <span>{group.title}</span>
@@ -133,6 +139,11 @@ export function AppSidebar() {
   const canViewFuel = can(Module.FUEL, Action.VIEW);
   const canViewTelemetry = can(Module.TELEMETRY, Action.VIEW);
   const canViewReferencePoints = can(Module.REFERENCE_POINTS, Action.VIEW);
+  const canViewFuelConsumptionReport = can(Module.REPORTS_FUEL_CONSUMPTION, Action.VIEW);
+  const canViewFuelCostsReport = can(Module.REPORTS_FUEL_COSTS, Action.VIEW);
+  const canViewFuelBenchmarkReport = can(Module.REPORTS_FUEL_BENCHMARK, Action.VIEW);
+  const canViewFuelEfficiencyReport = can(Module.REPORTS_FUEL_EFFICIENCY, Action.VIEW);
+  const canViewFuelSummaryReport = can(Module.REPORTS_FUEL_SUMMARY, Action.VIEW);
   const canViewAnyFuelReport = canAnyModule(
     [
       Module.REPORTS_FUEL_CONSUMPTION,
@@ -239,16 +250,61 @@ export function AppSidebar() {
     });
 
   const reportsItems: NavItem[] = [];
-  if (canViewAnyReport)
+  if (canViewFuelConsumptionReport)
     reportsItems.push({
-      title: t("common.reports"),
-      href: "/dashboard/reports",
+      title: t("fuelReports.hub.consumption"),
+      href: "/dashboard/fuel/reports/consumption",
+      icon: TrendingUp,
+      isActive: pathname === "/dashboard/fuel/reports/consumption",
+    });
+  if (canViewFuelCostsReport)
+    reportsItems.push({
+      title: t("fuelReports.hub.costs"),
+      href: "/dashboard/fuel/reports/costs",
+      icon: DollarSign,
+      isActive: pathname === "/dashboard/fuel/reports/costs",
+    });
+  if (canViewFuelBenchmarkReport)
+    reportsItems.push({
+      title: t("fuelReports.hub.benchmark"),
+      href: "/dashboard/fuel/reports/benchmark",
       icon: BarChart3,
-      isActive:
-        pathname.startsWith("/dashboard/reports") ||
-        pathname.startsWith("/dashboard/fuel/reports") ||
-        pathname.startsWith("/dashboard/vehicles/reports") ||
-        pathname.startsWith("/dashboard/checklist/reports"),
+      isActive: pathname === "/dashboard/fuel/reports/benchmark",
+    });
+  if (canViewFuelEfficiencyReport)
+    reportsItems.push({
+      title: t("fuelReports.hub.efficiency"),
+      href: "/dashboard/fuel/reports/efficiency",
+      icon: AlertTriangle,
+      isActive: pathname === "/dashboard/fuel/reports/efficiency",
+    });
+  if (canViewFuelSummaryReport)
+    reportsItems.push({
+      title: t("fuelReports.hub.summary"),
+      href: "/dashboard/fuel/reports/summary",
+      icon: Calendar,
+      isActive: pathname === "/dashboard/fuel/reports/summary",
+    });
+  if (canViewTrackingReports)
+    reportsItems.push({
+      title: t("trackingReports.positions.title"),
+      href: "/dashboard/vehicles/reports/positions",
+      icon: MapPin,
+      isActive: pathname === "/dashboard/vehicles/reports/positions",
+    });
+  if (canViewTrackingReports)
+    reportsItems.push({
+      title: t("trackingReports.trips.title"),
+      href: "/dashboard/vehicles/reports/trips",
+      icon: Route,
+      isActive: pathname === "/dashboard/vehicles/reports/trips",
+    });
+  if (canViewChecklistReports)
+    reportsItems.push({
+      title: t("checklist.reports.title"),
+      href: "/dashboard/checklist/reports",
+      icon: CheckSquare,
+      isActive: pathname.startsWith("/dashboard/checklist/reports"),
     });
 
   const customersItems: NavItem[] = [];

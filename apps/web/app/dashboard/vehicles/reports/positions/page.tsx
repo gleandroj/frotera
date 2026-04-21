@@ -5,6 +5,7 @@ import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
 import { useTranslation } from "@/i18n/useTranslation";
 import { trackingReportsAPI, vehiclesAPI } from "@/lib/frontend/api-client";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -59,7 +60,7 @@ export default function PositionsReportPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild className="-ml-2">
-          <Link href="/dashboard/vehicles/reports"><ArrowLeft className="h-5 w-5" /></Link>
+          <Link href="/dashboard/reports"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.positions.title")}</h1>
@@ -86,13 +87,11 @@ export default function PositionsReportPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">{t("trackingReports.startDate")}</label>
-          <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" />
+          <DateTimePicker value={from} onChange={setFrom} />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">{t("trackingReports.endDate")}</label>
-          <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" />
+          <DateTimePicker value={to} onChange={setTo} />
         </div>
         <Button onClick={() => fetchData(0)} disabled={loading || !vehicleId} size="sm">
           {loading ? t("trackingReports.searching") : t("trackingReports.search")}
