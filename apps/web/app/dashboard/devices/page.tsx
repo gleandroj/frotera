@@ -16,7 +16,15 @@ interface TrackerDevice {
   imei: string;
   model: string;
   name?: string | null;
+  serialSat?: string | null;
+  equipmentModel?: string | null;
+  individualPassword?: string | null;
+  carrier?: string | null;
+  simCardNumber?: string | null;
+  cellNumber?: string | null;
   vehicleId?: string | null;
+  connectedAt?: string | null;
+  odometerSource?: string;
   createdAt: string;
   updatedAt: string;
 }

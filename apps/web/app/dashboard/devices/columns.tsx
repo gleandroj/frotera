@@ -1,8 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreVertical, Pencil, Trash2, Eye } from "lucide-react";
-import Link from "next/link";
+import { ArrowUpDown, MoreVertical, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -101,12 +100,6 @@ export function getDeviceColumns(
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/devices/${device.id}`}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    {t("common.view")}
-                  </Link>
-                </DropdownMenuItem>
                 {canEditDevice && (
                   <DropdownMenuItem onClick={() => onEdit(device)}>
                     <Pencil className="mr-2 h-4 w-4" />
