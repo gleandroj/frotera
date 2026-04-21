@@ -23,6 +23,9 @@ import { FuelReportsModule } from "./fuel-reports/fuel-reports.module";
 import { ChecklistModule } from "./checklist/checklist.module";
 import { IncidentsModule } from "./incidents/incidents.module";
 import { TelemetryModule } from "./telemetry/telemetry.module";
+import { ReferencePointsModule } from "./reference-points/reference-points.module";
+import { GeocodingModule } from "./geocoding/geocoding.module";
+import { TripsModule } from "./trips/trips.module";
 
 @Module({
   imports: [
@@ -53,6 +56,9 @@ import { TelemetryModule } from "./telemetry/telemetry.module";
     ChecklistModule,
     IncidentsModule,
     TelemetryModule,
+    ReferencePointsModule,
+    GeocodingModule,
+    TripsModule,
   ],
 })
 export class AppModule {}

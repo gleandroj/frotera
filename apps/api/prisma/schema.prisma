@@ -71,6 +71,9 @@ model Organization {
   incidents           Incident[]
   telemetryAlerts     TelemetryAlert[]
   geofenceZones       GeofenceZone[]
+  referencePoints     ReferencePoint[]
+  vehicleTrips        VehicleTrip[]
+  vehicleStops        VehicleStop[]
 
   @@map("organizations")
 }
@@ -94,6 +97,7 @@ model Customer {
   geofenceZones       GeofenceZone[]
   incidents           Incident[]
   checklistTemplates  ChecklistTemplate[]
+  referencePoints     ReferencePoint[]
 
   @@index([organizationId])
   @@index([parentId])
@@ -155,6 +159,16 @@ enum GeofenceType {
   @@map("geofence_type")
 }
 
+enum ReferencePointType {
+  DEPOT
+  CUSTOMER_SITE
+  FUEL_STATION
+  WORKSHOP
+  OTHER
+
+  @@map("reference_point_type")
+}
+
 model Vehicle {
   id               String         @id @default(cuid())
   organizationId   String
@@ -195,6 +209,8 @@ model Vehicle {
   incidents         Incident[]
   telemetryAlerts   TelemetryAlert[]
   memberAssignments OrganizationMemberVehicle[]
+  trips             VehicleTrip[]
+  stops             VehicleStop[]
 
   @@index([organizationId])
   @@index([customerId])
@@ -447,6 +463,8 @@ enum RoleModule {
   REPORTS_FUEL_EFFICIENCY
   REPORTS_FUEL_SUMMARY
   CHECKLIST_TEMPLATES
+  REPORTS_TRACKING
+  REFERENCE_POINTS
 
   @@map("role_module")
 }
@@ -877,4 +895,83 @@ model ChecklistAnswer {
   @@index([entryId])
   @@index([itemId])
   @@map("checklist_answers")
+}
+
+// ─── Tracking Reports ─────────────────────────────────────────────────────────
+
+model ReferencePoint {
+  id             String             @id @default(cuid())
+  organizationId String
+  customerId     String?
+  name           String
+  description    String?
+  latitude       Float
+  longitude      Float
+  radiusMeters   Int                @default(100)
+  type           ReferencePointType @default(OTHER)
+  active         Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@map("reference_points")
+}
+
+model VehicleTrip {
+  id              String   @id @default(cuid())
+  organizationId  String
+  vehicleId       String
+  deviceId        String
+  driverId        String?
+  startedAt       DateTime
+  endedAt         DateTime
+  startLat        Float
+  startLng        Float
+  endLat          Float
+  endLng          Float
+  startAddress    String?
+  endAddress      String?
+  distanceMeters  Int
+  maxSpeedKmh     Float?
+  avgSpeedKmh     Float?
+  durationSeconds    Int
+  idleSeconds        Int      @default(0)
+  ignitionOnSeconds  Int?
+  pointCount         Int
+  createdAt          DateTime @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  stops        VehicleStop[]
+
+  @@index([organizationId, vehicleId, startedAt])
+  @@index([organizationId, startedAt])
+  @@map("vehicle_trips")
+}
+
+model VehicleStop {
+  id              String    @id @default(cuid())
+  organizationId  String
+  vehicleId       String
+  deviceId        String
+  driverId        String?
+  tripId          String?
+  startedAt       DateTime
+  endedAt         DateTime?
+  latitude        Float
+  longitude       Float
+  address         String?
+  durationSeconds Int?
+  createdAt       DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  trip         VehicleTrip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, vehicleId, startedAt])
+  @@map("vehicle_stops")
 }
