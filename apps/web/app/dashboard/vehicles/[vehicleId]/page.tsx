@@ -272,6 +272,68 @@ export default function VehicleDetailPage() {
           </TabsList>
 
           <TabsContent value="info" className="mt-6">
+            {streamLastPosition && (() => {
+              const stale = !streamLastPosition.receivedAt ||
+                Date.now() - new Date(streamLastPosition.receivedAt).getTime() > 5 * 60_000;
+              const totalOdometer = (vehicle.initialOdometerKm ?? 0) + (streamLastPosition.odometerKm ?? 0);
+              return (
+                <div className="rounded-lg border bg-card p-4 sm:p-6 text-card-foreground shadow-sm mb-6">
+                  <h2 className="text-lg font-semibold mb-4">Status Atual</h2>
+                  <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Velocidade</dt>
+                      <dd className={`mt-1 text-2xl font-bold ${stale ? "text-muted-foreground" : ""}`}>
+                        {stale ? "—" : `${Number(streamLastPosition.speed ?? 0).toFixed(0)} km/h`}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Ignição</dt>
+                      <dd className="mt-1">
+                        {streamLastPosition.ignitionOn === true ? (
+                          <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">Ligada</Badge>
+                        ) : streamLastPosition.ignitionOn === false ? (
+                          <Badge variant="secondary">Desligada</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </dd>
+                    </div>
+                    {streamLastPosition.voltageLevel != null && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Tensão</dt>
+                        <dd className="mt-1 font-medium">{streamLastPosition.voltageLevel} V</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Hodômetro</dt>
+                      <dd className="mt-1 font-medium">
+                        {totalOdometer.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} km
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Coordenadas</dt>
+                      <dd className="mt-1 font-mono text-sm">
+                        {streamLastPosition.latitude.toFixed(5)}, {streamLastPosition.longitude.toFixed(5)}
+                      </dd>
+                    </div>
+                    {streamLastPosition.city && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Localização</dt>
+                        <dd className="mt-1 text-sm">{streamLastPosition.city}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Última posição</dt>
+                      <dd className="mt-1 text-sm">
+                        {streamLastPosition.receivedAt
+                          ? new Date(streamLastPosition.receivedAt).toLocaleString("pt-BR")
+                          : new Date(streamLastPosition.recordedAt).toLocaleString("pt-BR")}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })()}
             <div className="rounded-lg border bg-card p-4 sm:p-6 text-card-foreground shadow-sm space-y-6">
               <div>
                 <h2 className="text-lg font-semibold mb-1">

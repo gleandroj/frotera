@@ -19,6 +19,8 @@ const FleetMapDynamic = dynamic<FleetMapProps>(
   { ssr: false },
 );
 
+const STALE_MS = 5 * 60_000;
+
 function formatRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);
@@ -27,6 +29,11 @@ function formatRelativeTime(dateStr: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h atrás`;
   return `${Math.floor(hrs / 24)}d atrás`;
+}
+
+function isStale(receivedAt: string | null | undefined): boolean {
+  if (!receivedAt) return true;
+  return Date.now() - new Date(receivedAt).getTime() > STALE_MS;
 }
 
 export default function TrackingPage() {
@@ -139,7 +146,11 @@ export default function TrackingPage() {
                 const streamed = deviceId ? positionMap.get(deviceId) : undefined;
                 const position = streamed ?? vehicle.lastPosition;
                 const isSelected = vehicle.id === selectedId;
-                const ignitionOn = (position as typeof vehicle.lastPosition)?.ignitionOn;
+                const ignitionOn = position?.ignitionOn;
+                const receivedAt = position?.receivedAt ?? null;
+                const stale = isStale(receivedAt);
+                const displayTs = receivedAt ?? position?.recordedAt ?? null;
+                const totalOdometer = (vehicle.initialOdometerKm ?? 0) + (position?.odometerKm ?? 0);
 
                 return (
                   <button
@@ -165,9 +176,7 @@ export default function TrackingPage() {
                           variant="secondary"
                           className={`text-xs shrink-0 ${ignitionOn === true
                             ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                            : ignitionOn === false
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-muted text-muted-foreground"
+                            : "bg-muted text-muted-foreground"
                             }`}
                         >
                           {ignitionOn === true
@@ -186,10 +195,23 @@ export default function TrackingPage() {
                     </div>
 
                     {position && (
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {t("tracking.lastUpdate")}: {formatRelativeTime(position.recordedAt)}
-                        {position.speed != null && position.speed > 0 && (
-                          <span className="ml-2">{Number(position.speed).toFixed(0)} km/h</span>
+                      <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                          <span className={stale ? "text-muted-foreground/50" : "font-medium text-foreground"}>
+                            {stale ? "— km/h" : `${Number(position.speed ?? 0).toFixed(0)} km/h`}
+                          </span>
+                          {position.voltageLevel != null && (
+                            <span>{position.voltageLevel} V</span>
+                          )}
+                        </div>
+                        {(vehicle.initialOdometerKm != null || position.odometerKm != null) && (
+                          <div>{totalOdometer.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} km</div>
+                        )}
+                        {position.city && (
+                          <div className="truncate" title={position.city}>{position.city}</div>
+                        )}
+                        {displayTs && (
+                          <div>{t("tracking.lastUpdate")}: {formatRelativeTime(displayTs)}</div>
                         )}
                       </div>
                     )}

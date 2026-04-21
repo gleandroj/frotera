@@ -611,7 +611,11 @@ export interface FleetPosition {
   speed?: number | null;
   heading?: number | null;
   ignitionOn?: boolean | null;
+  voltageLevel?: number | null;
   recordedAt: string;
+  receivedAt?: string | null;
+  odometerKm?: number | null;
+  city?: string | null;
 }
 
 export interface FleetVehicleStatus {
@@ -621,6 +625,7 @@ export interface FleetVehicleStatus {
   color?: string | null;
   vehicleType?: string | null;
   inactive: boolean;
+  initialOdometerKm?: number | null;
   customer?: { id: string; name: string } | null;
   trackerDevice?: { id: string; imei: string; connectedAt?: string | null } | null;
   lastPosition?: FleetPosition | null;
