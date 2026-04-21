@@ -962,6 +962,12 @@
     "accountSettings": "Configurações da Conta",
     "sections": {
       "overview": "Visão Geral",
+      "tracking": "Rastreamento",
+      "fleet": "Frota",
+      "operations": "Operações",
+      "monitoring": "Monitoramento",
+      "reports": "Relatórios",
+      "customers": "Clientes",
       "teamManagement": "Gerenciamento de Usuários",
       "userManagement": "Gerenciamento de Usuários",
       "crmSales": "CRM & Vendas",
