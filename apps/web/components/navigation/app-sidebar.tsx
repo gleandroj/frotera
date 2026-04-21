@@ -30,6 +30,7 @@ import {
   MapPin,
   MapPinned,
   Radio,
+  Smartphone,
   SlidersHorizontal,
   User,
   UserRound,
@@ -92,6 +93,7 @@ export function AppSidebar() {
   const canViewChecklistReports = can(Module.CHECKLIST, Action.VIEW);
   const canViewAnyReport = canViewAnyFuelReport || canViewTrackingReports || canViewChecklistReports;
   const canViewReferencePoints = can(Module.REFERENCE_POINTS, Action.VIEW);
+  const canViewDevices = can(Module.DEVICES, Action.VIEW);
 
   const isMember = currentOrganization
     ? !(currentOrganization.role?.permissions?.some((p) => p.module === 'USERS' && p.actions.includes('CREATE')) ?? false)
@@ -161,6 +163,14 @@ export function AppSidebar() {
         href: "/dashboard/vehicles",
         icon: Car,
         current: pathname.startsWith("/dashboard/vehicles"),
+      });
+    }
+    if (canViewDevices) {
+      items.push({
+        name: t("navigation.items.devices"),
+        href: "/dashboard/devices",
+        icon: Smartphone,
+        current: pathname.startsWith("/dashboard/devices"),
       });
     }
     if (canAccessTrackerHelp) {
@@ -251,7 +261,7 @@ export function AppSidebar() {
     }
     return items;
   }, [
-    t, pathname, canViewTracking, canViewDashboard, canViewVehicles,
+    t, pathname, canViewTracking, canViewDashboard, canViewVehicles, canViewDevices,
     canAccessTrackerHelp,
     canViewChecklist, canViewIncidents, canViewDrivers, canViewDocuments,
     canViewFuel, canViewAnyReport, canViewReferencePoints, canViewTelemetry, canViewCustomers,
