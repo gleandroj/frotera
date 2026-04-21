@@ -76,6 +76,8 @@ describe('AuthController', () => {
           twoFactorEnabled: false,
           emailVerified: new Date(),
           isSuperAdmin: false,
+          isSystemUser: false,
+          mustChangePassword: false,
           twoFactorVerified: false,
         },
         tokens: {
@@ -188,6 +190,7 @@ describe('AuthController', () => {
           twoFactorEnabled: false,
           emailVerified: new Date(),
           isSuperAdmin: false,
+          isSystemUser: false,
         },
       };
 
