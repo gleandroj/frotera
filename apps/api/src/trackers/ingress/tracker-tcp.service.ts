@@ -332,6 +332,15 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(
         `[GT06] Location | IMEI=${ctx.imei ?? "—"} | deviceId=${ctx.deviceId ?? "—"} | serial=${parsed.serialNumber} | ${posStr}`,
       );
+      // Debug: log raw bytes after the standard 18-byte GPS block to detect extended fields (e.g. odometer)
+      if (parsed.content.length > 18) {
+        const extra = parsed.content.subarray(18);
+        this.logger.debug(
+          `[GT06] Location extra bytes (proto=0x${parsed.protocolNumber.toString(16).padStart(2,'0')}) ` +
+          `after GPS block: ${extra.length}B = ${extra.toString('hex')} | ` +
+          `full content (${parsed.content.length}B): ${parsed.content.toString('hex')}`,
+        );
+      }
       if (position && ctx.deviceId && ctx.imei) {
         await this.redisWriter.pushPosition(ctx.deviceId, ctx.imei, position);
         const orgId = ctx.deviceOrganizationId;
