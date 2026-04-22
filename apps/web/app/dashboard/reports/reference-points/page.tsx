@@ -24,7 +24,7 @@ export default function ReferencePointsReportPage() {
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [selectedRpIds, setSelectedRpIds] = useState<string[]>([]);
-  const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 1), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [maxDistance, setMaxDistance] = useState("");
   const [data, setData] = useState<ReferencePointProximityRow[]>([]);
