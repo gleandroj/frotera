@@ -410,12 +410,27 @@ export function parseGT06TerminalInfo(b: number): {
 export function getPositionFromGT06LocationStd(
   content: Buffer,
 ): NormalizedPosition | null {
-  return getPositionFromGT06Location(content, 0, true, {
+  const pos = getPositionFromGT06Location(content, 0, true, {
     divisor: 1_800_000,
     dateMode: "yearBinaryBcd",
     hemisphereMode: "std",
     gpsFixMask: 0x1000,
   });
+  if (!pos) return null;
+
+  // 0x12 packets from this firmware append 8 bytes after the 18-byte GPS block:
+  //   bytes 18-21: mileage uint32 LE (unit TBD — metres or 0.1 km)
+  //   bytes 22-25: runtime uint32 LE (seconds, tentative)
+  // We store the raw mileage value as deviceOdometerKm (divide by 1000 assuming metres).
+  // Once confirmed against real movement data, adjust the divisor here.
+  if (content.length >= 22) {
+    const mileageRaw = content.readUInt32LE(18);
+    if (mileageRaw > 0) {
+      pos.deviceOdometerKm = mileageRaw / 1000; // assume metres → km
+    }
+  }
+
+  return pos;
 }
 
 /**

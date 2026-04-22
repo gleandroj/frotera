@@ -63,10 +63,15 @@ export class TrackerRedisWriterService {
     const lac = position.lbsLac != null ? String(position.lbsLac) : "";
     const cell = position.lbsCellId != null ? String(position.lbsCellId) : "";
 
-    // Odometer: get last position from hash and accumulate
+    // Odometer: prefer device-reported value; fall back to GPS-accumulated Haversine
     const lastHash = await this.redis.hGetAll(lastKey);
     let odometerKm = 0;
-    if (lastHash.latitude && lastHash.longitude) {
+    if (position.deviceOdometerKm != null && position.deviceOdometerKm > 0) {
+      odometerKm = position.deviceOdometerKm;
+      this.logger.debug(
+        `[odo] device odometer: ${odometerKm.toFixed(3)} km (IMEI=${imei})`,
+      );
+    } else if (lastHash.latitude && lastHash.longitude) {
       const delta = haversineKm(
         parseFloat(lastHash.latitude), parseFloat(lastHash.longitude),
         position.latitude, position.longitude,
