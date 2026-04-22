@@ -177,8 +177,8 @@ export class TripsService {
     const rpIds = referencePoints.map((r) => r.id);
     const take = query.take ?? 100;
     const skip = query.skip ?? 0;
-    const dateFrom = new Date(query.dateFrom);
-    const dateTo = new Date(query.dateTo);
+    const dateFrom = this.getStartOfDay(query.dateFrom);
+    const dateTo = this.getEndOfDay(query.dateTo);
     const maxDist = query.maxDistanceMeters ?? null;
 
     // Build vehicle/device lookup map for the result
@@ -288,5 +288,17 @@ export class TripsService {
     });
 
     return { data, total, skip, take };
+  }
+
+  private getStartOfDay(dateInput: string): Date {
+    const date = new Date(dateInput);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  private getEndOfDay(dateInput: string): Date {
+    const date = new Date(dateInput);
+    date.setHours(23, 59, 59, 999);
+    return date;
   }
 }
