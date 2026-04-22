@@ -73,8 +73,9 @@ export class GeocodingService {
         `Error reverse geocoding lat=${lat} lng=${lng} — ${cause.message}`,
         cause.stack,
       );
-      if ((cause as NodeJS.ErrnoException).cause) {
-        this.logger.error(`Underlying cause:`, (cause as NodeJS.ErrnoException).cause);
+      const underlying = (cause as { cause?: unknown }).cause;
+      if (underlying) {
+        this.logger.error(`Underlying cause:`, underlying);
       }
       return null;
     }
@@ -124,8 +125,9 @@ export class GeocodingService {
         `Error forward geocoding query="${query}" url=${url} — ${cause.message}`,
         cause.stack,
       );
-      if ((cause as NodeJS.ErrnoException).cause) {
-        this.logger.error(`Underlying cause:`, (cause as NodeJS.ErrnoException).cause);
+      const underlying = (cause as { cause?: unknown }).cause;
+      if (underlying) {
+        this.logger.error(`Underlying cause:`, underlying);
       }
       return [];
     }
