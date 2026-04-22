@@ -6,6 +6,7 @@ import { Module } from "@nestjs/common";
 import { AppJwtModule } from "@/auth/app-jwt.module";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { TrackerDevicesController } from "./devices/tracker-devices.controller";
+import { TrackerCommandsService } from "./devices/tracker-commands.service";
 import { SuperadminTrackerDiscoveriesController } from "./discovery/superadmin-tracker-discoveries.controller";
 import { TrackerDiscoveriesAccessGuard } from "./discovery/tracker-discoveries-access.guard";
 import { VehiclesController } from "./vehicles/vehicles.controller";
@@ -23,6 +24,7 @@ import { TrackersCoreModule } from "./trackers-core.module";
     SuperadminTrackerDiscoveriesController,
   ],
   providers: [
+    TrackerCommandsService,
     TrackerPositionsStreamService,
     TrackerPositionsGateway,
     TrackerDiscoveriesAccessGuard,

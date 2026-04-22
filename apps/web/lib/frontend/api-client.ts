@@ -970,6 +970,11 @@ export const trackerDevicesAPI = {
       `/api/organizations/${organizationId}/tracker-devices/${deviceId}/odometer/reset`,
       {}
     ),
+  sendCommand: (organizationId: string, deviceId: string, commandStr: string) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}/commands`,
+      { commandStr }
+    ),
 };
 
 // ── DOCUMENTS ────────────────────────────────────────────────────────────────

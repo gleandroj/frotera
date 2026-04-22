@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   OnModuleInit,
   OnModuleDestroy,
   Logger,
@@ -7,11 +8,13 @@ import {
 import { ConfigService } from "@nestjs/config";
 import * as fs from "fs";
 import * as net from "net";
+import type { RedisClientType } from "redis";
 import { PrismaService } from "@/prisma/prisma.service";
 import { TrackerDevicesService } from "../devices/tracker-devices.service";
 import { TrackerDiscoveryService } from "../discovery/tracker-discovery.service";
 import { NormalizedPosition } from "../dto/index";
 import { TrackerRedisWriterService } from "./tracker-redis-writer.service";
+import { TRACKER_REDIS_SUB } from "../positions/tracker-positions-stream.service";
 import { TelemetryAlertsService } from "@/telemetry/telemetry-alerts.service";
 import {
   isGT06Packet,
@@ -55,6 +58,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
   private server: net.Server | null = null;
   private hexDebugStream: fs.WriteStream | null = null;
   private readonly socketContexts = new Map<net.Socket, SocketContext>();
+  private readonly deviceSockets = new Map<string, net.Socket>();
 
   constructor(
     private readonly config: ConfigService,
@@ -63,6 +67,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     private readonly trackerDiscovery: TrackerDiscoveryService,
     private readonly redisWriter: TrackerRedisWriterService,
     private readonly telemetryAlerts: TelemetryAlertsService,
+    @Inject(TRACKER_REDIS_SUB) private readonly redisSub: RedisClientType,
   ) {
     this.logger.log(`Tracker TCP service constructor...`);
   }
@@ -91,9 +96,25 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
     this.server.on("error", (err) => {
       this.logger.error(`Tracker TCP server error: ${err.message}`);
     });
+
+    await this.redisSub.subscribe("tracker:device-cmd", (msg) => {
+      try {
+        const { deviceId, commandStr } = JSON.parse(msg) as { deviceId: string; commandStr: string };
+        const socket = this.deviceSockets.get(deviceId);
+        if (socket && !socket.destroyed) {
+          socket.write(commandStr);
+          this.logger.log(`[CMD] sent to ${deviceId}: ${commandStr}`);
+        } else {
+          this.logger.warn(`[CMD] device ${deviceId} not connected, command dropped: ${commandStr}`);
+        }
+      } catch (err) {
+        this.logger.warn(`[CMD] failed to parse command message: ${String(err)}`);
+      }
+    });
   }
 
   async onModuleDestroy(): Promise<void> {
+    await this.redisSub.unsubscribe("tracker:device-cmd").catch(() => undefined);
     if (this.hexDebugStream) {
       await new Promise<void>((resolve) => {
         this.hexDebugStream!.end(() => resolve());
@@ -169,14 +190,20 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(`Connection ended: ${remote}`);
       const ctx = this.socketContexts.get(socket);
       this.socketContexts.delete(socket);
-      if (ctx?.deviceId) this.markDisconnected(ctx.deviceId);
+      if (ctx?.deviceId) {
+        this.deviceSockets.delete(ctx.deviceId);
+        this.markDisconnected(ctx.deviceId);
+      }
     });
 
     socket.on("error", (err) => {
       this.logger.warn(`Socket error: ${err.message}`);
       const ctx = this.socketContexts.get(socket);
       this.socketContexts.delete(socket);
-      if (ctx?.deviceId) this.markDisconnected(ctx.deviceId);
+      if (ctx?.deviceId) {
+        this.deviceSockets.delete(ctx.deviceId);
+        this.markDisconnected(ctx.deviceId);
+      }
     });
   }
 
@@ -245,6 +272,7 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
         ctx.deviceOrganizationId = device.organizationId;
         ctx.deviceVehicleId = device.vehicle?.id ?? null;
         ctx.prevIgnitionOn = null;
+        this.deviceSockets.set(device.id, socket);
         this.markConnected(device.id);
         this.logger.log(
           `[GT06] Login | IMEI=${imei} | deviceId=${device.id} | OK (pre-registered)`,

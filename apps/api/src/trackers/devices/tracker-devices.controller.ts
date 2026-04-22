@@ -19,15 +19,21 @@ import {
   UpdateTrackerDeviceDto,
   PositionResponseDto,
   PositionHistoryQueryDto,
+  SendCommandDto,
+  CommandResultDto,
 } from "../dto/index";
 import { TrackerDevicesService } from "./tracker-devices.service";
+import { TrackerCommandsService } from "./tracker-commands.service";
 
 @ApiTags("tracker-devices")
 @Controller("organizations/:organizationId/tracker-devices")
 @UseGuards(JwtAuthGuard, OrganizationMemberGuard)
 @ApiBearerAuth()
 export class TrackerDevicesController {
-  constructor(private readonly devicesService: TrackerDevicesService) {}
+  constructor(
+    private readonly devicesService: TrackerDevicesService,
+    private readonly commandsService: TrackerCommandsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: "Create a tracker device" })
@@ -103,6 +109,20 @@ export class TrackerDevicesController {
   ): Promise<void> {
     await this.devicesService.findByOrganizationAndId(organizationId, deviceId);
     return this.devicesService.resetOdometer(deviceId);
+  }
+
+  @Post(":deviceId/commands")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Send a GPRS command to a connected device" })
+  @ApiResponse({ status: 200, type: CommandResultDto })
+  @ApiResponse({ status: 400, description: "Device is not connected" })
+  @ApiResponse({ status: 404, description: "Not found" })
+  async sendCommand(
+    @Param("organizationId") organizationId: string,
+    @Param("deviceId") deviceId: string,
+    @Body() body: SendCommandDto,
+  ): Promise<CommandResultDto> {
+    return this.commandsService.sendCommand(organizationId, deviceId, body.commandStr);
   }
 
   @Get(":deviceId/positions/last")

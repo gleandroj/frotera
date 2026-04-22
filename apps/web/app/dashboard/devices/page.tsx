@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { getDeviceColumns } from "./columns";
 import { DeviceFormDialog } from "./device-form-dialog";
 import { DeleteDeviceDialog } from "./delete-device-dialog";
+import { DeviceCommandDialog } from "./device-command-dialog";
 
 interface TrackerDevice {
   id: string;
@@ -38,6 +39,7 @@ export default function DevicesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<TrackerDevice | null>(null);
   const [deleteDevice, setDeleteDevice] = useState<TrackerDevice | null>(null);
+  const [commandDevice, setCommandDevice] = useState<TrackerDevice | null>(null);
 
   const loadDevices = () => {
     if (!currentOrganization?.id) {
@@ -122,6 +124,7 @@ export default function DevicesPage() {
           columns={getDeviceColumns(t, {
             onEdit: (device: TrackerDevice) => setEditDevice(device),
             onDelete: (device: TrackerDevice) => setDeleteDevice(device),
+            onCommand: (device: TrackerDevice) => setCommandDevice(device),
           })}
           data={devices}
           filterPlaceholder={t("common.search")}
@@ -152,6 +155,14 @@ export default function DevicesPage() {
         device={deleteDevice}
         organizationId={currentOrganization?.id || ""}
         onSuccess={handleSuccess}
+      />
+
+      <DeviceCommandDialog
+        device={commandDevice}
+        open={!!commandDevice}
+        onOpenChange={(open) => {
+          if (!open) setCommandDevice(null);
+        }}
       />
     </div>
   );

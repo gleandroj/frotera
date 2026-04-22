@@ -28,6 +28,10 @@ function createService() {
     processPosition: jest.fn().mockResolvedValue(undefined),
     processDeviceAlarm: jest.fn().mockResolvedValue(undefined),
   };
+  const redisSub = {
+    subscribe: jest.fn().mockResolvedValue(undefined),
+    unsubscribe: jest.fn().mockResolvedValue(undefined),
+  };
 
   const service = new TrackerTcpService(
     config as never,
@@ -36,6 +40,7 @@ function createService() {
     trackerDiscovery as never,
     redisWriter as never,
     telemetryAlerts as never,
+    redisSub as never,
   );
 
   return {

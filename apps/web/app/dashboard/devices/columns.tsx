@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpDown, MoreVertical, Pencil, Terminal, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 export interface DeviceColumnsOptions {
   onEdit: (device: Device) => void;
   onDelete: (device: Device) => void;
+  onCommand: (device: Device) => void;
   canEditDevice?: boolean;
   canDeleteDevice?: boolean;
 }
@@ -39,7 +40,7 @@ export function getDeviceColumns(
   t: TFunction,
   options: DeviceColumnsOptions,
 ): ColumnDef<Device>[] {
-  const { onEdit, onDelete, canEditDevice = true, canDeleteDevice = true } =
+  const { onEdit, onDelete, onCommand, canEditDevice = true, canDeleteDevice = true } =
     options;
 
   return [
@@ -148,6 +149,10 @@ export function getDeviceColumns(
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onCommand(device)}>
+                  <Terminal className="mr-2 h-4 w-4" />
+                  {t("devices.sendCommand")}
+                </DropdownMenuItem>
                 {canEditDevice && (
                   <DropdownMenuItem onClick={() => onEdit(device)}>
                     <Pencil className="mr-2 h-4 w-4" />

@@ -172,7 +172,27 @@
     "configureDevice": "Configurar Rastreador",
     "resetOdometer": "Zerar Odômetro",
     "resetOdometerConfirm": "Deseja zerar o odômetro deste dispositivo? O valor acumulado será zerado no próximo ciclo de posição.",
-    "toastOdometerReset": "Odômetro zerado com sucesso"
+    "toastOdometerReset": "Odômetro zerado com sucesso",
+    "sendCommand": "Enviar Comando",
+    "commands": {
+      "title": "Enviar Comando GPRS",
+      "description": "Selecione um comando e preencha os parâmetros.",
+      "selectCommand": "Selecione um comando...",
+      "offlineWarning": "Dispositivo desconectado. O comando pode ser descartado se o dispositivo não estiver online.",
+      "sendButton": "Enviar",
+      "previewLabel": "Comando",
+      "toastSent": "Comando enviado com sucesso",
+      "toastError": "Erro ao enviar comando",
+      "categories": {
+        "control": "Controle",
+        "position": "Posicionamento",
+        "odometer": "Odômetro",
+        "connection": "Conexão",
+        "power": "Energia",
+        "alerts": "Alertas",
+        "status": "Status / Info"
+      }
+    }
   },
   "vehicles": {
     "selectOrganization": "Selecione uma organização para ver os veículos.",

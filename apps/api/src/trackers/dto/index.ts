@@ -299,6 +299,19 @@ export class FleetVehicleStatusDto {
   lastPosition?: PositionResponseDto | null;
 }
 
+// ─── Commands ────────────────────────────────────────────────────────────────
+
+export class SendCommandDto {
+  @ApiProperty({ example: "WHERE#" })
+  @IsString()
+  commandStr: string;
+}
+
+export class CommandResultDto {
+  @ApiProperty()
+  sent: boolean;
+}
+
 // ─── Vehicles ────────────────────────────────────────────────────────────────
 
 /** Minimal customer info when returned nested in vehicle (avoids Swagger circular ref) */
