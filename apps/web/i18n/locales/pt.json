@@ -76,6 +76,7 @@
     "nothingToSave": "Nada para guardar.",
     "waitAttachmentUpload": "Aguarde o fim do envio do anexo antes de enviar.",
     "noResults": "Nenhum resultado.",
+    "remove": "Remover",
     "noPermission": "Você não tem permissão para acessar este conteúdo.",
     "createNewVehicle": "Novo veículo",
     "createNewDriver": "Novo motorista",
@@ -1983,6 +1984,43 @@
       "efficiencyDesc": "Veículos com queda de consumo acima do limiar",
       "summary": "Resumo do Período",
       "summaryDesc": "KPIs de dia, mês ou ano com comparativo"
+    },
+    "filters": {
+      "last30d": "Últimos 30 dias",
+      "last12m": "Últimos 12 meses",
+      "custom": "Personalizado",
+      "companies": "Empresas",
+      "vehicles": "Veículos",
+      "companiesPlaceholder": "Selecionar empresas...",
+      "companiesSelectedCount": "{{count}} empresa(s)",
+      "companiesSearch": "Pesquisar empresa...",
+      "vehiclesPlaceholder": "Selecionar veículos...",
+      "vehiclesSelectedCount": "{{count}} veículo(s)",
+      "vehiclesSearch": "Pesquisar veículo..."
+    }
+  },
+  "reports": {
+    "referencePoints": {
+      "title": "Pontos de Referência",
+      "description": "Posições de veículos com distância ao ponto de referência mais próximo.",
+      "filters": {
+        "referencePoints": "Pontos de referência",
+        "referencePointsPlaceholder": "Todos os pontos...",
+        "referencePointsSelected": "{{count}} ponto(s)",
+        "maxDistance": "Distância máx. (m)",
+        "maxDistancePlaceholder": "Sem limite",
+        "search": "Buscar"
+      },
+      "table": {
+        "dateTime": "Data/Hora",
+        "vehicle": "Veículo",
+        "plate": "Placa",
+        "latLng": "Lat/Lng",
+        "closestPoint": "Ponto Mais Próximo",
+        "distance": "Distância (m)",
+        "speed": "Velocidade"
+      },
+      "noData": "Nenhuma posição encontrada. Ajuste os filtros e clique em Buscar."
     }
   },
   "tracking": {

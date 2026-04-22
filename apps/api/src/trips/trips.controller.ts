@@ -8,7 +8,7 @@ import { RoleActionEnum, RoleModuleEnum } from '@/roles/roles.dto';
 import type { OrgScopedRequest } from '@/auth/types/authenticated-request.types';
 import { TripsService } from './trips.service';
 import { TripDetectorService } from './trip-detector.service';
-import { TripsQueryDto, StopsQueryDto, PositionsReportQueryDto, DetectTripsDto } from './dto/trips-query.dto';
+import { TripsQueryDto, StopsQueryDto, PositionsReportQueryDto, DetectTripsDto, ReferencePointsProximityQueryDto } from './dto/trips-query.dto';
 
 @ApiTags('reports')
 @Controller('organizations/:organizationId/reports')
@@ -62,5 +62,19 @@ export class TripsController {
       new Date(body.to),
     );
     return { success: true };
+  }
+
+  @Get('reference-points-proximity')
+  @Permission(RoleModuleEnum.REPORTS_TRACKING, RoleActionEnum.VIEW)
+  async getReferencePointsProximity(
+    @Request() req: OrgScopedRequest,
+    @Param('organizationId') organizationId: string,
+    @Query() query: ReferencePointsProximityQueryDto,
+  ) {
+    return this.tripsService.getReferencePointsProximityReport(
+      organizationId,
+      req.organizationMember.id,
+      query,
+    );
   }
 }

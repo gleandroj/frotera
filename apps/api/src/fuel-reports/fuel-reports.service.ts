@@ -36,27 +36,18 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
-      query.customerId,
+      { vehicleIds: query.vehicleIds, customerIds: query.customerIds },
     );
 
-    // Build where clause
     const where: any = {
       organizationId,
       vehicleId: { in: allowedVehicleIds },
     };
 
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
-      where.vehicleId = query.vehicleId;
-    }
-
     if (query.dateFrom || query.dateTo) {
       where.date = {};
-      if (query.dateFrom) {
-        where.date.gte = new Date(query.dateFrom);
-      }
-      if (query.dateTo) {
-        where.date.lte = new Date(query.dateTo);
-      }
+      if (query.dateFrom) where.date.gte = new Date(query.dateFrom);
+      if (query.dateTo) where.date.lte = new Date(query.dateTo);
     }
 
     const logs = await this.prisma.fuelLog.findMany({
@@ -115,13 +106,35 @@ export class FuelReportsService {
         totalKm = parseFloat((lastOdometer - firstOdometer).toFixed(2));
       }
 
-      // Build time series
-      vehicleLogs.forEach((log) => {
-        timeSeries.push({
-          date: log.date.toISOString().split('T')[0],
-          consumption: log.consumption,
+      // Build time series (optionally grouped by day/month/year)
+      const groupBy = (query as ConsumptionReportQueryDto).groupBy;
+      if (groupBy && groupBy !== 'day') {
+        const byPeriod: Record<string, number[]> = {};
+        vehicleLogs.forEach((log) => {
+          if (log.consumption === null) return;
+          const key =
+            groupBy === 'month'
+              ? log.date.toISOString().slice(0, 7)
+              : log.date.getFullYear().toString();
+          if (!byPeriod[key]) byPeriod[key] = [];
+          byPeriod[key].push(log.consumption);
         });
-      });
+        for (const [period, vals] of Object.entries(byPeriod)) {
+          timeSeries.push({
+            date: period,
+            consumption: parseFloat(
+              (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2),
+            ),
+          });
+        }
+      } else {
+        vehicleLogs.forEach((log) => {
+          timeSeries.push({
+            date: log.date.toISOString().split('T')[0],
+            consumption: log.consumption,
+          });
+        });
+      }
 
       // Calculate trend
       if (consumptions.length >= 3) {
@@ -176,7 +189,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
-      query.customerId,
+      { vehicleIds: query.vehicleIds, customerIds: query.customerIds },
     );
     const groupBy = query.groupBy ?? 'month';
 
@@ -185,18 +198,10 @@ export class FuelReportsService {
       vehicleId: { in: allowedVehicleIds },
     };
 
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
-      where.vehicleId = query.vehicleId;
-    }
-
     if (query.dateFrom || query.dateTo) {
       where.date = {};
-      if (query.dateFrom) {
-        where.date.gte = new Date(query.dateFrom);
-      }
-      if (query.dateTo) {
-        where.date.lte = new Date(query.dateTo);
-      }
+      if (query.dateFrom) where.date.gte = new Date(query.dateFrom);
+      if (query.dateTo) where.date.lte = new Date(query.dateTo);
     }
 
     const logs = await this.prisma.fuelLog.findMany({
@@ -282,7 +287,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
-      query.customerId,
+      { vehicleIds: query.vehicleIds, customerIds: query.customerIds },
     );
     const state = query.state ?? 'SP'; // TODO: use organization.state when available
 
@@ -292,18 +297,10 @@ export class FuelReportsService {
       marketPriceRef: { not: null },
     };
 
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
-      where.vehicleId = query.vehicleId;
-    }
-
     if (query.dateFrom || query.dateTo) {
       where.date = {};
-      if (query.dateFrom) {
-        where.date.gte = new Date(query.dateFrom);
-      }
-      if (query.dateTo) {
-        where.date.lte = new Date(query.dateTo);
-      }
+      if (query.dateFrom) where.date.gte = new Date(query.dateFrom);
+      if (query.dateTo) where.date.lte = new Date(query.dateTo);
     }
 
     const logs = await this.prisma.fuelLog.findMany({
@@ -338,14 +335,18 @@ export class FuelReportsService {
       totalOverpaid = null;
     }
 
-    // Build time series (by month)
+    // Build time series (grouped by period)
+    const groupBy = query.groupBy ?? 'month';
     const byMonth: Record<string, any[]> = {};
     logsWithMarket.forEach((log) => {
-      const month = log.date.toISOString().slice(0, 7);
-      if (!byMonth[month]) {
-        byMonth[month] = [];
-      }
-      byMonth[month].push(log);
+      const key =
+        groupBy === 'day'
+          ? log.date.toISOString().split('T')[0]
+          : groupBy === 'year'
+            ? log.date.getFullYear().toString()
+            : log.date.toISOString().slice(0, 7);
+      if (!byMonth[key]) byMonth[key] = [];
+      byMonth[key].push(log);
     });
 
     const timeSeries: BenchmarkPointDto[] = [];
@@ -402,13 +403,20 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
-      query.customerId,
+      { vehicleIds: query.vehicleIds, customerIds: query.customerIds },
     );
+
+    const dateWhere: any = {};
+    if (query.dateFrom || query.dateTo) {
+      if (query.dateFrom) dateWhere.gte = new Date(query.dateFrom);
+      if (query.dateTo) dateWhere.lte = new Date(query.dateTo);
+    }
 
     const logs = await this.prisma.fuelLog.findMany({
       where: {
         organizationId,
         vehicleId: { in: allowedVehicleIds },
+        ...(Object.keys(dateWhere).length > 0 ? { date: dateWhere } : {}),
       },
       include: {
         vehicle: {
@@ -515,7 +523,7 @@ export class FuelReportsService {
     const allowedVehicleIds = await this.getAllowedVehicleIds(
       organizationId,
       memberId,
-      query.customerId,
+      { vehicleIds: query.vehicleIds, customerIds: query.customerIds },
     );
     const refDate = new Date(query.date);
 
@@ -530,10 +538,6 @@ export class FuelReportsService {
       vehicleId: { in: allowedVehicleIds },
       date: { gte: start, lte: end },
     };
-
-    if (query.vehicleId && allowedVehicleIds.includes(query.vehicleId)) {
-      where.vehicleId = query.vehicleId;
-    }
 
     const logs = await this.prisma.fuelLog.findMany({ where });
     const prevLogs = await this.prisma.fuelLog.findMany({
@@ -610,7 +614,7 @@ export class FuelReportsService {
   private async getAllowedVehicleIds(
     organizationId: string,
     memberId: string,
-    filterCustomerId?: string,
+    options?: { vehicleIds?: string[]; customerIds?: string[] },
   ): Promise<string[]> {
     const member = await this.prisma.organizationMember.findFirst({
       where: { id: memberId, organizationId },
@@ -622,12 +626,25 @@ export class FuelReportsService {
     const allowedCustomerIds =
       await this.customersService.getAllowedCustomerIds(member, organizationId);
 
-    const scopedCustomerIds =
-      await this.customersService.resolveResourceCustomerFilter(
+    let scopedCustomerIds: string[] | null;
+
+    if (options?.customerIds?.length) {
+      const subtrees = await Promise.all(
+        options.customerIds.map((cId) =>
+          this.customersService
+            .resolveResourceCustomerFilter(organizationId, allowedCustomerIds, cId)
+            .catch(() => [] as string[]),
+        ),
+      );
+      const unioned = [...new Set(subtrees.flat().filter((id): id is string => id !== null))];
+      scopedCustomerIds = unioned;
+    } else {
+      scopedCustomerIds = await this.customersService.resolveResourceCustomerFilter(
         organizationId,
         allowedCustomerIds,
-        filterCustomerId,
+        undefined,
       );
+    }
 
     const allowedVehicleFilter =
       scopedCustomerIds !== null
@@ -639,7 +656,14 @@ export class FuelReportsService {
       select: { id: true },
     });
 
-    return vehicles.map((v) => v.id);
+    const vehicleIds = vehicles.map((v) => v.id);
+
+    if (options?.vehicleIds?.length) {
+      const filterSet = new Set(options.vehicleIds);
+      return vehicleIds.filter((id) => filterSet.has(id));
+    }
+
+    return vehicleIds;
   }
 
   private getPeriodBounds(

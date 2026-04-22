@@ -504,7 +504,6 @@ describe('FuelReportsService', () => {
       const query: SummaryReportQueryDto = {
         period: 'month',
         date: '2026-01-15',
-        vehicleId: undefined,
       };
 
       const result = await service.getSummaryReport(orgId, memberId, query);

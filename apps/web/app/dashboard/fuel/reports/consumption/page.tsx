@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
 import { fuelReportsAPI, VehicleConsumption } from "@/lib/frontend/api-client";
 import { ConsumptionChart } from "../components/consumption-chart";
+import { FuelReportFilters, defaultDateRange, type DatePreset, type GroupBy } from "../components/fuel-report-filters";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
@@ -12,20 +13,40 @@ import { formatLocaleDecimal } from "@/lib/locale-decimal";
 export default function ConsumptionReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
-  const { currentOrganization, selectedCustomerId } = useAuth();
+  const { currentOrganization } = useAuth();
+
+  const initial = defaultDateRange();
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+  const [datePreset, setDatePreset] = useState<DatePreset>(initial.preset);
+  const [dateFrom, setDateFrom] = useState(initial.dateFrom);
+  const [dateTo, setDateTo] = useState(initial.dateTo);
+  const [groupBy, setGroupBy] = useState<GroupBy>("month");
+
   const [data, setData] = useState<VehicleConsumption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
     setLoading(true);
-    fuelReportsAPI.consumption(currentOrganization.id, {
-      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
-    })
+    fuelReportsAPI
+      .consumption(currentOrganization.id, {
+        vehicleIds: selectedVehicleIds.length > 0 ? selectedVehicleIds : undefined,
+        customerIds: selectedCustomerIds.length > 0 ? selectedCustomerIds : undefined,
+        dateFrom,
+        dateTo,
+        groupBy,
+      })
       .then((res) => setData(res.data))
       .catch(() => toast.error(t("fuel.toastError")))
       .finally(() => setLoading(false));
-  }, [currentOrganization?.id, selectedCustomerId, t]);
+  }, [currentOrganization?.id, selectedVehicleIds, selectedCustomerIds, dateFrom, dateTo, groupBy, t]);
+
+  const handleDatePreset = (preset: DatePreset, from?: string, to?: string) => {
+    setDatePreset(preset);
+    if (from !== undefined) setDateFrom(from);
+    if (to !== undefined) setDateTo(to);
+  };
 
   const trendVariant = (trend: string) => {
     if (trend === "improving") return "secondary";
@@ -40,6 +61,23 @@ export default function ConsumptionReportPage() {
         <p className="text-muted-foreground">{t("fuelReports.consumption.description")}</p>
       </div>
 
+      {currentOrganization && (
+        <FuelReportFilters
+          organizationId={currentOrganization.id}
+          selectedCustomerIds={selectedCustomerIds}
+          selectedVehicleIds={selectedVehicleIds}
+          datePreset={datePreset}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          groupBy={groupBy}
+          showGroupBy
+          onCustomerIdsChange={setSelectedCustomerIds}
+          onVehicleIdsChange={setSelectedVehicleIds}
+          onDatePresetChange={handleDatePreset}
+          onGroupByChange={setGroupBy}
+        />
+      )}
+
       {loading ? (
         <div className="text-center text-muted-foreground">{t("common.loading")}</div>
       ) : data.length === 0 ? (
@@ -51,7 +89,7 @@ export default function ConsumptionReportPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="py-2 text-left">Veículo</th>
+                  <th className="py-2 text-left">{t("navigation.items.vehicles")}</th>
                   <th className="py-2 text-right">{t("fuelReports.consumption.avgConsumption")}</th>
                   <th className="py-2 text-right">{t("fuelReports.consumption.best")}</th>
                   <th className="py-2 text-right">{t("fuelReports.consumption.worst")}</th>
@@ -68,34 +106,22 @@ export default function ConsumptionReportPage() {
                     </td>
                     <td className="py-2 text-right">
                       {v.avgConsumption != null
-                        ? `${formatLocaleDecimal(v.avgConsumption, intlLocale, {
-                            minFractionDigits: 2,
-                            maxFractionDigits: 2,
-                          })} km/l`
+                        ? `${formatLocaleDecimal(v.avgConsumption, intlLocale, { minFractionDigits: 2, maxFractionDigits: 2 })} km/l`
                         : "—"}
                     </td>
                     <td className="py-2 text-right">
                       {v.bestConsumption != null
-                        ? `${formatLocaleDecimal(v.bestConsumption, intlLocale, {
-                            minFractionDigits: 2,
-                            maxFractionDigits: 2,
-                          })} km/l`
+                        ? `${formatLocaleDecimal(v.bestConsumption, intlLocale, { minFractionDigits: 2, maxFractionDigits: 2 })} km/l`
                         : "—"}
                     </td>
                     <td className="py-2 text-right">
                       {v.worstConsumption != null
-                        ? `${formatLocaleDecimal(v.worstConsumption, intlLocale, {
-                            minFractionDigits: 2,
-                            maxFractionDigits: 2,
-                          })} km/l`
+                        ? `${formatLocaleDecimal(v.worstConsumption, intlLocale, { minFractionDigits: 2, maxFractionDigits: 2 })} km/l`
                         : "—"}
                     </td>
                     <td className="py-2 text-right">
                       {v.totalKm != null
-                        ? `${formatLocaleDecimal(v.totalKm, intlLocale, {
-                            minFractionDigits: 0,
-                            maxFractionDigits: 0,
-                          })} km`
+                        ? `${formatLocaleDecimal(v.totalKm, intlLocale, { minFractionDigits: 0, maxFractionDigits: 0 })} km`
                         : "—"}
                     </td>
                     <td className="py-2 text-center">

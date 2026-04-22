@@ -17,6 +17,18 @@ export const internalApiUrl = process.env.NEXT_PUBLIC_APP_URL;
 export const externalApi = axios.create({
   baseURL: externalApiUrl || "http://localhost:3001",
   timeout: 10000,
+  paramsSerializer: (params) => {
+    const parts: string[] = [];
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) continue;
+      if (Array.isArray(value)) {
+        value.forEach((v) => parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`));
+      } else {
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      }
+    }
+    return parts.join("&");
+  },
 });
 
 /** Alias for server-side or legacy usage (e.g. dashboard API) */
@@ -1400,28 +1412,28 @@ export interface PeriodSummary {
 export const fuelReportsAPI = {
   consumption: (
     orgId: string,
-    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string },
+    params?: { vehicleIds?: string[]; customerIds?: string[]; dateFrom?: string; dateTo?: string; groupBy?: string },
   ) =>
     externalApi.get<VehicleConsumption[]>(`/api/organizations/${orgId}/fuel/reports/consumption`, { params }),
 
   costs: (
     orgId: string,
-    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string; groupBy?: string },
+    params?: { vehicleIds?: string[]; customerIds?: string[]; dateFrom?: string; dateTo?: string; groupBy?: string },
   ) =>
     externalApi.get<CostsPeriod[]>(`/api/organizations/${orgId}/fuel/reports/costs`, { params }),
 
   benchmark: (
     orgId: string,
-    params?: { vehicleId?: string; customerId?: string; dateFrom?: string; dateTo?: string; state?: string },
+    params?: { vehicleIds?: string[]; customerIds?: string[]; dateFrom?: string; dateTo?: string; state?: string; groupBy?: string },
   ) =>
     externalApi.get<BenchmarkSummary>(`/api/organizations/${orgId}/fuel/reports/benchmark`, { params }),
 
-  efficiency: (orgId: string, params?: { thresholdPct?: number; customerId?: string }) =>
+  efficiency: (orgId: string, params?: { vehicleIds?: string[]; customerIds?: string[]; dateFrom?: string; dateTo?: string; thresholdPct?: number }) =>
     externalApi.get<VehicleEfficiency[]>(`/api/organizations/${orgId}/fuel/reports/efficiency`, { params }),
 
   summary: (
     orgId: string,
-    params: { period: 'day' | 'month' | 'year'; date: string; vehicleId?: string; customerId?: string },
+    params: { period: 'day' | 'month' | 'year'; date: string; vehicleIds?: string[]; customerIds?: string[] },
   ) =>
     externalApi.get<PeriodSummary>(`/api/organizations/${orgId}/fuel/reports/summary`, { params }),
 
@@ -1735,7 +1747,40 @@ export interface ReferencePoint {
   customer?: { id: string; name: string } | null;
 }
 
+export interface ReferencePointProximityRow {
+  positionId: string;
+  recordedAt: string;
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  ignitionOn: boolean | null;
+  vehicleId: string;
+  vehicleName: string | null;
+  vehiclePlate: string | null;
+  closestReferencePointId: string;
+  closestReferencePointName: string;
+  closestDistanceMeters: number;
+}
+
 export const trackingReportsAPI = {
+  referencePointsProximity: (
+    organizationId: string,
+    params: {
+      vehicleIds?: string[];
+      customerIds?: string[];
+      referencePointIds?: string[];
+      dateFrom: string;
+      dateTo: string;
+      maxDistanceMeters?: number;
+      skip?: number;
+      take?: number;
+    },
+  ) =>
+    externalApi.get<{ data: ReferencePointProximityRow[]; total: number; skip: number; take: number }>(
+      `/api/organizations/${organizationId}/reports/reference-points-proximity`,
+      { params },
+    ),
+
   listPositions: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; limit?: number; offset?: number; dateField?: 'recordedAt' | 'receivedAt' }) =>
     externalApi.get<{ items: unknown[]; total: number }>(
       `/api/organizations/${organizationId}/reports/positions`,

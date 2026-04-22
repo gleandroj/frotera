@@ -1,11 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsOptional,
   IsString,
   IsDateString,
   IsEnum,
   IsNumber,
+  IsArray,
   Min,
 } from 'class-validator';
 
@@ -14,15 +15,19 @@ import {
 // ────────────────────────────────────────────────────────────────────────────
 
 export class FuelReportBaseQueryDto {
-  @ApiPropertyOptional({ description: 'Filter by vehicle ID' })
+  @ApiPropertyOptional({ description: 'Filter by vehicle IDs', type: [String] })
   @IsOptional()
-  @IsString()
-  vehicleId?: string;
+  @Transform(({ value }) => (typeof value === 'string' ? [value] : value))
+  @IsArray()
+  @IsString({ each: true })
+  vehicleIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Restrict to vehicles under this customer (subtree)' })
+  @ApiPropertyOptional({ description: 'Restrict to vehicles under these customers (subtrees)', type: [String] })
   @IsOptional()
-  @IsString()
-  customerId?: string;
+  @Transform(({ value }) => (typeof value === 'string' ? [value] : value))
+  @IsArray()
+  @IsString({ each: true })
+  customerIds?: string[];
 
   @ApiPropertyOptional({ description: 'Start date (ISO 8601)' })
   @IsOptional()
@@ -35,7 +40,15 @@ export class FuelReportBaseQueryDto {
   dateTo?: string;
 }
 
-export class ConsumptionReportQueryDto extends FuelReportBaseQueryDto {}
+export class ConsumptionReportQueryDto extends FuelReportBaseQueryDto {
+  @ApiPropertyOptional({
+    enum: ['day', 'month', 'year'],
+    description: 'Group time series by period',
+  })
+  @IsOptional()
+  @IsEnum(['day', 'month', 'year'])
+  groupBy?: 'day' | 'month' | 'year';
+}
 
 export class CostsReportQueryDto extends FuelReportBaseQueryDto {
   @ApiPropertyOptional({
@@ -52,6 +65,14 @@ export class BenchmarkReportQueryDto extends FuelReportBaseQueryDto {
   @IsOptional()
   @IsString()
   state?: string;
+
+  @ApiPropertyOptional({
+    enum: ['day', 'month', 'year'],
+    description: 'Group time series by period',
+  })
+  @IsOptional()
+  @IsEnum(['day', 'month', 'year'])
+  groupBy?: 'day' | 'month' | 'year';
 }
 
 export class EfficiencyReportQueryDto extends FuelReportBaseQueryDto {
@@ -66,15 +87,19 @@ export class EfficiencyReportQueryDto extends FuelReportBaseQueryDto {
 }
 
 export class SummaryReportQueryDto {
-  @ApiPropertyOptional({ description: 'Filter by vehicle ID' })
+  @ApiPropertyOptional({ description: 'Filter by vehicle IDs', type: [String] })
   @IsOptional()
-  @IsString()
-  vehicleId?: string;
+  @Transform(({ value }) => (typeof value === 'string' ? [value] : value))
+  @IsArray()
+  @IsString({ each: true })
+  vehicleIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Restrict to vehicles under this customer (subtree)' })
+  @ApiPropertyOptional({ description: 'Restrict to vehicles under these customers (subtrees)', type: [String] })
   @IsOptional()
-  @IsString()
-  customerId?: string;
+  @Transform(({ value }) => (typeof value === 'string' ? [value] : value))
+  @IsArray()
+  @IsString({ each: true })
+  customerIds?: string[];
 
   @ApiProperty({
     enum: ['day', 'month', 'year'],

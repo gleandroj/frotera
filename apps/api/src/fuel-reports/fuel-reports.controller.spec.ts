@@ -184,7 +184,7 @@ describe('FuelReportsController', () => {
       );
 
       const query: ConsumptionReportQueryDto = {
-        vehicleId: 'v1',
+        vehicleIds: ['v1'],
         dateFrom: '2026-01-01',
         dateTo: '2026-03-31',
       };
@@ -434,7 +434,7 @@ describe('FuelReportsController', () => {
       const query: SummaryReportQueryDto = {
         period: 'month',
         date: '2026-01-15',
-        vehicleId: 'v1',
+        vehicleIds: ['v1'],
       };
 
       await controller.getSummary(mockRequest as any, orgId, query);

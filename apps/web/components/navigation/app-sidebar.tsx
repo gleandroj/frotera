@@ -314,6 +314,13 @@ export function AppSidebar() {
       icon: CheckSquare,
       isActive: pathname.startsWith("/dashboard/checklist/reports"),
     });
+  if (canViewTrackingReports)
+    reportsItems.push({
+      title: t("reports.referencePoints.title"),
+      href: "/dashboard/reports/reference-points",
+      icon: MapPinned,
+      isActive: pathname === "/dashboard/reports/reference-points",
+    });
 
   const customersItems: NavItem[] = [];
   if (canViewCustomers)
