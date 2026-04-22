@@ -91,6 +91,7 @@ export default function ReferencePointsPage() {
   const [geocodeSearching, setGeocodeSearching] = useState(false);
   const [geocodeResults, setGeocodeResults] = useState<GeocodeResult[]>([]);
   const [geocodePopoverOpen, setGeocodePopoverOpen] = useState(false);
+  const [focusedPoint, setFocusedPoint] = useState<[number, number] | null>(null);
 
   // Load points and customers
   useEffect(() => {
@@ -321,6 +322,8 @@ export default function ReferencePointsPage() {
               onMapClick={sheetOpen ? handleMapClick : undefined}
               latitude={sheetOpen && latitude ? parseFloat(latitude) : undefined}
               longitude={sheetOpen && longitude ? parseFloat(longitude) : undefined}
+              radiusMeters={sheetOpen && radiusMeters ? parseInt(radiusMeters) : undefined}
+              focusedPoint={sheetOpen ? null : focusedPoint}
             />
           </div>
         </div>
@@ -338,7 +341,16 @@ export default function ReferencePointsPage() {
                 <p className="text-sm text-muted-foreground">{t("referencePoints.noPoints")}</p>
               ) : (
                 points.map((point) => (
-                  <div key={point.id} className="rounded-lg border p-3 space-y-2 hover:bg-muted/50">
+                  <div
+                    key={point.id}
+                    className={cn(
+                      "rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-muted/50 transition-colors",
+                      focusedPoint?.[0] === point.latitude && focusedPoint?.[1] === point.longitude
+                        ? "border-primary bg-muted/50"
+                        : "",
+                    )}
+                    onClick={() => setFocusedPoint([point.latitude, point.longitude])}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{point.name}</p>
@@ -351,7 +363,7 @@ export default function ReferencePointsPage() {
                         {typeOptions.find((opt) => opt.value === point.type)?.label}
                       </Badge>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -435,40 +447,42 @@ export default function ReferencePointsPage() {
             <div>
               <Label htmlFor="address-search">{t("referencePoints.address")} *</Label>
               <div className="flex gap-2">
-                <Popover open={geocodePopoverOpen} onOpenChange={setGeocodePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <div className="flex-1">
-                      <Input
-                        id="address-search"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder={t("referencePoints.addressSearchPlaceholder")}
-                      />
+                <div className="relative flex-1">
+                  <Input
+                    id="address-search"
+                    value={address}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (geocodePopoverOpen) setGeocodePopoverOpen(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleGeocodeSearch();
+                      }
+                      if (e.key === "Escape") setGeocodePopoverOpen(false);
+                    }}
+                    placeholder={t("referencePoints.addressSearchPlaceholder")}
+                    autoComplete="off"
+                  />
+                  {geocodePopoverOpen && geocodeResults.length > 0 && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+                      {geocodeResults.map((result, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectGeocodeResult(result);
+                          }}
+                        >
+                          {result.displayName}
+                        </button>
+                      ))}
                     </div>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-[300px] p-0">
-                    <Command>
-                      <CommandInput placeholder={t("referencePoints.searchAddress")} />
-                      <CommandList>
-                        {geocodeResults.length === 0 ? (
-                          <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-                        ) : (
-                          <CommandGroup>
-                            {geocodeResults.map((result, idx) => (
-                              <CommandItem
-                                key={idx}
-                                value={result.displayName}
-                                onSelect={() => handleSelectGeocodeResult(result)}
-                              >
-                                {result.displayName}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                  )}
+                </div>
                 <Button
                   type="button"
                   onClick={handleGeocodeSearch}
