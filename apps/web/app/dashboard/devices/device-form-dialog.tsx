@@ -11,6 +11,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -129,10 +139,12 @@ export function DeviceFormDialog({
   const isSubform = !!onConfirm;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResettingOdometer, setIsResettingOdometer] = useState(false);
+  const [isResetOdometerDialogOpen, setIsResetOdometerDialogOpen] =
+    useState(false);
 
-  const handleResetOdometer = useCallback(() => {
+  const handleConfirmResetOdometer = useCallback(() => {
     if (!organizationId || !device?.id) return;
-    if (!window.confirm(t("devices.resetOdometerConfirm"))) return;
+    setIsResetOdometerDialogOpen(false);
     setIsResettingOdometer(true);
     trackerDevicesAPI.resetOdometer(organizationId, device.id)
       .then(() => toast.success(t("devices.toastOdometerReset")))
@@ -456,7 +468,7 @@ export function DeviceFormDialog({
                       variant="destructive"
                       size="sm"
                       disabled={isResettingOdometer}
-                      onClick={handleResetOdometer}
+                      onClick={() => setIsResetOdometerDialogOpen(true)}
                     >
                       {t("devices.resetOdometer")}
                     </Button>
@@ -489,6 +501,30 @@ export function DeviceFormDialog({
           </form>
         </Form>
       </SheetContent>
+      <AlertDialog
+        open={isResetOdometerDialogOpen}
+        onOpenChange={setIsResetOdometerDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("devices.resetOdometer")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("devices.resetOdometerConfirm")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResettingOdometer}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmResetOdometer}
+              disabled={isResettingOdometer}
+            >
+              {t("common.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

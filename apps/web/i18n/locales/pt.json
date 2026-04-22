@@ -2030,6 +2030,7 @@
     "editPoint": "Editar Ponto de Referência",
     "newPointForm": "Novo Ponto de Referência",
     "mapInstructions": "Clique no mapa para definir a localização ou preencha manualmente",
+    "mapClickHint": "Clique no mapa para posicionar o ponto",
     "namePlaceholder": "Ex: Depósito Principal",
     "descriptionPlaceholder": "Detalhes sobre este ponto",
     "typeLabel": "Tipo",
