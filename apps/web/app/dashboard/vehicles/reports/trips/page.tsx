@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Link from "next/link";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 const ALL_VEHICLES = "__trips_all__";
 
@@ -37,11 +36,14 @@ export default function TripsReportPage() {
   const [vehicleId, setVehicleId] = useState<string>(ALL_VEHICLES);
   const [from, setFrom] = useState(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 7);
     d.setHours(0, 0, 0, 0);
     return d.toISOString().slice(0, 16);
   });
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 16));
+  const [to, setTo] = useState(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d.toISOString().slice(0, 16);
+  });
   const [trips, setTrips] = useState<VehicleTrip[]>([]);
   const [stops, setStops] = useState<VehicleStop[]>([]);
   const [tripsTotal, setTripsTotal] = useState(0);
@@ -95,14 +97,9 @@ export default function TripsReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild className="-ml-2">
-          <Link href="/dashboard/reports"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.trips.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("trackingReports.trips.subtitle")}</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.trips.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("trackingReports.trips.subtitle")}</p>
       </div>
 
       {/* Filters */}

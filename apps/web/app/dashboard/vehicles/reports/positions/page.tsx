@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Vehicle } from "@/lib/frontend/api-client";
 
 type DateField = "recordedAt" | "receivedAt";
@@ -223,14 +222,9 @@ export default function PositionsReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild className="-ml-2">
-          <Link href="/dashboard/reports"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.positions.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("trackingReports.positions.subtitle")}</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("trackingReports.positions.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("trackingReports.positions.subtitle")}</p>
       </div>
 
       {/* Filters */}
