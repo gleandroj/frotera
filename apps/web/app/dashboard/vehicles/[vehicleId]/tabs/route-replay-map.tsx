@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Polyline, useMap } from "react-leaflet";
+import { MapBaseLayers } from "@/components/ui/map-tile-layers";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PositionPoint } from "@/components/devices/device-map";
@@ -59,10 +60,7 @@ export function RouteReplayMap({ positions, currentIdx }: Props) {
       zoom={14}
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <MapBaseLayers />
       <Polyline positions={polylinePoints} color="#3b82f6" weight={3} opacity={0.8} />
       <MovingMarker positions={positions} currentIdx={currentIdx} />
     </MapContainer>

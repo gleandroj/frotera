@@ -4,12 +4,12 @@ import { useEffect, useMemo } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   MapContainer,
-  TileLayer,
   Polyline,
   Marker,
   Popup,
   useMap,
 } from "react-leaflet";
+import { MapBaseLayers } from "@/components/ui/map-tile-layers";
 import L from "leaflet";
 import { Truck } from "lucide-react";
 
@@ -142,10 +142,7 @@ export function DeviceMap({
         className="h-full w-full rounded-md"
       >
         <MapCenter center={center} zoom={zoom} />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <MapBaseLayers />
         {polylinePositions.length > 1 && (
           <Polyline positions={polylinePositions} color="#2563eb" weight={4} />
         )}

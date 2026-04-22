@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, Circle, Marker, Popup, useMap } from "react-leaflet";
+import { MapBaseLayers } from "@/components/ui/map-tile-layers";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { ReferencePoint } from "@/lib/frontend/api-client";
@@ -130,10 +131,7 @@ export function ReferencePointsMap({
       style={{ height: "100%", width: "100%" }}
       className="rounded-lg"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <MapBaseLayers />
 
       <GeolocationInit />
       <FlyToPoint target={focusedPoint} />

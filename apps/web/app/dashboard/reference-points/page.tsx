@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -514,15 +515,18 @@ export default function ReferencePointsPage() {
               </div>
             )}
 
-            <div>
-              <Label htmlFor="radius">{t("referencePoints.radius")}</Label>
-              <Input
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="radius">{t("referencePoints.radius")}</Label>
+                <span className="text-sm text-muted-foreground">{radiusMeters} m</span>
+              </div>
+              <Slider
                 id="radius"
-                type="number"
-                min="1"
-                value={radiusMeters}
-                onChange={(e) => setRadiusMeters(e.target.value)}
-                placeholder="500"
+                min={50}
+                max={50000}
+                step={50}
+                value={[parseInt(radiusMeters) || 500]}
+                onValueChange={(v) => setRadiusMeters(String(v[0]))}
               />
             </div>
 

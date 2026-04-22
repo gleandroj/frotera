@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { Action, Module, usePermissions } from "@/lib/hooks/use-permissions";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
@@ -185,18 +184,11 @@ export default function TelemetryPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("telemetry.title")}
-          </h1>
-          <p className="text-muted-foreground">{t("telemetry.description")}</p>
-        </div>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/telemetry/geofences">
-            {t("telemetry.manageGeofences")}
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("telemetry.title")}
+        </h1>
+        <p className="text-muted-foreground">{t("telemetry.description")}</p>
       </div>
 
       <Card>

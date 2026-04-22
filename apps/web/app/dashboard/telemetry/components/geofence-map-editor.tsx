@@ -5,10 +5,10 @@ import {
   Circle,
   MapContainer,
   Polygon,
-  TileLayer,
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import { MapBaseLayers } from "@/components/ui/map-tile-layers";
 import "leaflet/dist/leaflet.css";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
@@ -300,7 +300,7 @@ export function GeofenceMapEditor({
             center={cameraTarget}
             zoom={cameraZoom}
           />
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapBaseLayers />
           <MapClick onClick={onMapClick} />
           {type === "CIRCLE" && (
             <Circle

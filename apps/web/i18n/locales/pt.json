@@ -380,7 +380,7 @@
       "CRITICAL": "Crítico"
     },
     "geofences": {
-      "title": "Zonas de geofence",
+      "title": "Cercas Virtuais",
       "description": "Configure zonas geográficas para monitorar entradas e saídas.",
       "noZones": "Nenhuma zona configurada.",
       "newZone": "Nova zona",
@@ -1042,7 +1042,8 @@
       "tracking": "Rastreamento",
       "help": "Ajuda",
       "trackingReports": "Relatórios de Rastreamento",
-      "referencePoints": "Pontos de Referência"
+      "referencePoints": "Pontos de Referência",
+      "virtualFences": "Cercas Virtuais"
     },
     "footer": {
       "copyright": "© {{year}} Frotera",

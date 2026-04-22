@@ -47,6 +47,7 @@ import {
   MapPinned,
   Radio,
   Route,
+  ShieldCheck,
   Smartphone,
   SlidersHorizontal,
   TrendingUp,
@@ -238,8 +239,15 @@ export function AppSidebar() {
       title: t("navigation.items.telemetry"),
       href: "/dashboard/telemetry",
       icon: Bell,
-      isActive: pathname.startsWith("/dashboard/telemetry"),
+      isActive: pathname === "/dashboard/telemetry",
       badge: unreadTelemetry > 0 ? unreadTelemetry : undefined,
+    });
+  if (canViewTelemetry)
+    monitoringItems.push({
+      title: t("navigation.items.virtualFences"),
+      href: "/dashboard/telemetry/geofences",
+      icon: ShieldCheck,
+      isActive: pathname.startsWith("/dashboard/telemetry/geofences"),
     });
   if (canViewReferencePoints)
     monitoringItems.push({
