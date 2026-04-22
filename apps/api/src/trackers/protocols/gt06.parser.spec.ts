@@ -57,14 +57,15 @@ describe("gt06.parser protocol coverage", () => {
     expectValidLatLng(position);
   });
 
-  it("should parse advanced location packet (0x94 extended frame)", () => {
-    const { parsed, position } = parsePositionOrThrow(
+  it("should return null for 0x94 packet with no valid GPS block (no crash)", () => {
+    // This packet has an invalid date (day=0x57=87) — GPS block is undetectable.
+    // Parser must return null gracefully, not throw or produce garbage coordinates.
+    const parsed = parsePacketOrThrow(
       "79790020940a035778964875627507243202086043828955320210008604382100036a030d0a",
     );
     expect(isGT06Location(parsed.protocolNumber)).toBe(true);
-    // Some 0x94 firmwares send float/int layouts inconsistently; parser must not crash.
-    expect(typeof position.latitude).toBe("number");
-    expect(typeof position.longitude).toBe("number");
+    const position = parseGT06LocationToPosition(parsed.protocolNumber, parsed.content);
+    expect(position).toBeNull();
   });
 });
 

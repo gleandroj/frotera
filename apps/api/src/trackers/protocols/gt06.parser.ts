@@ -332,6 +332,15 @@ function parseGt06Datetime6YearBinaryBcdRest(
   return new Date(Date.UTC(year, month - 1, day, hour, min, sec)).toISOString();
 }
 
+function isValidCoordinate(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180
+  );
+}
+
 /**
  * Decode 18-byte GPS block (same order as Traccar {@code decodeGps} with hasLength=false,
  * hasSatellites=true): 6B date (binary YY MM DD HH mm ss), 1B GPS info, 4B lat, 4B lng,
@@ -371,6 +380,8 @@ function decodeGpsBlockTraccarStyle(
   ) {
     return null;
   }
+
+  if (!isValidCoordinate(lat, lng)) return null;
 
   return {
     latitude: lat,
@@ -516,6 +527,7 @@ export function parseGT06AlarmPacket(content: Buffer): NormalizedPosition | null
 
   // Accept alarm packets even without GPS fix (alarm is still meaningful)
   if (!gpsFixed) return null;
+  if (!isValidCoordinate(lat, lng)) return null;
 
   return {
     latitude: lat,
@@ -638,6 +650,8 @@ export function getPositionFromGT06Location(
     return null;
   }
 
+  if (!isValidCoordinate(lat, lng)) return null;
+
   return {
     latitude: lat,
     longitude: lng,
@@ -648,57 +662,21 @@ export function getPositionFromGT06Location(
 }
 
 /**
- * Parse GT06 Location Advanced (0x94). Same 18-byte block layout as 0x22, but latitude/longitude
- * are in NMEA DDMM.MMMMM (DDDMM.MMMMM for longitude), not divisor-300000. Firmware sends float
- * or fixed-point; we convert to decimal degrees via nmeaDdmmToDecimal.
+ * Parse GT06 Location Advanced (0x94). Layout varies by firmware (GPS-only, LBS-only, mixed).
+ * Uses dynamic GPS block detection to avoid reading garbage from non-GPS frames.
  */
 export function getPositionFromGT06LocationAdvanced(
   content: Buffer,
-  startOffset: number = 0,
 ): NormalizedPosition | null {
-  if (content.length < startOffset + 18) return null;
+  const o = findGpsOffset(content);
+  if (o === null) return null;
+  if (content.length < o + 18) return null;
 
-  const o = startOffset;
-  const year = 2000 + ((content[o + 0] >> 4) * 10 + (content[o + 0] & 0x0f));
-  const month = (content[o + 1] >> 4) * 10 + (content[o + 1] & 0x0f);
-  const day = (content[o + 2] >> 4) * 10 + (content[o + 2] & 0x0f);
-  const hour = (content[o + 3] >> 4) * 10 + (content[o + 3] & 0x0f);
-  const min = (content[o + 4] >> 4) * 10 + (content[o + 4] & 0x0f);
-  const sec = (content[o + 5] >> 4) * 10 + (content[o + 5] & 0x0f);
+  const pos = decodeGpsBlockTraccarStyle(content, o, true);
+  if (!pos) return null;
+  if (!isValidCoordinate(pos.latitude, pos.longitude)) return null;
 
-  const recordedAt = new Date(
-    Date.UTC(year, month - 1, day, hour, min, sec),
-  ).toISOString();
-
-  // 0x94: lat/lng as NMEA DDMM.MMMMM (often 4-byte float from device)
-  const latRaw =
-    content.length >= o + 11
-      ? content.readFloatBE(o + 7)
-      : content.readInt32BE(o + 7) / 100000;
-  const lngRaw =
-    content.length >= o + 15
-      ? content.readFloatBE(o + 11)
-      : content.readInt32BE(o + 11) / 100000;
-
-  const speed = (content[o + 15] ?? 0) * 1.852;
-  const courseStatus = content.readUInt16BE(o + 16);
-  const gpsFixed = (courseStatus & 0x8000) !== 0;
-  const latSouth = (courseStatus & 0x4000) !== 0;
-  const lngWest = (courseStatus & 0x2000) !== 0;
-  const course = courseStatus & 0x03ff;
-
-  const lat = nmeaDdmmToDecimal(latRaw, latSouth);
-  const lng = nmeaDdmmToDecimal(lngRaw, lngWest);
-
-  if (!gpsFixed) return null;
-
-  return {
-    latitude: lat,
-    longitude: lng,
-    speed,
-    heading: course,
-    recordedAt,
-  };
+  return pos;
 }
 
 /**
@@ -753,32 +731,39 @@ export function getPositionFromGT06LocationOnDemand(
   if (latLegacy > 90) lat = -Math.abs(lat);
   if (lngLegacy > 180) lng = -Math.abs(lng);
 
+  if (!isValidCoordinate(lat, lng)) return null;
+
   return { ...parsed, latitude: lat, longitude: lng };
 }
 
 /**
- * Single entry point: parse any GT06 location packet (0x22, 0xA0, 0x94, 0x1A) to a normalized position.
- * Uses the appropriate parser per protocol number; returns null if parsing fails.
+ * Single entry point: parse any GT06 location packet to a normalized position.
+ * Priority: 0x22 > 0x12 > 0x1A > 0x94. Returns null if parsing fails — no fallback.
+ * 0x13 / 0x36 heartbeats are intentionally absent; they never produce positions.
  */
 export function parseGT06LocationToPosition(
   protocolNumber: number,
   content: Buffer,
 ): NormalizedPosition | null {
-  if (protocolNumber === PROTOCOL_LOCATION_STD) {
-    return getPositionFromGT06LocationStd(content);
-  }
-  if (protocolNumber === PROTOCOL_LOCATION_ON_DEMAND) {
-    return getPositionFromGT06LocationOnDemand(content);
-  }
-  if (protocolNumber === PROTOCOL_LOCATION_ADVANCED) {
-    return getPositionFromGT06LocationAdvanced(content);
-  }
+  // 0x22 / 0xA0 — primary GPS source
   if (
     protocolNumber === PROTOCOL_LOCATION_2G ||
     protocolNumber === PROTOCOL_LOCATION_4G
   ) {
     const startOffset = getGT06Location22GpsBlockStart(content);
     return getPositionFromGT06Location(content, startOffset, true);
+  }
+  // 0x12 — standard GPS
+  if (protocolNumber === PROTOCOL_LOCATION_STD) {
+    return getPositionFromGT06LocationStd(content);
+  }
+  // 0x1A — on-demand GPS
+  if (protocolNumber === PROTOCOL_LOCATION_ON_DEMAND) {
+    return getPositionFromGT06LocationOnDemand(content);
+  }
+  // 0x94 — advanced/mixed; only accepted when GPS block is valid
+  if (protocolNumber === PROTOCOL_LOCATION_ADVANCED) {
+    return getPositionFromGT06LocationAdvanced(content);
   }
   return null;
 }
