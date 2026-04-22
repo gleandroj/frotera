@@ -31,10 +31,12 @@ export default function ReferencePointsReportPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const fetchPage = async (skip: number) => {
     if (!currentOrganization?.id) return;
     setLoading(true);
+    setHasSearched(true);
     try {
       const res = await trackingReportsAPI.referencePointsProximity(currentOrganization.id, {
         vehicleIds: selectedVehicleIds.length > 0 ? selectedVehicleIds : undefined,
@@ -165,7 +167,7 @@ export default function ReferencePointsReportPage() {
           )}
         </>
       )}
-      {!loading && data.length === 0 && total === 0 && page === 0 && (
+      {!loading && hasSearched && data.length === 0 && (
         <div className="text-center text-muted-foreground py-8">{t("reports.referencePoints.noData")}</div>
       )}
     </div>
