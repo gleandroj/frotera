@@ -123,4 +123,24 @@ describe("gt06.parser location regressions", () => {
     expect(position.latitude).toBeCloseTo(-16.3383, 3);
     expect(position.longitude).toBeCloseTo(-48.9329, 3);
   });
+
+  it("parses 0x22 with location-source=0x02 (LBS)", () => {
+    // content[0]=0x02 — same NT layout as 0x01 but location source = LBS
+    const { position } = parsePositionOrThrow(
+      "78783c220203577896487562751a04160414231a0416041423c901c0b6c805400f9900180009000000000000000040000027430002000000000065000604070d0a",
+    );
+    expect(position.recordedAt).toBe("2026-04-22T04:20:35.000Z");
+    expect(position.latitude).toBeCloseTo(-16.337, 2);
+    expect(position.longitude).toBeCloseTo(-48.936, 2);
+  });
+
+  it("parses 0x22 with location-source=0x03 (GPS+LBS)", () => {
+    // content[0]=0x03 — same NT layout but location source = GPS+LBS
+    const { position } = parsePositionOrThrow(
+      "78783c220303577896487562751a04160417201a041604162dc001c0b6c805400f990018a009000000000000000046054e28490002000000000065000feb680d0a",
+    );
+    expect(position.recordedAt).toBe("2026-04-22T04:22:45.000Z");
+    expect(position.latitude).toBeCloseTo(-16.337, 2);
+    expect(position.longitude).toBeCloseTo(-48.936, 2);
+  });
 });

@@ -222,13 +222,14 @@ export function findGpsOffset(buf: Buffer): number | null {
 }
 
 /**
- * NT20 / VL100 style 0x22 (GPS+LBS): leading location source (0x01) + 8-byte terminal ID +
+ * NT20 / VL100 style 0x22 (GPS+LBS): leading location source (1B) + 8-byte terminal ID +
  * 6-byte device time, then the same 18-byte GPS block as {@link decodeGpsBlockTraccarStyle}
  * (6-byte GPS time binary, 1B info, 4+4 lat/lng, 1B speed, 2B course/status).
+ * Location source values: 0x01=GPS, 0x02=LBS, 0x03=GPS+LBS (small byte indicates this layout).
  * See Traccar Gt06ProtocolDecoder (modelNT && MSG_GPS_LBS_2).
  */
 export function getGT06Location22GpsBlockStart(content: Buffer): number {
-  if (content.length >= 33 && content[0] === 0x01) {
+  if (content.length >= 33 && content[0] >= 0x01 && content[0] <= 0x0f) {
     return 1 + 8 + 6;
   }
   return findGpsOffset(content) ?? 0;
@@ -584,7 +585,8 @@ export function getPositionFromGT06Location(
   const ntLike =
     o === 1 + 8 + 6 &&
     content.length >= 33 &&
-    content[0] === 0x01;
+    content[0] >= 0x01 &&
+    content[0] <= 0x0f;
   if (ntLike) {
     return decodeGpsBlockTraccarStyle(content, o, requireGpsFix);
   }
