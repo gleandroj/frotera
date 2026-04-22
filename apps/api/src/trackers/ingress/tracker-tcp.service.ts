@@ -171,16 +171,14 @@ export class TrackerTcpService implements OnModuleInit, OnModuleDestroy {
 
     socket.on("data", (data: Buffer) => {
       this.appendTcpHexDebugLine(remote, data);
-      const hexPreview =
-        data.length <= 64 ? data.toString("hex") : `${data.subarray(0, 32).toString("hex")}...`;
       const hint =
         data.length >= 2 && data[0] === 0x78 && data[1] === 0x78
           ? " (GT06?)"
           : data.length >= 2 && data[0] === 0x79 && data[1] === 0x79
             ? " (GT06 adv?)"
             : "";
-      this.logger.debug(
-        `[${remote}] Received ${data.length} bytes${hint} | hex: ${hexPreview}`,
+      this.logger.log(
+        `[${remote}] Received ${data.length} bytes${hint} | hex: ${data.toString("hex")}`,
       );
       ctx.buffer = Buffer.concat([ctx.buffer, data]);
       this.processBuffer(socket, ctx);
