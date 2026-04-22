@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -316,7 +317,7 @@ export default function ReferencePointsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map — always mounted to avoid flicker on filter changes */}
         <div className="lg:col-span-2">
-          <div className="h-[500px] rounded-lg overflow-hidden border">
+          <div className="relative h-[500px] rounded-lg overflow-hidden border">
             <ReferencePointsMapDynamic
               points={points}
               onMapClick={sheetOpen ? handleMapClick : undefined}
@@ -325,6 +326,11 @@ export default function ReferencePointsPage() {
               radiusMeters={sheetOpen && radiusMeters ? parseInt(radiusMeters) : undefined}
               focusedPoint={sheetOpen ? null : focusedPoint}
             />
+            {sheetOpen && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[400] bg-background/90 backdrop-blur-sm text-xs px-3 py-1.5 rounded-full border shadow-sm pointer-events-none select-none">
+                {t("referencePoints.mapClickHint")}
+              </div>
+            )}
           </div>
         </div>
 
@@ -394,8 +400,8 @@ export default function ReferencePointsPage() {
       </div>
 
       {/* Form Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="max-w-[500px] overflow-y-auto">
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
+        <SheetContent hideOverlay className="max-w-[500px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
               {editingPoint ? t("referencePoints.editPoint") : t("referencePoints.newPointForm")}
@@ -446,51 +452,59 @@ export default function ReferencePointsPage() {
             {/* Address Search */}
             <div>
               <Label htmlFor="address-search">{t("referencePoints.address")} *</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="address-search"
-                    value={address}
-                    onChange={(e) => {
-                      setAddress(e.target.value);
-                      if (geocodePopoverOpen) setGeocodePopoverOpen(false);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleGeocodeSearch();
-                      }
-                      if (e.key === "Escape") setGeocodePopoverOpen(false);
-                    }}
-                    placeholder={t("referencePoints.addressSearchPlaceholder")}
-                    autoComplete="off"
-                  />
-                  {geocodePopoverOpen && geocodeResults.length > 0 && (
-                    <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-                      {geocodeResults.map((result, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
-                          onMouseDown={(e) => {
+              <Popover open={geocodePopoverOpen} onOpenChange={setGeocodePopoverOpen}>
+                <div className="flex gap-2">
+                  <PopoverAnchor asChild>
+                    <div className="flex-1">
+                      <Input
+                        id="address-search"
+                        value={address}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          if (geocodePopoverOpen) setGeocodePopoverOpen(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
                             e.preventDefault();
-                            handleSelectGeocodeResult(result);
-                          }}
-                        >
-                          {result.displayName}
-                        </button>
-                      ))}
+                            handleGeocodeSearch();
+                          }
+                          if (e.key === "Escape") setGeocodePopoverOpen(false);
+                        }}
+                        placeholder={t("referencePoints.addressSearchPlaceholder")}
+                        autoComplete="off"
+                      />
                     </div>
-                  )}
+                  </PopoverAnchor>
+                  <Button
+                    type="button"
+                    onClick={handleGeocodeSearch}
+                    disabled={geocodeSearching || !address.trim()}
+                  >
+                    {geocodeSearching ? t("common.searching") : t("common.search")}
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleGeocodeSearch}
-                  disabled={geocodeSearching || !address.trim()}
-                >
-                  {geocodeSearching ? t("common.searching") : t("common.search")}
-                </Button>
-              </div>
+                {geocodeResults.length > 0 && (
+                  <PopoverContent
+                    align="start"
+                    className="p-0 w-80"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
+                    {geocodeResults.map((result, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectGeocodeResult(result);
+                        }}
+                      >
+                        {result.displayName}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                )}
+              </Popover>
             </div>
 
             {/* Coordinates display (read-only) */}
