@@ -37,12 +37,13 @@ export default function TripsReportPage() {
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 16);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
   });
   const [to, setTo] = useState(() => {
     const d = new Date();
-    d.setHours(23, 59, 59, 999);
-    return d.toISOString().slice(0, 16);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T23:59`;
   });
   const [trips, setTrips] = useState<VehicleTrip[]>([]);
   const [stops, setStops] = useState<VehicleStop[]>([]);
