@@ -169,7 +169,10 @@
     "connectedAt": "Última conexão",
     "sectionOdometer": "Configurações do Odômetro",
     "sectionIdentification": "Identificação do Rastreador",
-    "configureDevice": "Configurar Rastreador"
+    "configureDevice": "Configurar Rastreador",
+    "resetOdometer": "Zerar Odômetro",
+    "resetOdometerConfirm": "Deseja zerar o odômetro deste dispositivo? O valor acumulado será zerado no próximo ciclo de posição.",
+    "toastOdometerReset": "Odômetro zerado com sucesso"
   },
   "vehicles": {
     "selectOrganization": "Selecione uma organização para ver os veículos.",

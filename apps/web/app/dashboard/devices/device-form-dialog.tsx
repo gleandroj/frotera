@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -128,6 +128,17 @@ export function DeviceFormDialog({
   const isEdit = !!device;
   const isSubform = !!onConfirm;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResettingOdometer, setIsResettingOdometer] = useState(false);
+
+  const handleResetOdometer = useCallback(() => {
+    if (!organizationId || !device?.id) return;
+    if (!window.confirm(t("devices.resetOdometerConfirm"))) return;
+    setIsResettingOdometer(true);
+    trackerDevicesAPI.resetOdometer(organizationId, device.id)
+      .then(() => toast.success(t("devices.toastOdometerReset")))
+      .catch((error) => toast.error(getApiErrorMessage(error, t, "common.error")))
+      .finally(() => setIsResettingOdometer(false));
+  }, [organizationId, device?.id, t]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(isEdit ? editSchema : createSchema),
@@ -438,6 +449,19 @@ export function DeviceFormDialog({
                     </FormItem>
                   )}
                 />
+                {isEdit && (
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={isResettingOdometer}
+                      onClick={handleResetOdometer}
+                    >
+                      {t("devices.resetOdometer")}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 

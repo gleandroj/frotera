@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -88,6 +89,20 @@ export class TrackerDevicesController {
   ): Promise<void> {
     await this.devicesService.findByOrganizationAndId(organizationId, deviceId);
     return this.devicesService.delete(deviceId);
+  }
+
+  @Post(":deviceId/odometer/reset")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Reset device odometer in Redis to zero" })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 404, description: "Not found" })
+  async resetOdometer(
+    @Param("organizationId") organizationId: string,
+    @Param("deviceId") deviceId: string,
+  ): Promise<void> {
+    await this.devicesService.findByOrganizationAndId(organizationId, deviceId);
+    return this.devicesService.resetOdometer(deviceId);
   }
 
   @Get(":deviceId/positions/last")

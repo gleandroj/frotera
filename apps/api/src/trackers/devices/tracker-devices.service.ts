@@ -127,6 +127,7 @@ export class TrackerDevicesService {
     if (data.carrier !== undefined) updateData.carrier = data.carrier;
     if (data.simCardNumber !== undefined) updateData.simCardNumber = data.simCardNumber;
     if (data.cellNumber !== undefined) updateData.cellNumber = data.cellNumber;
+    if (data.odometerSource !== undefined) updateData.odometerSource = data.odometerSource;
     const device = await this.prisma.trackerDevice.update({
       where: { id },
       data: updateData,
@@ -136,6 +137,10 @@ export class TrackerDevicesService {
 
   async delete(id: string): Promise<void> {
     await this.prisma.trackerDevice.delete({ where: { id } });
+  }
+
+  async resetOdometer(deviceId: string): Promise<void> {
+    await this.redisWriter.resetOdometer(deviceId);
   }
 
   async listByOrganization(organizationId: string): Promise<TrackerDeviceResponseDto[]> {

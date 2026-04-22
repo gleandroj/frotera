@@ -188,6 +188,14 @@ export class TrackerRedisWriterService {
     this.logger.debug(`Pushed status-only for device ${deviceId}`);
   }
 
+  async resetOdometer(deviceId: string): Promise<void> {
+    const lastKey = `${this.lastPrefix}${deviceId}`;
+    const exists = await this.redis.exists(lastKey);
+    if (exists) {
+      await this.redis.hSet(lastKey, 'odometerKm', '0');
+    }
+  }
+
   /**
    * Get last position from Redis (for API). Returns null if not in Redis.
    */

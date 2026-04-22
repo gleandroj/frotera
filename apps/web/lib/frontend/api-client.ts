@@ -965,6 +965,11 @@ export const trackerDevicesAPI = {
     externalApi.delete(
       `/api/organizations/${organizationId}/tracker-devices/${deviceId}`
     ),
+  resetOdometer: (organizationId: string, deviceId: string) =>
+    externalApi.post(
+      `/api/organizations/${organizationId}/tracker-devices/${deviceId}/odometer/reset`,
+      {}
+    ),
 };
 
 // ── DOCUMENTS ────────────────────────────────────────────────────────────────
