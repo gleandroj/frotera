@@ -25,6 +25,9 @@ export class PositionsReportQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsDateString() to?: string;
   @ApiPropertyOptional({ default: 500 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(2000) limit?: number = 500;
   @ApiPropertyOptional({ default: 0 }) @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset?: number = 0;
+  /** Which timestamp to filter and sort by: 'recordedAt' (device clock) or 'receivedAt' (server clock). Default: receivedAt */
+  @ApiPropertyOptional({ enum: ['recordedAt', 'receivedAt'], default: 'receivedAt' })
+  @IsOptional() @IsString() dateField?: 'recordedAt' | 'receivedAt' = 'receivedAt';
 }
 
 export class DetectTripsDto {

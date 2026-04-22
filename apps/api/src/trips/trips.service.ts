@@ -76,17 +76,18 @@ export class TripsService {
 
     if (deviceIds.length === 0) return { items: [], total: 0 };
 
+    const dateField = query.dateField ?? 'receivedAt';
     const where: any = { deviceId: { in: deviceIds } };
     if (query.from || query.to) {
-      where.recordedAt = {};
-      if (query.from) where.recordedAt.gte = new Date(query.from);
-      if (query.to) where.recordedAt.lte = new Date(query.to);
+      where[dateField] = {};
+      if (query.from) where[dateField].gte = new Date(query.from);
+      if (query.to) where[dateField].lte = new Date(query.to);
     }
 
     const [items, total] = await Promise.all([
       this.prisma.devicePosition.findMany({
         where,
-        orderBy: { recordedAt: 'desc' },
+        orderBy: { [dateField]: 'desc' },
         take: query.limit ?? 500,
         skip: query.offset ?? 0,
         include: {

@@ -1726,7 +1726,7 @@ export interface ReferencePoint {
 }
 
 export const trackingReportsAPI = {
-  listPositions: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; limit?: number; offset?: number }) =>
+  listPositions: (organizationId: string, params?: { vehicleId?: string; from?: string; to?: string; limit?: number; offset?: number; dateField?: 'recordedAt' | 'receivedAt' }) =>
     externalApi.get<{ items: unknown[]; total: number }>(
       `/api/organizations/${organizationId}/reports/positions`,
       { params }
