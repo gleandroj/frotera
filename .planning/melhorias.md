@@ -26,3 +26,11 @@ KPIs de combustível para o período selecionado.
 Ter filtro por multiplos veiculos e/ou empresas.
 Ter filtro por data: Ultimos 30 dias, Ultimos 12 meses, periodo de tempo escolhido pelo usuario.
 Agrupamento: Dia, mes, Ano.
+
+Relatorio de pontos de referencia.
+Ter filtro por multiplos veiculos e/ou empresas.
+Ter filtro por data: Ultimos 30 dias, Ultimos 12 meses, periodo de tempo escolhido pelo usuario.
+Ter filtro por ponto de referencia (multiplios ou vazio todos).
+Ter um filtro para trazer somente posicoes com distiancia inferior a X metros.
+
+Quero saber a distancia de uma posicao ate todos pontos de referencias cadastrados.
