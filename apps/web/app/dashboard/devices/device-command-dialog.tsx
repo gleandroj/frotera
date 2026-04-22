@@ -376,19 +376,24 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const CUSTOM_ID = "__custom__";
+
 export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [selectedId, setSelectedId] = useState<string>("");
   const [params, setParams] = useState<Record<string, string>>({});
+  const [customInput, setCustomInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedCommand = COMMANDS.find((c) => c.id === selectedId) ?? null;
-  const commandStr = selectedCommand ? selectedCommand.build(params) : "";
+  const isCustom = selectedId === CUSTOM_ID;
+  const selectedCommand = isCustom ? null : (COMMANDS.find((c) => c.id === selectedId) ?? null);
+  const commandStr = isCustom ? customInput : (selectedCommand ? selectedCommand.build(params) : "");
 
   const handleSelectCommand = (id: string) => {
     setSelectedId(id);
     setParams({});
+    setCustomInput("");
   };
 
   const handleParamChange = (name: string, value: string) => {
@@ -396,6 +401,7 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
   };
 
   const isParamsValid = () => {
+    if (isCustom) return customInput.trim() !== "";
     if (!selectedCommand) return false;
     return selectedCommand.params.every(
       (p) => !p.required || (params[p.name] ?? "").trim() !== "",
@@ -403,7 +409,7 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!device || !currentOrganization?.id || !selectedCommand || !isParamsValid()) return;
+    if (!device || !currentOrganization?.id || !isParamsValid()) return;
     setIsSubmitting(true);
     try {
       await trackerDevicesAPI.sendCommand(currentOrganization.id, device.id, commandStr);
@@ -411,6 +417,7 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
       onOpenChange(false);
       setSelectedId("");
       setParams({});
+      setCustomInput("");
     } catch (err) {
       toast.error(getApiErrorMessage(err, t, "devices.commands.toastError"));
     } finally {
@@ -422,6 +429,7 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
     if (!v) {
       setSelectedId("");
       setParams({});
+      setCustomInput("");
     }
     onOpenChange(v);
   };
@@ -454,6 +462,7 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
                 <SelectValue placeholder={t("devices.commands.selectCommand")} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={CUSTOM_ID}>✏️ Comando personalizado</SelectItem>
                 {CATEGORIES.map((cat) => {
                   const cmds = COMMANDS.filter((c) => c.category === cat.key);
                   if (cmds.length === 0) return null;
@@ -471,6 +480,20 @@ export function DeviceCommandDialog({ device, open, onOpenChange }: Props) {
               </SelectContent>
             </Select>
           </div>
+
+          {isCustom && (
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-cmd">Comando</Label>
+              <Input
+                id="custom-cmd"
+                className="font-mono"
+                placeholder="ex: WHERE# ou RELAY,1#"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && isParamsValid() && handleSubmit()}
+              />
+            </div>
+          )}
 
           {selectedCommand && selectedCommand.params.length > 0 && (
             <div className="space-y-3 rounded-md border p-3">
