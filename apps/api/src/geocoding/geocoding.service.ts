@@ -68,7 +68,14 @@ export class GeocodingService {
       await this.redis.setEx(cacheKey, 604800, data.display_name);
       return data.display_name;
     } catch (error) {
-      this.logger.error(`Error reverse geocoding ${lat}, ${lng}:`, error);
+      const cause = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `Error reverse geocoding lat=${lat} lng=${lng} — ${cause.message}`,
+        cause.stack,
+      );
+      if ((cause as NodeJS.ErrnoException).cause) {
+        this.logger.error(`Underlying cause:`, (cause as NodeJS.ErrnoException).cause);
+      }
       return null;
     }
   }
@@ -78,8 +85,9 @@ export class GeocodingService {
    * Returns up to `limit` results. No caching (interactive search).
    */
   async forwardGeocode(query: string, limit = 5): Promise<GeocodeResult[]> {
+    const url = `${this.nominatimBaseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=${limit}&accept-language=pt`;
+    this.logger.debug(`Forward geocoding query="${query}" url=${url}`);
     try {
-      const url = `${this.nominatimBaseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=${limit}&accept-language=pt`;
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'rs-frotas-fleet-system',
@@ -102,6 +110,7 @@ export class GeocodingService {
         return [];
       }
 
+      this.logger.debug(`Forward geocode query="${query}" returned ${data.length} result(s)`);
       return data
         .filter((item) => item.display_name && item.lat && item.lon)
         .map((item) => ({
@@ -110,7 +119,14 @@ export class GeocodingService {
           lng: parseFloat(item.lon!),
         }));
     } catch (error) {
-      this.logger.error(`Error forward geocoding query: ${query}:`, error);
+      const cause = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `Error forward geocoding query="${query}" url=${url} — ${cause.message}`,
+        cause.stack,
+      );
+      if ((cause as NodeJS.ErrnoException).cause) {
+        this.logger.error(`Underlying cause:`, (cause as NodeJS.ErrnoException).cause);
+      }
       return [];
     }
   }
