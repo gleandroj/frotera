@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { format, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
-import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useTranslation } from "@/i18n/useTranslation";
 import { usePermissions, Module, Action } from "@/lib/hooks/use-permissions";
@@ -49,7 +47,6 @@ function formatVehicleLabel(v: Vehicle): string {
 
 export default function ChecklistReportsPage() {
   const { t } = useTranslation();
-  const router = useRouter();
   const intlLocale = useIntlLocale();
   const { currentOrganization, selectedCustomerId } = useAuth();
   const { can } = usePermissions();
@@ -165,26 +162,11 @@ export default function ChecklistReportsPage() {
   };
 
   if (!canView) {
-    return (
-      <div className="space-y-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/checklist")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("checklist.reports.back")}
-        </Button>
-        <p className="text-muted-foreground">{t("checklist.reports.noPermission")}</p>
-      </div>
-    );
+    return <p className="text-muted-foreground">{t("checklist.reports.noPermission")}</p>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/checklist")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("checklist.reports.back")}
-        </Button>
-      </div>
-
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t("checklist.reports.title")}</h1>
         <p className="text-muted-foreground">{t("checklist.reports.description")}</p>

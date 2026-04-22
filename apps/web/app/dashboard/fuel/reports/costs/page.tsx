@@ -5,8 +5,6 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { fuelReportsAPI, CostsPeriod } from "@/lib/frontend/api-client";
 import { CostsBarChart } from "../components/costs-bar-chart";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
@@ -17,7 +15,6 @@ type GroupBy = "day" | "month" | "year";
 export default function CostsReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
-  const router = useRouter();
   const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<CostsPeriod[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>("month");
@@ -39,12 +36,6 @@ export default function CostsReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/fuel/reports")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("fuel.backToList")}
-        </Button>
-      </div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("fuelReports.costs.title")}</h1>

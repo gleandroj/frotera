@@ -5,9 +5,6 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { fuelReportsAPI, BenchmarkSummary } from "@/lib/frontend/api-client";
 import { BenchmarkAreaChart } from "../components/benchmark-area-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal";
@@ -15,7 +12,6 @@ import { formatLocaleCurrency, formatLocaleDecimal } from "@/lib/locale-decimal"
 export default function BenchmarkReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
-  const router = useRouter();
   const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<BenchmarkSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,12 +29,6 @@ export default function BenchmarkReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/fuel/reports")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("fuel.backToList")}
-        </Button>
-      </div>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t("fuelReports.benchmark.title")}</h1>
         <p className="text-muted-foreground">{t("fuelReports.benchmark.description")}</p>

@@ -6,16 +6,12 @@ import { fuelReportsAPI, VehicleConsumption } from "@/lib/frontend/api-client";
 import { ConsumptionChart } from "../components/consumption-chart";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import { useIntlLocale } from "@/lib/hooks/use-intl-locale";
 import { formatLocaleDecimal } from "@/lib/locale-decimal";
 
 export default function ConsumptionReportPage() {
   const { t } = useTranslation();
   const intlLocale = useIntlLocale();
-  const router = useRouter();
   const { currentOrganization, selectedCustomerId } = useAuth();
   const [data, setData] = useState<VehicleConsumption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +35,6 @@ export default function ConsumptionReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/fuel/reports")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("fuel.backToList")}
-        </Button>
-      </div>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t("fuelReports.consumption.title")}</h1>
         <p className="text-muted-foreground">{t("fuelReports.consumption.description")}</p>
